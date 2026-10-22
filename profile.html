@@ -1,1 +1,214 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon profil — Novelia</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: #100d19;
+      color: #f5f1ff;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      width: 100%;
+      max-width: 520px;
+      margin: 30px auto;
+      padding: 26px;
+      background: #1c1729;
+      border: 1px solid #382b50;
+      border-radius: 18px;
+    }
+    h1 { color: #c5a3ff; margin-top: 0; }
+    p { color: #c5bdd6; line-height: 1.5; }
+    label {
+      display: block;
+      margin: 18px 0 7px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 13px;
+      border-radius: 9px;
+      border: 1px solid #49365f;
+      background: #110e19;
+      color: white;
+      font-size: 16px;
+    }
+    button, .link {
+      display: inline-block;
+      margin-top: 18px;
+      padding: 12px 16px;
+      border: 0;
+      border-radius: 9px;
+      background: #9b6bff;
+      color: #fff;
+      font-weight: bold;
+      font-size: 15px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .secondary { background: #382b50; }
+    #status { margin-top: 16px; overflow-wrap: anywhere; }
+    .email { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Mon profil</h1>
+    <p>Personnalise ton identité sur Novelia.</p>
+
+    <p class="email">
+      <strong>Adresse e-mail :</strong>
+      <span id="email">Chargement...</span>
+    </p>
+
+    <form id="profileForm">
+      <label for="username">Pseudonyme unique</label>
+      <input
+        id="username"
+        type="text"
+        minlength="3"
+        maxlength="24"
+        pattern="[A-Za-z0-9_]+"
+        placeholder="Ex. PlumeObsidienne"
+        required
+      >
+
+      <label for="displayName">Nom affiché</label>
+      <input
+        id="displayName"
+        type="text"
+        maxlength="50"
+        placeholder="Le nom visible sur ton profil"
+      >
+
+      <button type="submit" id="saveButton">
+        Enregistrer mon profil
+      </button>
+    </form>
+
+    <p id="status" role="status"></p>
+
+    <a class="link secondary" href="index.html">Retour à Novelia</a>
+    <button class="secondary" id="logoutButton" type="button">
+      Se déconnecter
+    </button>
+  </main>
+
+  <script type="module">
+    import { createClient } from
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL =
+      "https://czwaokqpqgrghxeeyguq.supabase.co";
+    const SUPABASE_KEY =
+      "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const emailEl = document.getElementById("email");
+    const usernameEl = document.getElementById("username");
+    const displayNameEl = document.getElementById("displayName");
+    const statusEl = document.getElementById("status");
+    const saveButton = document.getElementById("saveButton");
+
+    let currentUser = null;
+
+    async function loadProfile() {
+      statusEl.textContent = "Chargement du profil...";
+
+      const { data: { user }, error: authError } =
+        await supabase.auth.getUser();
+
+      if (authError || !user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+      emailEl.textContent = user.email || "Non renseignée";
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("username, display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        statusEl.textContent =
+          "Impossible de charger le profil : " + error.message;
+        return;
+      }
+
+      if (data) {
+        usernameEl.value = data.username || "";
+        displayNameEl.value = data.display_name || "";
+      }
+
+      statusEl.textContent = "Profil chargé.";
+    }
+
+    document.getElementById("profileForm")
+      .addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        if (!currentUser) return;
+
+        const username = usernameEl.value.trim();
+        const displayName = displayNameEl.value.trim();
+
+        if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) {
+          statusEl.textContent =
+            "Le pseudonyme doit contenir 3 à 24 caractères : lettres, chiffres ou _.";
+          return;
+        }
+
+        saveButton.disabled = true;
+        statusEl.textContent = "Enregistrement...";
+
+        const { error } = await supabase
+          .from("profiles")
+          .upsert({
+            id: currentUser.id,
+            username: username,
+            display_name: displayName || null
+          }, { onConflict: "id" });
+
+        saveButton.disabled = false;
+
+        if (error) {
+          if (error.code === "23505") {
+            statusEl.textContent =
+              "Ce pseudonyme est déjà utilisé. Choisis-en un autre.";
+          } else {
+            statusEl.textContent =
+              "Erreur d'enregistrement : " + error.message;
+          }
+          return;
+        }
+
+        statusEl.textContent = "Profil enregistré avec succès.";
+      });
+
+    document.getElementById("logoutButton")
+      .addEventListener("click", async () => {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+          statusEl.textContent = "Erreur : " + error.message;
+          return;
+        }
+
+        window.location.href = "login.html";
+      });
+
+    loadProfile();
+  </script>
+</body>
+</html>
+
