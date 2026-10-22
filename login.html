@@ -1,12 +1,130 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Novelia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion | Novelia</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      padding: 20px; background: #100b1d; color: #f5efff;
+      font-family: Arial, sans-serif;
+    }
+    .panel {
+      width: 100%; max-width: 420px; padding: 28px;
+      background: #1c1430; border: 1px solid #49336b;
+      border-radius: 18px;
+    }
+    h1 { text-align: center; color: #c7a5ff; margin-top: 0; }
+    p { color: #c9bfd9; line-height: 1.5; }
+    label { display: block; margin: 15px 0 7px; }
+    input {
+      width: 100%; padding: 13px; border-radius: 9px;
+      border: 1px solid #594477; background: #100b1d;
+      color: white; font-size: 16px;
+    }
+    button {
+      width: 100%; padding: 13px; margin-top: 14px;
+      border: 0; border-radius: 9px; background: #9b6bdf;
+      color: white; font-weight: bold; font-size: 16px;
+    }
+    button.secondary { background: #392750; }
+    #message { overflow-wrap: anywhere; margin-top: 16px; }
+    a { color: #c7a5ff; }
+  </style>
 </head>
 <body>
-  <h1>Novelia</h1>
-  <p>Page de connexion en préparation.</p>
+  <main class="panel">
+    <h1>Novelia</h1>
+    <p>Connecte-toi pour retrouver ton univers de lecture.</p>
+
+    <form id="authForm">
+      <label for="email">Adresse e-mail</label>
+      <input id="email" type="email" autocomplete="email" required>
+
+      <label for="password">Mot de passe</label>
+      <input id="password" type="password"
+             autocomplete="current-password" minlength="6" required>
+
+      <button type="submit" id="loginBtn">Se connecter</button>
+      <button type="button" class="secondary" id="signupBtn">
+        Créer un compte
+      </button>
+    </form>
+
+    <p id="message" role="status" aria-live="polite"></p>
+    <p><a href="./index.html">Retour à l’accueil</a></p>
+  </main>
+
+  <script type="module">
+    import { createClient } from
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "COLLE_ICI_TON_PROJECT_URL";
+    const SUPABASE_KEY = "COLLE_ICI_TA_CLE_PUBLIQUE";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const message = document.getElementById("message");
+    const form = document.getElementById("authForm");
+    const signupBtn = document.getElementById("signupBtn");
+
+    function showMessage(text) {
+      message.textContent = text;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      showMessage("Connexion en cours...");
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email, password
+      });
+
+      if (error) {
+        showMessage("Connexion impossible : " + error.message);
+        return;
+      }
+
+      window.location.href = "./index.html";
+    });
+
+    signupBtn.addEventListener("click", async () => {
+      showMessage("Création du compte en cours...");
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || password.length < 6) {
+        showMessage("Entre un e-mail valide et un mot de passe d’au moins 6 caractères.");
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin +
+            window.location.pathname.replace(/[^/]*$/, "index.html")
+        }
+      });
+
+      if (error) {
+        showMessage("Inscription impossible : " + error.message);
+        return;
+      }
+
+      if (data.session) {
+        showMessage("Compte créé. Redirection...");
+        window.location.href = "./index.html";
+      } else {
+        showMessage("Compte créé. Consulte tes e-mails pour confirmer ton inscription avant de te connecter.");
+      }
+    });
+  </script>
 </body>
 </html>
