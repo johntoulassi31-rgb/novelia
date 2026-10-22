@@ -6,14 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#100d19">
   <title>Novelia — Lire sans limites</title>
+
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       background: #100d19;
       color: #f8f5ff;
       font-family: Arial, sans-serif;
     }
+
     header {
       padding: 20px;
       background: #191324;
@@ -21,18 +24,29 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    .logo { color: #b99aff; font-size: 24px; font-weight: bold; }
+
+    .logo {
+      color: #b99aff;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
     nav { display: flex; gap: 14px; flex-wrap: wrap; }
     nav a { color: #d8c9f5; text-decoration: none; font-size: 14px; }
+
     .hero {
       margin: 24px 16px;
       padding: 28px 22px;
       border-radius: 20px;
       background: linear-gradient(135deg, #392456, #191324);
     }
+
     .hero h1 { font-size: 34px; margin: 12px 0; }
     .hero p { color: #d2c4e8; line-height: 1.6; }
+
     .button {
       background: #8b5cf6;
       color: white;
@@ -42,9 +56,19 @@
       font-weight: bold;
       cursor: pointer;
     }
+
+    .button:hover { background: #a078ff; }
+
     main { padding: 0 16px 30px; }
     h2 { font-size: 22px; }
-    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0; }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+    }
+
     .filter {
       background: #211630;
       color: #e4d6ff;
@@ -53,18 +77,24 @@
       border-radius: 20px;
       cursor: pointer;
     }
+
     .filter.active { background: #8b5cf6; color: white; }
+
     .stories {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
     }
+
     .story {
       background: #191324;
       border: 1px solid #352747;
       border-radius: 14px;
       overflow: hidden;
+      min-width: 0;
     }
+
+    /* Couverture provisoire pour les œuvres sans image */
     .cover {
       min-height: 160px;
       padding: 14px;
@@ -73,20 +103,42 @@
       font: bold 23px Georgia, serif;
       background: linear-gradient(145deg, #32122e, #7f1d3d, #130b20);
     }
+
+    /* Véritable image de couverture */
+    .cover-image {
+      display: block;
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      object-position: center;
+      background: #211630;
+    }
+
     .story:nth-child(2) .cover {
       background: linear-gradient(145deg, #21134f, #7147b8, #19102b);
     }
+
     .story:nth-child(3) .cover {
       background: linear-gradient(145deg, #54301d, #b76a45, #211126);
     }
+
     .story:nth-child(4) .cover {
       background: linear-gradient(145deg, #102d39, #315d73, #111320);
     }
+
     .info { padding: 12px; }
     .info h3 { font-size: 15px; margin: 0 0 8px; }
     .info p { color: #b8abc9; font-size: 12px; margin: 0; }
+
     .read { margin-top: 12px; width: 100%; }
+
     .story[hidden] { display: none; }
+
+    #message {
+      color: #c4a5ff;
+      line-height: 1.6;
+    }
+
     footer {
       padding: 24px 16px;
       text-align: center;
@@ -94,13 +146,20 @@
       border-top: 1px solid #352747;
       font-size: 12px;
     }
+
     @media (min-width: 700px) {
-      .hero, main { max-width: 1000px; margin-left: auto; margin-right: auto; }
+      .hero, main {
+        max-width: 1000px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
       .stories { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .hero h1 { font-size: 48px; }
     }
   </style>
 </head>
+
 <body>
   <header>
     <div class="logo">✦ NOVELIA</div>
@@ -114,13 +173,18 @@
   <section class="hero" id="accueil">
     <p>TON PROCHAIN UNIVERS T'ATTEND</p>
     <h1>Là où chaque histoire prend vie.</h1>
-    <p>Explore des romans captivants et des webtoons
-       fascinants. Trouve ta prochaine histoire préférée.</p>
-    <button class="button" id="explore">Explorer les histoires</button>
+    <p>
+      Explore des romans captivants et des webtoons
+      fascinants. Trouve ta prochaine histoire préférée.
+    </p>
+    <button class="button" id="explore">
+      Explorer les histoires
+    </button>
   </section>
 
   <main id="histoires">
     <h2>À découvrir</h2>
+
     <div class="filters">
       <button class="filter active" data-filter="Tous">Tout</button>
       <button class="filter" data-filter="Roman">Romans</button>
@@ -128,60 +192,97 @@
     </div>
 
     <div class="stories">
+
+      <!-- Les Roses de minuit -->
       <article class="story" data-type="Roman">
-        <div class="cover">Les Roses<br>de minuit</div>
+        <img
+          class="cover-image"
+          src="images/roses.png"
+          alt="Couverture de Les Roses de minuit"
+          loading="lazy"
+          onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+        >
+        <div class="cover" hidden>
+          Les Roses<br>de minuit
+        </div>
+
         <div class="info">
           <h3>Les Roses de minuit</h3>
           <p>Dark romance · Roman</p>
-          <button class="button read" data-read="Les Roses de minuit">Découvrir</button>
+          <button
+            class="button read"
+            data-story="roses"
+          >Découvrir</button>
         </div>
       </article>
 
+      <!-- La Lune des oubliés -->
       <article class="story" data-type="Webtoon">
-        <div class="cover">La Lune<br>des oubliés</div>
+        <div class="cover">
+          La Lune<br>des oubliés
+        </div>
         <div class="info">
           <h3>La Lune des oubliés</h3>
           <p>Fantasy · Webtoon</p>
-          <button class="button read" data-read="La Lune des oubliés">Découvrir</button>
+          <button class="button read" data-story="lune">
+            Découvrir
+          </button>
         </div>
       </article>
 
+      <!-- Un automne pour nous -->
       <article class="story" data-type="Roman">
-        <div class="cover">Un automne<br>pour nous</div>
+        <div class="cover">
+          Un automne<br>pour nous
+        </div>
         <div class="info">
           <h3>Un automne pour nous</h3>
           <p>Romance · Roman</p>
-          <button class="button read" data-read="Un automne pour nous">Découvrir</button>
+          <button class="button read" data-story="automne">
+            Découvrir
+          </button>
         </div>
       </article>
 
+      <!-- La Ville sans ombre -->
       <article class="story" data-type="Webtoon">
-        <div class="cover">La Ville<br>sans ombre</div>
+        <div class="cover">
+          La Ville<br>sans ombre
+        </div>
         <div class="info">
           <h3>La Ville sans ombre</h3>
           <p>Mystère · Webtoon</p>
-          <button class="button read" data-read="La Ville sans ombre">Découvrir</button>
+          <button class="button read" data-story="ville">
+            Découvrir
+          </button>
         </div>
       </article>
+
     </div>
+
     <p id="message" aria-live="polite"></p>
   </main>
 
-  <footer>© Novelia — Version bêta 0.1<br>
+  <footer>
+    © Novelia — Version bêta 0.2<br>
     Les histoires présentées sont des exemples fictifs.
   </footer>
 
   <script>
     const filters = document.querySelectorAll("[data-filter]");
     const stories = document.querySelectorAll(".story");
-    const message = document.getElementById("message");
 
     function filterStories(type) {
       stories.forEach(function(story) {
-        story.hidden = type !== "Tous" && story.dataset.type !== type;
+        story.hidden =
+          type !== "Tous" && story.dataset.type !== type;
       });
+
       filters.forEach(function(button) {
-        button.classList.toggle("active", button.dataset.filter === type);
+        button.classList.toggle(
+          "active",
+          button.dataset.filter === type
+        );
       });
     }
 
@@ -198,14 +299,16 @@
     });
 
     document.getElementById("explore").addEventListener("click", function() {
-      document.getElementById("histoires").scrollIntoView({behavior: "smooth"});
+      document.getElementById("histoires").scrollIntoView({
+        behavior: "smooth"
+      });
     });
 
-    document.querySelectorAll("[data-read]").forEach(function(button) {
+    document.querySelectorAll("[data-story]").forEach(function(button) {
       button.addEventListener("click", function() {
-        message.textContent = button.dataset.read +
-          " : la lecture sera disponible dans une prochaine version.";
-        message.style.color = "#c4a5ff";
+        window.location.href =
+          "reader.html?story=" +
+          encodeURIComponent(button.dataset.story);
       });
     });
   </script>
