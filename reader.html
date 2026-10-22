@@ -143,6 +143,7 @@
       cursor: pointer;
       text-decoration: none;
       text-align: center;
+      font-family: inherit;
     }
 
     .primary {
@@ -154,6 +155,18 @@
       background: #30203f;
       color: #e9d5ff;
       border: 1px solid #49345f;
+    }
+
+    .favorite-button {
+      background: #30203f;
+      color: #f0dfff;
+      border: 1px solid #49345f;
+    }
+
+    .favorite-button.is-favorite {
+      background: #4a1949;
+      border-color: #c084fc;
+      color: #ffffff;
     }
 
     .button:hover { filter: brightness(1.15); }
@@ -303,14 +316,26 @@
             <span class="tag" id="format"></span>
           </div>
           <p class="summary" id="description"></p>
+
           <div class="actions">
             <button class="button primary" id="startReading">
               Commencer la lecture
             </button>
+
+            <button
+              class="button favorite-button"
+              id="favoriteButton"
+              type="button"
+              aria-pressed="false"
+            >
+              ♡ Ajouter aux favoris
+            </button>
+
             <a class="button secondary" href="index.html#histoires">
               Retour aux histoires
             </a>
           </div>
+          <p class="summary" id="favoriteMessage" role="status" aria-live="polite"></p>
         </div>
       </div>
 
@@ -403,6 +428,28 @@
       }
     };
 
+    const FAVORITES_KEY = "novelia_favorites";
+
+    function loadFavorites() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
+        return Array.isArray(saved)
+          ? saved.filter(item => typeof item === "string")
+          : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveFavorites(favorites) {
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
     const params = new URLSearchParams(window.location.search);
     const id = params.get("story");
     const story = stories[id];
@@ -411,6 +458,19 @@
     const coverFallback = document.getElementById("coverFallback");
     const reader = document.getElementById("reader");
     const content = document.getElementById("content");
+    const favoriteButton = document.getElementById("favoriteButton");
+    const favoriteMessage = document.getElementById("favoriteMessage");
+
+    function updateFavoriteButton() {
+      const favorites = loadFavorites();
+      const isFavorite = favorites.includes(id);
+
+      favoriteButton.classList.toggle("is-favorite", isFavorite);
+      favoriteButton.setAttribute("aria-pressed", String(isFavorite));
+      favoriteButton.textContent = isFavorite
+        ? "♥ Retirer des favoris"
+        : "♡ Ajouter aux favoris";
+    }
 
     if (!story) {
       document.title = "Œuvre introuvable — Novelia";
@@ -426,7 +486,9 @@
         story.type === "Roman" ? "Lecture textuelle" : "Lecture illustrée";
       document.getElementById("description").textContent = story.description;
       document.getElementById("chapterCount").textContent =
-        story.type === "Roman" ? "1 chapitre de démonstration" : "1 épisode de démonstration";
+        story.type === "Roman"
+          ? "1 chapitre de démonstration"
+          : "1 épisode de démonstration";
       document.getElementById("chapterTitle").textContent = story.chapter;
       document.getElementById("readingType").textContent = story.type;
 
@@ -444,6 +506,27 @@
       });
 
       coverFallback.textContent = story.title;
+
+      updateFavoriteButton();
+
+      favoriteButton.addEventListener("click", function() {
+        const favorites = loadFavorites();
+        const isFavorite = favorites.includes(id);
+
+        const updatedFavorites = isFavorite
+          ? favorites.filter(item => item !== id)
+          : [...favorites, id];
+
+        if (saveFavorites(updatedFavorites)) {
+          updateFavoriteButton();
+          favoriteMessage.textContent = isFavorite
+            ? "Cette œuvre a été retirée de tes favoris."
+            : "Cette œuvre a été ajoutée à tes favoris.";
+        } else {
+          favoriteMessage.textContent =
+            "Impossible d'enregistrer ce changement sur cet appareil.";
+        }
+      });
 
       document.getElementById("startReading").addEventListener("click", function() {
         reader.hidden = false;
@@ -466,7 +549,10 @@
 
           const fallback = document.createElement("div");
           fallback.className = "panel-fallback";
-          fallback.innerHTML = "<strong>Case " + (index + 1) + "</strong>";
+
+          const label = document.createElement("strong");
+          label.textContent = "Case " + (index + 1);
+          fallback.appendChild(label);
 
           const text = document.createElement("p");
           text.textContent = panelData.text;
