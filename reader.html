@@ -58,7 +58,7 @@
       margin-bottom: 20px;
     }
 
-    .book-card {
+    .book-card, .chapter {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -166,7 +166,7 @@
     .favorite-button.is-favorite {
       background: #4a1949;
       border-color: #c084fc;
-      color: #ffffff;
+      color: white;
     }
 
     .button:hover { filter: brightness(1.15); }
@@ -184,15 +184,54 @@
 
     .chapter {
       padding: 22px;
-      background: var(--panel);
-      border-radius: 14px;
-      border: 1px solid var(--border);
     }
 
     .chapter h2 {
       color: #d8b4fe;
       font-size: 21px;
       line-height: 1.4;
+    }
+
+    .chapter-picker {
+      margin: 18px 0;
+    }
+
+    .chapter-picker label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .chapter-picker select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 9px;
+      border: 1px solid #49345f;
+      background: #100b18;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .chapter-progress {
+      height: 5px;
+      background: #30203f;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+
+    .chapter-progress-bar {
+      height: 100%;
+      width: 0;
+      background: var(--purple);
+      transition: width 0.2s;
+    }
+
+    .chapter-counter {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
     }
 
     .novel-text {
@@ -311,10 +350,12 @@
         <div>
           <div class="eyebrow" id="type">Œuvre Novelia</div>
           <h1 id="title">Chargement...</h1>
+
           <div class="meta">
             <span class="tag" id="genre"></span>
             <span class="tag" id="format"></span>
           </div>
+
           <p class="summary" id="description"></p>
 
           <div class="actions">
@@ -327,14 +368,13 @@
               id="favoriteButton"
               type="button"
               aria-pressed="false"
-            >
-              ♡ Ajouter aux favoris
-            </button>
+            >♡ Ajouter aux favoris</button>
 
             <a class="button secondary" href="index.html#histoires">
               Retour aux histoires
             </a>
           </div>
+
           <p class="summary" id="favoriteMessage" role="status" aria-live="polite"></p>
         </div>
       </div>
@@ -349,6 +389,17 @@
       <div class="chapter">
         <div class="eyebrow" id="readingType">Lecture</div>
         <h2 id="chapterTitle"></h2>
+
+        <div class="chapter-picker">
+          <label for="chapterSelect">Choisir un chapitre ou un épisode</label>
+          <select id="chapterSelect"></select>
+        </div>
+
+        <div class="chapter-progress">
+          <div class="chapter-progress-bar" id="progressBar"></div>
+        </div>
+        <div class="chapter-counter" id="chapterCounter"></div>
+
         <div id="content"></div>
 
         <div class="chapter-nav">
@@ -359,6 +410,8 @@
             Suivant →
           </button>
         </div>
+
+        <p class="summary" id="navigationMessage" role="status" aria-live="polite"></p>
       </div>
     </section>
 
@@ -377,11 +430,29 @@
         genre: "Dark romance",
         cover: "images/roses.png",
         description: "Dans l'obscurité de la nuit, les secrets, les passions et les choix dangereux peuvent bouleverser plusieurs destins. Découvre le début de cette histoire.",
-        chapter: "Chapitre 1 — La première page",
-        content: [
-          "La nuit enveloppait la ville lorsque tout commença.",
-          "Derrière les fenêtres éclairées, des secrets attendaient leur heure. Personne ne savait encore que cette rencontre allait bouleverser plusieurs destins.",
-          "Fin de cet extrait de démonstration."
+        chapters: [
+          {
+            title: "Chapitre 1 — La première page",
+            content: [
+              "La nuit enveloppait la ville lorsque tout commença.",
+              "Derrière les fenêtres éclairées, des secrets attendaient leur heure. Personne ne savait encore que cette rencontre allait bouleverser plusieurs destins.",
+              "Fin de cet extrait de démonstration."
+            ]
+          },
+          {
+            title: "Chapitre 2 — Un étrange pressentiment",
+            content: [
+              "Le lendemain matin, la ville semblait avoir retrouvé son calme.",
+              "Pourtant, une inquiétude persistait. Un message anonyme allait bientôt remettre en question tout ce que l'on croyait savoir."
+            ]
+          },
+          {
+            title: "Chapitre 3 — Le secret",
+            content: [
+              "La porte s'ouvrit lentement.",
+              "Ce qui se trouvait derrière allait changer le cours de cette histoire."
+            ]
+          }
         ]
       },
 
@@ -391,11 +462,29 @@
         genre: "Fantasy",
         cover: "images/lune.png",
         description: "Sous une lune mystérieuse, une ville semble cacher des secrets oubliés. Une silhouette surgit dans la nuit et tout pourrait bientôt changer.",
-        chapter: "Épisode 1 — Le commencement",
-        panels: [
-          { image: "images/lune-1.png", text: "La ville sous la lune." },
-          { image: "images/lune-2.png", text: "Une silhouette apparaît au loin." },
-          { image: "images/lune-3.png", text: "Une rencontre inattendue." }
+        chapters: [
+          {
+            title: "Épisode 1 — Le commencement",
+            panels: [
+              { image: "images/lune-1.png", text: "La ville sous la lune." },
+              { image: "images/lune-2.png", text: "Une silhouette apparaît au loin." },
+              { image: "images/lune-3.png", text: "Une rencontre inattendue." }
+            ]
+          },
+          {
+            title: "Épisode 2 — L'inconnue",
+            panels: [
+              { text: "Au détour d'une ruelle, l'inconnue s'arrête et observe les lumières de la ville." },
+              { text: "Un bruit résonne derrière elle. Quelqu'un semble connaître son nom." }
+            ]
+          },
+          {
+            title: "Épisode 3 — Le symbole",
+            panels: [
+              { text: "Sur un mur ancien, un symbole apparaît sous la lumière de la lune." },
+              { text: "L'inconnue comprend que son voyage ne fait que commencer." }
+            ]
+          }
         ]
       },
 
@@ -405,11 +494,29 @@
         genre: "Romance",
         cover: "images/automne.png",
         description: "Les feuilles tombent, les regards se croisent et une journée ordinaire prend une tournure inattendue. Le début d'une romance à découvrir.",
-        chapter: "Chapitre 1 — Un jour d’automne",
-        content: [
-          "Les feuilles dansaient dans le vent lorsqu’ils se croisèrent pour la première fois.",
-          "Un simple regard suffit à rendre cette journée différente des autres.",
-          "Fin de cet extrait de démonstration."
+        chapters: [
+          {
+            title: "Chapitre 1 — Un jour d’automne",
+            content: [
+              "Les feuilles dansaient dans le vent lorsqu’ils se croisèrent pour la première fois.",
+              "Un simple regard suffit à rendre cette journée différente des autres.",
+              "Fin de cet extrait de démonstration."
+            ]
+          },
+          {
+            title: "Chapitre 2 — Un café pour deux",
+            content: [
+              "Le lendemain, ils se retrouvèrent par hasard dans un petit café.",
+              "La conversation commença par quelques banalités, puis les minutes s'envolèrent sans qu'ils s'en aperçoivent."
+            ]
+          },
+          {
+            title: "Chapitre 3 — Avant la pluie",
+            content: [
+              "Le ciel s'assombrit au-dessus de la rue.",
+              "Avant de se séparer, l'un d'eux hésita, puis posa une question qui changea le cours de leur journée."
+            ]
+          }
         ]
       },
 
@@ -419,11 +526,29 @@
         genre: "Mystère",
         cover: "images/ville.png",
         description: "Dans une ville silencieuse où quelque chose semble anormal, chaque rue dissimule peut-être un indice. Une porte mystérieuse pourrait révéler la vérité.",
-        chapter: "Épisode 1 — Une ville étrange",
-        panels: [
-          { image: "images/ville-1.png", text: "Une ville silencieuse au petit matin." },
-          { image: "images/ville-2.png", text: "Une rue où personne ne s’arrête." },
-          { image: "images/ville-3.png", text: "Une porte s’ouvre dans l’obscurité." }
+        chapters: [
+          {
+            title: "Épisode 1 — Une ville étrange",
+            panels: [
+              { image: "images/ville-1.png", text: "Une ville silencieuse au petit matin." },
+              { image: "images/ville-2.png", text: "Une rue où personne ne s’arrête." },
+              { image: "images/ville-3.png", text: "Une porte s’ouvre dans l’obscurité." }
+            ]
+          },
+          {
+            title: "Épisode 2 — La porte",
+            panels: [
+              { text: "La porte grince, mais personne ne semble se trouver derrière." },
+              { text: "Sur le sol, une trace fraîche mène vers une ruelle." }
+            ]
+          },
+          {
+            title: "Épisode 3 — Le premier indice",
+            panels: [
+              { text: "Un carnet oublié contient une carte de la ville." },
+              { text: "Un quartier est encerclé. À côté, trois mots ont été écrits : ne reviens pas." }
+            ]
+          }
         ]
       }
     };
@@ -460,6 +585,15 @@
     const content = document.getElementById("content");
     const favoriteButton = document.getElementById("favoriteButton");
     const favoriteMessage = document.getElementById("favoriteMessage");
+    const chapterSelect = document.getElementById("chapterSelect");
+    const chapterTitle = document.getElementById("chapterTitle");
+    const previousButton = document.getElementById("previousChapter");
+    const nextButton = document.getElementById("nextChapter");
+    const chapterCounter = document.getElementById("chapterCounter");
+    const progressBar = document.getElementById("progressBar");
+    const navigationMessage = document.getElementById("navigationMessage");
+
+    let currentChapterIndex = 0;
 
     function updateFavoriteButton() {
       const favorites = loadFavorites();
@@ -472,10 +606,113 @@
         : "♡ Ajouter aux favoris";
     }
 
+    function renderChapter() {
+      const chapter = story.chapters[currentChapterIndex];
+
+      chapterTitle.textContent = chapter.title;
+      chapterSelect.value = String(currentChapterIndex);
+      chapterCounter.textContent =
+        (currentChapterIndex + 1) + " / " + story.chapters.length;
+
+      progressBar.style.width =
+        ((currentChapterIndex + 1) / story.chapters.length * 100) + "%";
+
+      previousButton.disabled = currentChapterIndex === 0;
+      nextButton.disabled = currentChapterIndex === story.chapters.length - 1;
+
+      content.replaceChildren();
+      navigationMessage.textContent = "";
+
+      if (chapter.panels) {
+        content.className = "";
+
+        const webtoon = document.createElement("div");
+        webtoon.className = "webtoon-content";
+
+        chapter.panels.forEach(function(panelData, index) {
+          const panel = document.createElement("section");
+          panel.className = "webtoon-panel";
+
+          if (panelData.image) {
+            const image = document.createElement("img");
+            image.src = panelData.image;
+            image.alt = story.title + " — case " + (index + 1);
+            image.loading = "lazy";
+            image.hidden = true;
+
+            const fallback = document.createElement("div");
+            fallback.className = "panel-fallback";
+
+            const label = document.createElement("strong");
+            label.textContent = "Case " + (index + 1);
+            fallback.appendChild(label);
+
+            const text = document.createElement("p");
+            text.textContent = panelData.text;
+            fallback.appendChild(text);
+
+            image.addEventListener("load", function() {
+              image.hidden = false;
+              fallback.hidden = true;
+            });
+
+            image.addEventListener("error", function() {
+              image.hidden = true;
+              fallback.hidden = false;
+            });
+
+            panel.appendChild(image);
+            panel.appendChild(fallback);
+          } else {
+            const fallback = document.createElement("div");
+            fallback.className = "panel-fallback";
+
+            const label = document.createElement("strong");
+            label.textContent = "Case " + (index + 1);
+            fallback.appendChild(label);
+
+            const text = document.createElement("p");
+            text.textContent = panelData.text;
+            fallback.appendChild(text);
+
+            panel.appendChild(fallback);
+          }
+
+          webtoon.appendChild(panel);
+        });
+
+        content.appendChild(webtoon);
+
+        const notice = document.createElement("p");
+        notice.className = "notice";
+        notice.textContent =
+          "Les illustrations définitives pourront être ajoutées ultérieurement.";
+        content.appendChild(notice);
+      } else {
+        content.className = "novel-text";
+
+        chapter.content.forEach(function(paragraphText) {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = paragraphText;
+          content.appendChild(paragraph);
+        });
+      }
+    }
+
+    function goToChapter(index) {
+      if (index < 0 || index >= story.chapters.length) return;
+
+      currentChapterIndex = index;
+      renderChapter();
+
+      reader.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     if (!story) {
       document.title = "Œuvre introuvable — Novelia";
       document.getElementById("bookCard").hidden = true;
       document.getElementById("errorMessage").hidden = false;
+      reader.hidden = true;
     } else {
       document.title = story.title + " — Novelia";
 
@@ -485,12 +722,10 @@
       document.getElementById("format").textContent =
         story.type === "Roman" ? "Lecture textuelle" : "Lecture illustrée";
       document.getElementById("description").textContent = story.description;
+
       document.getElementById("chapterCount").textContent =
-        story.type === "Roman"
-          ? "1 chapitre de démonstration"
-          : "1 épisode de démonstration";
-      document.getElementById("chapterTitle").textContent = story.chapter;
-      document.getElementById("readingType").textContent = story.type;
+        story.chapters.length +
+        (story.type === "Roman" ? " chapitres de démonstration" : " épisodes de démonstration");
 
       cover.alt = "Couverture de " + story.title;
       cover.src = story.cover;
@@ -506,6 +741,15 @@
       });
 
       coverFallback.textContent = story.title;
+
+      document.getElementById("readingType").textContent = story.type;
+
+      story.chapters.forEach(function(chapter, index) {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = chapter.title;
+        chapterSelect.appendChild(option);
+      });
 
       updateFavoriteButton();
 
@@ -530,65 +774,28 @@
 
       document.getElementById("startReading").addEventListener("click", function() {
         reader.hidden = false;
+        renderChapter();
         reader.scrollIntoView({ behavior: "smooth", block: "start" });
       });
 
-      if (story.panels) {
-        const webtoon = document.createElement("div");
-        webtoon.className = "webtoon-content";
+      chapterSelect.addEventListener("change", function() {
+        goToChapter(Number(chapterSelect.value));
+      });
 
-        story.panels.forEach(function(panelData, index) {
-          const panel = document.createElement("section");
-          panel.className = "webtoon-panel";
+      previousButton.addEventListener("click", function() {
+        goToChapter(currentChapterIndex - 1);
+      });
 
-          const image = document.createElement("img");
-          image.src = panelData.image;
-          image.alt = story.title + " — case " + (index + 1);
-          image.loading = "lazy";
-          image.hidden = true;
+      nextButton.addEventListener("click", function() {
+        if (currentChapterIndex < story.chapters.length - 1) {
+          goToChapter(currentChapterIndex + 1);
+        } else {
+          navigationMessage.textContent =
+            "Tu as atteint la fin des contenus de démonstration de cette œuvre.";
+        }
+      });
 
-          const fallback = document.createElement("div");
-          fallback.className = "panel-fallback";
-
-          const label = document.createElement("strong");
-          label.textContent = "Case " + (index + 1);
-          fallback.appendChild(label);
-
-          const text = document.createElement("p");
-          text.textContent = panelData.text;
-          fallback.appendChild(text);
-
-          image.addEventListener("load", function() {
-            image.hidden = false;
-            fallback.hidden = true;
-          });
-
-          image.addEventListener("error", function() {
-            image.hidden = true;
-            fallback.hidden = false;
-          });
-
-          panel.appendChild(image);
-          panel.appendChild(fallback);
-          webtoon.appendChild(panel);
-        });
-
-        content.appendChild(webtoon);
-
-        const notice = document.createElement("p");
-        notice.className = "notice";
-        notice.textContent =
-          "Les illustrations définitives pourront être ajoutées ultérieurement.";
-        content.appendChild(notice);
-      } else {
-        content.className = "novel-text";
-
-        story.content.forEach(function(paragraphText) {
-          const paragraph = document.createElement("p");
-          paragraph.textContent = paragraphText;
-          content.appendChild(paragraph);
-        });
-      }
+      renderChapter();
     }
   </script>
 </body>
