@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profil public — Novelia</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #100d19;
+      color: #f5f1ff;
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 650px;
+      margin: 25px auto;
+    }
+    .panel, .story {
+      background: #1c1729;
+      border: 1px solid #382b50;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    h1, h2 { color: #c5a3ff; }
+    .muted { color: #c5bdd6; }
+    button, .link {
+      display: inline-block;
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 9px;
+      background: #9b6bff;
+      color: white;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; }
+    .story h3 { margin-top: 0; }
+    #status { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+<main>
+  <a class="link" href="index.html">← Accueil Novelia</a>
+
+  <section class="panel">
+    <h1 id="name">Profil public</h1>
+    <p id="username" class="muted">Chargement...</p>
+    <p id="emailNote" class="muted">
+      Les adresses e-mail restent privées.
+    </p>
+
+    <p id="counts" class="muted"></p>
+    <button id="followButton" hidden>S'abonner</button>
+    <p id="status" role="status"></p>
+  </section>
+
+  <section>
+    <h2>Histoires publiées</h2>
+    <div id="stories">
+      <p class="muted">Chargement des histoires...</p>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import { createClient } from
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  const supabase = createClient(
+    "https://czwaokqpqgrghxeeyguq.supabase.co",
+    "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+  );
+
+  const $ = id => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const requestedUsername = (params.get("username") || "")
+    .trim().replace(/^@/, "");
+
+  let profile = null;
+  let currentUser = null;
+  let following = false;
+
+  function message(text) {
+    $("status").textContent = text;
+  }
+
+  async function loadPage() {
+    if (!requestedUsername) {
+      $("name").textContent = "Profil introuvable";
+      $("username").textContent =
+        "Ajoute un pseudonyme dans l'adresse de la page.";
+      $("stories").textContent = "";
+      return;
+    }
+
+    const { data: authData } = await supabase.auth.getUser();
+    currentUser = authData?.user || null;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, username, display_name")
+      .ilike("username", requestedUsername)
+      .maybeSingle();
+
+    if (error || !data) {
+      $("name").textContent = "Profil introuvable";
+      $("username").textContent =
+        "Vérifie le pseudonyme ou réessaie plus tard.";
+      $("stories").textContent = "";
+      return;
+    }
+
+    profile = data;
+    $("name").textContent =
+      profile.display_name || profile.username || "Lecteur Novelia";
+    $("username").textContent = "@" + profile.username;
+
+    const [followersResult, followingResult, storiesResult] =
+      await Promise.all([
+        supabase.from("follows").select("follower_id", { count: "exact", head: true })
+          .eq("followed_id", profile.id),
+        supabase.from("follows").select("followed_id", { count: "exact", head: true })
+          .eq("follower_id", profile.id),
+        supabase.from("stories")
+          .select("id, title, description, genre, story_type")
+          .eq("author_id", profile.id)
+          .eq("status", "published")
+          .order("created_at", { ascending: false })
+      ]);
+
+    $("counts").textContent =
+      (followersResult.count ?? 0) + " abonné(s) · " +
+      (followingResult.count ?? 0) + " abonnement(s)";
+
+    if (storiesResult.error) {
+      $("stories").textContent =
+        "Impossible de charger les histoires.";
+    } else if (!storiesResult.data?.length) {
+      $("stories").textContent =
+        "Cet auteur n'a pas encore publié d'histoire.";
+    } else {
+      $("stories").replaceChildren();
+
+      storiesResult.data.forEach(story => {
+        const card = document.createElement("article");
+        card.className = "story";
+
+        const title = document.createElement("h3");
+        title.textContent = story.title;
+
+        const genre = document.createElement("p");
+        genre.className = "muted";
+        genre.textContent =
+          (story.story_type === "webtoon" ? "Webtoon" : "Roman") +
+          " · " + (story.genre || "Autre");
+
+        const description = document.createElement("p");
+        description.textContent = story.description || "";
+
+        card.append(title, genre, description);
+        $("stories").append(card);
+      });
+    }
+
+    if (currentUser && currentUser.id !== profile.id) {
+      $("followButton").hidden = false;
+      await refreshFollowButton();
+    } else if (!currentUser) {
+      message("Connecte-toi pour t'abonner à cet auteur.");
+    }
+  }
+
+  async function refreshFollowButton() {
+    const { data, error } = await supabase
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", currentUser.id)
+      .eq("followed_id", profile.id)
+      .maybeSingle();
+
+    if (error) {
+      message("Impossible de vérifier l'abonnement.");
+      return;
+    }
+
+    following = !!data;
+    $("followButton").textContent =
+      following ? "Se désabonner" : "S'abonner";
+  }
+
+  $("followButton").addEventListener("click", async () => {
+    if (!currentUser) {
+      location.href = "login.html";
+      return;
+    }
+
+    $("followButton").disabled = true;
+
+    let result;
+
+    if (following) {
+      result = await supabase.from("follows")
+        .delete()
+        .eq("follower_id", currentUser.id)
+        .eq("followed_id", profile.id);
+    } else {
+      result = await supabase.from("follows")
+        .insert({
+          follower_id: currentUser.id,
+          followed_id: profile.id
+        });
+    }
+
+    $("followButton").disabled = false;
+
+    if (result.error) {
+      message("Erreur : " + result.error.message);
+      return;
+    }
+
+    message(following
+      ? "Tu ne suis plus cet auteur."
+      : "Tu suis maintenant cet auteur.");
+
+    await loadPage();
+  });
+
+  loadPage();
+</script>
+</body>
+</html>
