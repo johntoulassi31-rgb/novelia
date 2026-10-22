@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#100b18">
+  <title>Lecture — Novelia</title>
+
+  <style>
+    :root {
+      --bg: #100b18;
+      --panel: #1b1326;
+      --purple: #a855f7;
+      --text: #f7f1ff;
+      --muted: #b8a9c9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      line-height: 1.8;
+    }
+
+    header {
+      padding: 18px;
+      background: var(--panel);
+      border-bottom: 1px solid #39234e;
+    }
+
+    header a {
+      color: var(--purple);
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .container {
+      width: min(760px, 100%);
+      margin: auto;
+      padding: 24px 20px 60px;
+    }
+
+    .type {
+      color: var(--purple);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 12px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 7vw, 42px);
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .description {
+      color: var(--muted);
+    }
+
+    .chapter {
+      margin-top: 32px;
+      padding: 22px;
+      background: var(--panel);
+      border-radius: 14px;
+      border: 1px solid #39234e;
+    }
+
+    .chapter h2 {
+      color: #d8b4fe;
+      font-size: 21px;
+    }
+
+    .chapter p {
+      white-space: pre-line;
+    }
+
+    .panel {
+      min-height: 180px;
+      margin: 18px 0;
+      padding: 25px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      background: #291b39;
+      border: 1px solid #68418a;
+      border-radius: 10px;
+      color: #e9d5ff;
+    }
+
+    .notice {
+      padding: 14px;
+      border-left: 3px solid var(--purple);
+      color: var(--muted);
+      background: #1b1326;
+      font-size: 14px;
+    }
+
+    .back {
+      display: inline-block;
+      margin-top: 25px;
+      padding: 11px 18px;
+      border-radius: 8px;
+      background: var(--purple);
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <a href="index.html">✦ NOVELIA</a>
+  </header>
+
+  <main class="container">
+    <div class="type" id="type">Lecture</div>
+    <h1 id="title">Bienvenue sur Novelia</h1>
+    <p class="description" id="description">
+      Ton prochain univers commence ici.
+    </p>
+
+    <div class="chapter">
+      <h2 id="chapterTitle">Présentation de l’œuvre</h2>
+      <div id="content">
+        <p>Sélectionne une œuvre depuis la page d’accueil.</p>
+      </div>
+    </div>
+
+    <a class="back" href="index.html">← Retour à l’accueil</a>
+  </main>
+
+  <footer>Novelia · Chaque histoire mérite d’être racontée.</footer>
+
+  <script>
+    const stories = {
+      roses: {
+        title: "Les Roses de minuit",
+        type: "Roman",
+        description: "Une histoire à découvrir sur Novelia.",
+        chapter: "Chapitre 1 — La première page",
+        content: [
+          "La nuit enveloppait la ville lorsque tout commença.",
+          "Derrière les fenêtres éclairées, des secrets attendaient leur heure. Personne ne savait encore que cette rencontre allait bouleverser plusieurs destins.",
+          "Fin de cet extrait de démonstration."
+        ]
+      },
+
+      lune: {
+        title: "La Lune des oubliés",
+        type: "Webtoon",
+        description: "Une histoire illustrée à découvrir.",
+        chapter: "Épisode 1 — Le commencement",
+        panels: [
+          "Case 1 — La ville sous la lune.",
+          "Case 2 — Une silhouette apparaît au loin.",
+          "Case 3 — Une rencontre inattendue."
+        ]
+      },
+
+      automne: {
+        title: "Un automne pour nous",
+        type: "Roman",
+        description: "Une romance à découvrir sur Novelia.",
+        chapter: "Chapitre 1 — Un jour d’automne",
+        content: [
+          "Les feuilles dansaient dans le vent lorsqu’ils se croisèrent pour la première fois.",
+          "Un simple regard suffit à rendre cette journée différente des autres.",
+          "Fin de cet extrait de démonstration."
+        ]
+      },
+
+      ville: {
+        title: "La Ville sans ombre",
+        type: "Webtoon",
+        description: "Un univers illustré plein de mystères.",
+        chapter: "Épisode 1 — Une ville étrange",
+        panels: [
+          "Case 1 — Une ville silencieuse au petit matin.",
+          "Case 2 — Une rue où personne ne s’arrête.",
+          "Case 3 — Une porte s’ouvre dans l’obscurité."
+        ]
+      }
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("story");
+    const story = stories[id];
+    const content = document.getElementById("content");
+
+    if (story) {
+      document.title = story.title + " — Novelia";
+      document.getElementById("title").textContent = story.title;
+      document.getElementById("type").textContent = story.type;
+      document.getElementById("description").textContent =
+        story.description;
+      document.getElementById("chapterTitle").textContent =
+        story.chapter;
+
+      content.replaceChildren();
+
+      if (story.panels) {
+        story.panels.forEach((panelText, index) => {
+          const panel = document.createElement("div");
+          panel.className = "panel";
+          panel.textContent = panelText;
+          content.appendChild(panel);
+        });
+      } else {
+        story.content.forEach(paragraphText => {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = paragraphText;
+          content.appendChild(paragraph);
+        });
+      }
+    } else {
+      document.getElementById("title").textContent =
+        "Œuvre introuvable";
+      document.getElementById("description").textContent =
+        "Retourne à l’accueil et sélectionne une œuvre.";
+      document.getElementById("chapterTitle").textContent =
+        "Aucune lecture disponible";
+      content.replaceChildren();
+    }
+  </script>
+</body>
+</html>
