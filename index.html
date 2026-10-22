@@ -94,7 +94,6 @@
       min-width: 0;
     }
 
-    /* Couverture provisoire pour les œuvres sans image */
     .cover {
       min-height: 160px;
       padding: 14px;
@@ -104,7 +103,6 @@
       background: linear-gradient(145deg, #32122e, #7f1d3d, #130b20);
     }
 
-    /* Véritable image de couverture */
     .cover-image {
       display: block;
       width: 100%;
@@ -131,7 +129,6 @@
     .info p { color: #b8abc9; font-size: 12px; margin: 0; }
 
     .read { margin-top: 12px; width: 100%; }
-
     .story[hidden] { display: none; }
 
     #message {
@@ -209,18 +206,25 @@
         <div class="info">
           <h3>Les Roses de minuit</h3>
           <p>Dark romance · Roman</p>
-          <button
-            class="button read"
-            data-story="roses"
-          >Découvrir</button>
+          <button class="button read" data-story="roses">
+            Découvrir
+          </button>
         </div>
       </article>
 
       <!-- La Lune des oubliés -->
       <article class="story" data-type="Webtoon">
-        <div class="cover">
+        <img
+          class="cover-image"
+          src="images/lune.png"
+          alt="Couverture de La Lune des oubliés"
+          loading="lazy"
+          onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+        >
+        <div class="cover" hidden>
           La Lune<br>des oubliés
         </div>
+
         <div class="info">
           <h3>La Lune des oubliés</h3>
           <p>Fantasy · Webtoon</p>
@@ -232,9 +236,17 @@
 
       <!-- Un automne pour nous -->
       <article class="story" data-type="Roman">
-        <div class="cover">
+        <img
+          class="cover-image"
+          src="images/automne.png"
+          alt="Couverture de Un automne pour nous"
+          loading="lazy"
+          onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+        >
+        <div class="cover" hidden>
           Un automne<br>pour nous
         </div>
+
         <div class="info">
           <h3>Un automne pour nous</h3>
           <p>Romance · Roman</p>
