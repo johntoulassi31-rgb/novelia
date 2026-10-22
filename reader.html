@@ -16,9 +16,7 @@
       --muted: #b8a9c9;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -32,6 +30,10 @@
       padding: 18px;
       background: var(--panel);
       border-bottom: 1px solid #39234e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
     }
 
     header a {
@@ -43,7 +45,7 @@
     .container {
       width: min(760px, 100%);
       margin: auto;
-      padding: 24px 20px 60px;
+      padding: 24px 16px 60px;
     }
 
     .type {
@@ -59,9 +61,7 @@
       margin-bottom: 8px;
     }
 
-    .description {
-      color: var(--muted);
-    }
+    .description { color: var(--muted); }
 
     .chapter {
       margin-top: 32px;
@@ -74,26 +74,69 @@
     .chapter h2 {
       color: #d8b4fe;
       font-size: 21px;
+      line-height: 1.4;
     }
 
-    .chapter p {
+    .novel-text {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      line-height: 2;
+      overflow-wrap: anywhere;
+    }
+
+    .novel-text p {
+      margin: 0 0 22px;
       white-space: pre-line;
     }
 
-    .panel {
+    .webtoon-content {
+      margin: 0 -22px;
+      background: #09070e;
+    }
+
+    .webtoon-panel {
+      position: relative;
+      width: 100%;
+      margin: 0;
+      background: #171020;
+      border-bottom: 3px solid #09070e;
+    }
+
+    .webtoon-panel img {
+      display: block;
+      width: 100%;
+      height: auto;
       min-height: 180px;
-      margin: 18px 0;
-      padding: 25px;
-      display: grid;
-      place-items: center;
+      object-fit: contain;
+      background: #171020;
+    }
+
+    .panel-fallback {
+      min-height: 240px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      background: #291b39;
-      border: 1px solid #68418a;
-      border-radius: 10px;
       color: #e9d5ff;
+      background: linear-gradient(160deg, #291b39, #100b18);
+    }
+
+    .panel-fallback strong {
+      display: block;
+      color: #d8b4fe;
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    .panel-fallback p {
+      margin: 0;
+      color: var(--muted);
     }
 
     .notice {
+      margin-top: 20px;
       padding: 14px;
       border-left: 3px solid var(--purple);
       color: var(--muted);
@@ -117,6 +160,13 @@
       padding: 20px;
       color: var(--muted);
       font-size: 13px;
+      border-top: 1px solid #39234e;
+    }
+
+    @media (max-width: 480px) {
+      .chapter { padding: 16px; }
+      .webtoon-content { margin: 0 -16px; }
+      .novel-text { font-size: 17px; }
     }
   </style>
 </head>
@@ -124,11 +174,14 @@
 <body>
   <header>
     <a href="index.html">✦ NOVELIA</a>
+    <a href="index.html#histoires">Toutes les œuvres</a>
   </header>
 
   <main class="container">
     <div class="type" id="type">Lecture</div>
+
     <h1 id="title">Bienvenue sur Novelia</h1>
+
     <p class="description" id="description">
       Ton prochain univers commence ici.
     </p>
@@ -143,7 +196,9 @@
     <a class="back" href="index.html">← Retour à l’accueil</a>
   </main>
 
-  <footer>Novelia · Chaque histoire mérite d’être racontée.</footer>
+  <footer>
+    Novelia · Chaque histoire mérite d’être racontée.
+  </footer>
 
   <script>
     const stories = {
@@ -165,9 +220,18 @@
         description: "Une histoire illustrée à découvrir.",
         chapter: "Épisode 1 — Le commencement",
         panels: [
-          "Case 1 — La ville sous la lune.",
-          "Case 2 — Une silhouette apparaît au loin.",
-          "Case 3 — Une rencontre inattendue."
+          {
+            image: "images/lune-1.png",
+            text: "La ville sous la lune."
+          },
+          {
+            image: "images/lune-2.png",
+            text: "Une silhouette apparaît au loin."
+          },
+          {
+            image: "images/lune-3.png",
+            text: "Une rencontre inattendue."
+          }
         ]
       },
 
@@ -189,9 +253,18 @@
         description: "Un univers illustré plein de mystères.",
         chapter: "Épisode 1 — Une ville étrange",
         panels: [
-          "Case 1 — Une ville silencieuse au petit matin.",
-          "Case 2 — Une rue où personne ne s’arrête.",
-          "Case 3 — Une porte s’ouvre dans l’obscurité."
+          {
+            image: "images/ville-1.png",
+            text: "Une ville silencieuse au petit matin."
+          },
+          {
+            image: "images/ville-2.png",
+            text: "Une rue où personne ne s’arrête."
+          },
+          {
+            image: "images/ville-3.png",
+            text: "Une porte s’ouvre dans l’obscurité."
+          }
         ]
       }
     };
@@ -203,6 +276,7 @@
 
     if (story) {
       document.title = story.title + " — Novelia";
+
       document.getElementById("title").textContent = story.title;
       document.getElementById("type").textContent = story.type;
       document.getElementById("description").textContent =
@@ -213,27 +287,75 @@
       content.replaceChildren();
 
       if (story.panels) {
-        story.panels.forEach((panelText, index) => {
-          const panel = document.createElement("div");
-          panel.className = "panel";
-          panel.textContent = panelText;
-          content.appendChild(panel);
+        const webtoon = document.createElement("div");
+        webtoon.className = "webtoon-content";
+
+        story.panels.forEach(function(panelData, index) {
+          const panel = document.createElement("section");
+          panel.className = "webtoon-panel";
+
+          const image = document.createElement("img");
+          image.src = panelData.image;
+          image.alt = story.title + " — case " + (index + 1);
+          image.loading = "lazy";
+
+          const fallback = document.createElement("div");
+          fallback.className = "panel-fallback";
+          fallback.innerHTML =
+            "<strong>Case " + (index + 1) + "</strong>";
+
+          const text = document.createElement("p");
+          text.textContent = panelData.text;
+          fallback.appendChild(text);
+
+          image.addEventListener("error", function() {
+            image.hidden = true;
+            fallback.hidden = false;
+          });
+
+          image.addEventListener("load", function() {
+            fallback.hidden = true;
+          });
+
+          panel.appendChild(image);
+          panel.appendChild(fallback);
+          webtoon.appendChild(panel);
         });
+
+        content.appendChild(webtoon);
+
+        const notice = document.createElement("p");
+        notice.className = "notice";
+        notice.textContent =
+          "Les illustrations de cet épisode seront affichées ici dès qu’elles seront disponibles.";
+        content.appendChild(notice);
+
       } else {
-        story.content.forEach(paragraphText => {
+        content.className = "novel-text";
+
+        story.content.forEach(function(paragraphText) {
           const paragraph = document.createElement("p");
           paragraph.textContent = paragraphText;
           content.appendChild(paragraph);
         });
       }
+
     } else {
+      document.title = "Œuvre introuvable — Novelia";
+
       document.getElementById("title").textContent =
         "Œuvre introuvable";
       document.getElementById("description").textContent =
         "Retourne à l’accueil et sélectionne une œuvre.";
       document.getElementById("chapterTitle").textContent =
         "Aucune lecture disponible";
+
       content.replaceChildren();
+
+      const message = document.createElement("p");
+      message.textContent =
+        "Cette œuvre n’existe pas ou le lien est incorrect.";
+      content.appendChild(message);
     }
   </script>
 </body>
