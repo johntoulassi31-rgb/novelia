@@ -1,0 +1,282 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Publier une histoire — Novelia</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #100d19;
+  --panel: #1c1729;
+  --purple: #a78bfa;
+  --text: #f5f3ff;
+  --muted: #b7aecb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+main { max-width: 760px; margin: auto; }
+header { margin-bottom: 24px; }
+a { color: var(--purple); }
+h1 { margin-bottom: 8px; }
+p { line-height: 1.5; }
+.panel {
+  background: var(--panel);
+  border: 1px solid #382d50;
+  border-radius: 16px;
+  padding: 22px;
+}
+label {
+  display: block;
+  margin: 18px 0 8px;
+  font-weight: bold;
+}
+input, textarea, select {
+  width: 100%;
+  padding: 13px;
+  border-radius: 9px;
+  border: 1px solid #514365;
+  background: #100d19;
+  color: white;
+  font: inherit;
+}
+textarea { min-height: 130px; resize: vertical; }
+button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--purple);
+  color: #170f29;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:disabled { opacity: .6; cursor: wait; }
+#message {
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 9px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.note { color: var(--muted); font-size: 14px; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p><a href="index.html">← Retour à Novelia</a></p>
+  <h1>Publier une histoire</h1>
+  <p class="note">Présente ton univers et ajoute le premier chapitre de ton histoire.</p>
+  <p id="account">Vérification de la connexion…</p>
+</header>
+
+<section class="panel">
+  <form id="publishForm" class="hidden">
+    <label for="title">Titre de l'histoire *</label>
+    <input id="title" maxlength="150" required placeholder="Ex. : Les Roses de minuit">
+
+    <label for="description">Résumé *</label>
+    <textarea id="description" maxlength="5000" required
+      placeholder="Présente ton histoire aux lecteurs…"></textarea>
+
+    <label for="type">Format *</label>
+    <select id="type" required>
+      <option value="roman">Roman</option>
+      <option value="webtoon">Webtoon</option>
+    </select>
+
+    <label for="genre">Genre</label>
+    <select id="genre">
+      <option>Romance</option>
+      <option>Dark romance</option>
+      <option>Fantasy</option>
+      <option>Mystère</option>
+      <option>Thriller</option>
+      <option>Science-fiction</option>
+      <option>Drame</option>
+      <option>Autre</option>
+    </select>
+
+    <label for="cover">URL de la couverture (facultatif)</label>
+    <input id="cover" type="url" placeholder="https://exemple.com/couverture.jpg">
+    <p class="note">Utilise une image dont tu as le droit de te servir.</p>
+
+    <hr style="border-color:#382d50;margin-top:26px">
+
+    <h2>Premier chapitre</h2>
+
+    <label for="chapterTitle">Titre du chapitre *</label>
+    <input id="chapterTitle" maxlength="200" required
+      placeholder="Ex. : Chapitre 1 — La rencontre">
+
+    <label for="content">Contenu du chapitre *</label>
+    <textarea id="content" required
+      placeholder="Commence à écrire ici…" ></textarea>
+    <p class="note">
+      Pour un roman, colle le texte du chapitre. Pour un webtoon,
+      cette première version accepte du texte et des liens d'images dans le contenu.
+    </p>
+
+    <label for="status">Visibilité</label>
+    <select id="status">
+      <option value="published">Publier maintenant</option>
+      <option value="draft">Garder en brouillon</option>
+    </select>
+
+    <button id="submitButton" type="submit">Enregistrer mon histoire</button>
+  </form>
+
+  <div id="message" role="status"></div>
+</section>
+</main>
+
+<script type="module">
+import { createClient } from
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const supabase = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
+
+const form = document.getElementById("publishForm");
+const account = document.getElementById("account");
+const message = document.getElementById("message");
+const button = document.getElementById("submitButton");
+
+let currentUser = null;
+
+function showMessage(text, success = false) {
+  message.textContent = text;
+  message.style.background = success ? "#173c2c" : "#38202d";
+  message.style.color = success ? "#b9f6d0" : "#ffd5df";
+}
+
+async function initialize() {
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data.user) {
+    account.textContent = "Tu dois être connecté pour publier.";
+    showMessage("Connecte-toi à ton compte Novelia avant de publier.");
+    message.innerHTML = "";
+    const link = document.createElement("a");
+    link.href = "login.html";
+    link.textContent = "Se connecter";
+    message.appendChild(link);
+    return;
+  }
+
+  currentUser = data.user;
+  account.textContent = "Connecté : " + currentUser.email;
+  form.classList.remove("hidden");
+}
+
+await initialize();
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!currentUser) {
+    showMessage("Connecte-toi avant de publier.");
+    return;
+  }
+
+  const title = document.getElementById("title").value.trim();
+  const description = document.getElementById("description").value.trim();
+  const storyType = document.getElementById("type").value;
+  const genre = document.getElementById("genre").value;
+  const coverUrl = document.getElementById("cover").value.trim();
+  const chapterTitle = document.getElementById("chapterTitle").value.trim();
+  const content = document.getElementById("content").value.trim();
+  const status = document.getElementById("status").value;
+
+  if (!title || !description || !chapterTitle || !content) {
+    showMessage("Remplis tous les champs obligatoires.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Enregistrement…";
+  showMessage("Enregistrement de ton histoire en cours…");
+
+  try {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    if (!profile) {
+      throw new Error(
+        "Ton profil Novelia n'existe pas encore. Déconnecte-toi, reconnecte-toi puis réessaie."
+      );
+    }
+
+    const { data: story, error: storyError } = await supabase
+      .from("stories")
+      .insert({
+        author_id: currentUser.id,
+        title,
+        description,
+        cover_url: coverUrl,
+        story_type: storyType,
+        genre,
+        status
+      })
+      .select("id")
+      .single();
+
+    if (storyError) throw storyError;
+
+    const { error: chapterError } = await supabase
+      .from("chapters")
+      .insert({
+        story_id: story.id,
+        title: chapterTitle,
+        content,
+        chapter_number: 1
+      });
+
+    if (chapterError) {
+      showMessage(
+        "L'histoire a été créée, mais le premier chapitre n'a pas été enregistré. " +
+        "Garde cet identifiant pour assistance : " + story.id +
+        "\nErreur : " + chapterError.message
+      );
+      return;
+    }
+
+    showMessage(
+      status === "published"
+        ? "Histoire publiée dans la base de données Novelia !\n" +
+          "Le premier chapitre a été enregistré. L'affichage dans le catalogue et le lecteur sera connecté à cette base dans une prochaine étape."
+        : "Brouillon enregistré avec son premier chapitre.\n" +
+          "Tu pourras le publier plus tard.",
+      true
+    );
+
+    form.reset();
+  } catch (error) {
+    showMessage("Impossible d'enregistrer : " + error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Enregistrer mon histoire";
+  }
+});
+</script>
+</body>
+</html>
+
