@@ -258,9 +258,17 @@
 
       <!-- La Ville sans ombre -->
       <article class="story" data-type="Webtoon">
-        <div class="cover">
+        <img
+          class="cover-image"
+          src="images/ville.png"
+          alt="Couverture de La Ville sans ombre"
+          loading="lazy"
+          onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+        >
+        <div class="cover" hidden>
           La Ville<br>sans ombre
         </div>
+
         <div class="info">
           <h3>La Ville sans ombre</h3>
           <p>Mystère · Webtoon</p>
