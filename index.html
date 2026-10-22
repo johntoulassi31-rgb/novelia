@@ -30,8 +30,33 @@
     }
 
     .logo { color: #b99aff; font-size: 24px; font-weight: bold; }
-    nav { display: flex; gap: 14px; flex-wrap: wrap; }
+    nav { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
     nav a { color: #d8c9f5; text-decoration: none; font-size: 14px; }
+
+    .account-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: #d8c9f5;
+    }
+
+    .account-email {
+      max-width: 190px;
+      overflow-wrap: anywhere;
+    }
+
+    .account-button {
+      background: #392750;
+      border: 1px solid #7957a0;
+      color: white;
+      border-radius: 8px;
+      padding: 9px 12px;
+      text-decoration: none;
+      cursor: pointer;
+      font-size: 13px;
+    }
 
     .hero {
       margin: 24px 16px;
@@ -57,7 +82,6 @@
 
     main { padding: 0 16px 30px; }
     h2 { font-size: 22px; }
-
     .search-box { margin: 18px 0; }
 
     .search-box label {
@@ -151,7 +175,6 @@
     .info { padding: 12px; }
     .info h3 { font-size: 15px; margin: 0 0 8px; }
     .info p { color: #b8abc9; font-size: 12px; margin: 0; }
-
     .read { margin-top: 12px; width: 100%; }
 
     .favorite {
@@ -159,7 +182,7 @@
       height: 38px;
       border-radius: 50%;
       border: 1px solid #6b4a89;
-      background: #191324eF;
+      background: #191324ef;
       color: white;
       font-size: 22px;
       cursor: pointer;
@@ -168,15 +191,9 @@
       justify-content: center;
     }
 
-    .favorite-card {
-      position: absolute;
-      top: 9px;
-      right: 9px;
-    }
-
+    .favorite-card { position: absolute; top: 9px; right: 9px; }
     .favorite.saved { color: #ff79b0; border-color: #ff79b0; }
     .story[hidden] { display: none; }
-
     #message { color: #c4a5ff; line-height: 1.6; }
 
     footer {
@@ -202,11 +219,22 @@
 <body>
   <header>
     <div class="logo">✦ NOVELIA</div>
+
     <nav>
       <a href="#accueil">Accueil</a>
       <a href="#histoires" data-nav="Roman">Romans</a>
       <a href="#histoires" data-nav="Webtoon">Webtoons</a>
     </nav>
+
+    <div class="account-area">
+      <span id="accountStatus">Vérification du compte...</span>
+      <a id="loginLink" class="account-button" href="./login.html" hidden>
+        Se connecter
+      </a>
+      <button id="logoutButton" class="account-button" hidden>
+        Déconnexion
+      </button>
+    </div>
   </header>
 
   <section class="hero" id="accueil">
@@ -302,25 +330,41 @@
   </main>
 
   <footer>
-    © Novelia — Version bêta 0.4<br>
+    © Novelia — Version bêta 0.5<br>
     Les histoires présentées sont des exemples fictifs.
   </footer>
 
-  <script>
+  <script type="module">
+    import { createClient } from
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL =
+      "https://czwaokqpqgrghxeeyguq.supabase.co";
+
+    const SUPABASE_KEY =
+      "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const filters = document.querySelectorAll("[data-filter]");
     const stories = document.querySelectorAll(".story");
     const search = document.getElementById("search");
     const message = document.getElementById("message");
-    const FAVORITES_KEY = "novelia_favorites";
+    const accountStatus = document.getElementById("accountStatus");
+    const loginLink = document.getElementById("loginLink");
+    const logoutButton = document.getElementById("logoutButton");
 
+    const FAVORITES_KEY = "novelia_favorites";
     let activeType = "Tous";
     let favorites = loadFavorites();
 
     function loadFavorites() {
       try {
-        const saved = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
+        const saved = JSON.parse(
+          localStorage.getItem(FAVORITES_KEY) || "[]"
+        );
         return Array.isArray(saved) ? saved : [];
-      } catch (error) {
+      } catch {
         return [];
       }
     }
@@ -329,22 +373,26 @@
       try {
         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
         return true;
-      } catch (error) {
-        message.textContent = "Impossible de sauvegarder les favoris dans ce navigateur.";
+      } catch {
+        message.textContent =
+          "Impossible de sauvegarder les favoris dans ce navigateur.";
         return false;
       }
     }
 
     function updateFavoriteButtons() {
-      document.querySelectorAll("[data-favorite]").forEach(function(button) {
+      document.querySelectorAll("[data-favorite]").forEach(button => {
         const id = button.dataset.favorite;
         const saved = favorites.includes(id);
+
         button.textContent = saved ? "♥" : "♡";
         button.classList.toggle("saved", saved);
         button.setAttribute("aria-pressed", String(saved));
         button.setAttribute(
           "aria-label",
-          (saved ? "Retirer " : "Ajouter ") + id + (saved ? " des favoris" : " aux favoris")
+          saved
+            ? "Retirer cette histoire des favoris"
+            : "Ajouter cette histoire aux favoris"
         );
       });
     }
@@ -353,45 +401,51 @@
       const query = search.value.trim().toLocaleLowerCase("fr");
       let visibleCount = 0;
 
-      stories.forEach(function(story) {
+      stories.forEach(story => {
         const text = story.innerText.toLocaleLowerCase("fr");
+
         const matchesType =
           activeType === "Tous" ||
           (activeType === "Favoris"
             ? favorites.includes(story.dataset.id)
             : story.dataset.type === activeType);
-        const matchesSearch = text.includes(query);
-        const visible = matchesType && matchesSearch;
 
+        const visible = matchesType && text.includes(query);
         story.hidden = !visible;
+
         if (visible) visibleCount++;
       });
 
-      filters.forEach(function(button) {
-        button.classList.toggle("active", button.dataset.filter === activeType);
+      filters.forEach(button => {
+        button.classList.toggle(
+          "active",
+          button.dataset.filter === activeType
+        );
       });
 
       if (visibleCount === 0) {
-        message.textContent = activeType === "Favoris" && favorites.length === 0
-          ? "Tu n’as pas encore de favoris. Appuie sur ♡ sur une histoire pour l’ajouter."
-          : "Aucune histoire trouvée. Essaie un autre titre ou un autre genre.";
+        message.textContent =
+          activeType === "Favoris" && favorites.length === 0
+            ? "Tu n’as pas encore de favoris. Appuie sur ♡ sur une histoire pour l’ajouter."
+            : "Aucune histoire trouvée. Essaie un autre titre ou un autre genre.";
       } else if (query !== "") {
         message.textContent = visibleCount +
-          (visibleCount > 1 ? " histoires trouvées." : " histoire trouvée.");
+          (visibleCount > 1
+            ? " histoires trouvées."
+            : " histoire trouvée.");
       } else {
         message.textContent = "";
       }
     }
 
-    document.querySelectorAll("[data-favorite]").forEach(function(button) {
-      button.addEventListener("click", function() {
+    // Gestion des favoris existants
+    document.querySelectorAll("[data-favorite]").forEach(button => {
+      button.addEventListener("click", () => {
         const id = button.dataset.favorite;
 
-        if (favorites.includes(id)) {
-          favorites = favorites.filter(function(item) { return item !== id; });
-        } else {
-          favorites.push(id);
-        }
+        favorites = favorites.includes(id)
+          ? favorites.filter(item => item !== id)
+          : [...favorites, id];
 
         if (saveFavorites()) {
           updateFavoriteButtons();
@@ -400,15 +454,15 @@
       });
     });
 
-    filters.forEach(function(button) {
-      button.addEventListener("click", function() {
+    filters.forEach(button => {
+      button.addEventListener("click", () => {
         activeType = button.dataset.filter;
         filterStories();
       });
     });
 
-    document.querySelectorAll("[data-nav]").forEach(function(link) {
-      link.addEventListener("click", function() {
+    document.querySelectorAll("[data-nav]").forEach(link => {
+      link.addEventListener("click", () => {
         activeType = link.dataset.nav;
         filterStories();
       });
@@ -416,16 +470,66 @@
 
     search.addEventListener("input", filterStories);
 
-    document.getElementById("explore").addEventListener("click", function() {
-      document.getElementById("histoires").scrollIntoView({ behavior: "smooth" });
+    document.getElementById("explore").addEventListener("click", () => {
+      document.getElementById("histoires").scrollIntoView({
+        behavior: "smooth"
+      });
       search.focus();
     });
 
-    document.querySelectorAll("[data-story]").forEach(function(button) {
-      button.addEventListener("click", function() {
+    document.querySelectorAll("[data-story]").forEach(button => {
+      button.addEventListener("click", () => {
         window.location.href = "reader.html?story=" +
           encodeURIComponent(button.dataset.story);
       });
+    });
+
+    // Affichage de l'utilisateur connecté
+    async function updateAccount(session) {
+      if (session?.user) {
+        accountStatus.textContent = session.user.email || "Lecteur connecté";
+        loginLink.hidden = true;
+        logoutButton.hidden = false;
+      } else {
+        accountStatus.textContent = "Visiteur";
+        loginLink.hidden = false;
+        logoutButton.hidden = true;
+      }
+    }
+
+    logoutButton.addEventListener("click", async () => {
+      logoutButton.disabled = true;
+      accountStatus.textContent = "Déconnexion...";
+
+      const { error } = await supabase.auth.signOut();
+
+      logoutButton.disabled = false;
+
+      if (error) {
+        message.textContent = "Erreur de déconnexion : " + error.message;
+        const { data } = await supabase.auth.getSession();
+        await updateAccount(data.session);
+        return;
+      }
+
+      await updateAccount(null);
+      message.textContent = "Tu es déconnecté de Novelia.";
+    });
+
+    // Vérifier la session existante puis suivre les changements
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError) {
+      accountStatus.textContent = "Connexion indisponible";
+      message.textContent =
+        "Impossible de vérifier la session. Recharge la page.";
+    } else {
+      await updateAccount(sessionData.session);
+    }
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      updateAccount(session);
     });
 
     updateFavoriteButtons();
