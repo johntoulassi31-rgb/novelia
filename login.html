@@ -7,34 +7,86 @@
   <title>Connexion | Novelia</title>
   <style>
     * { box-sizing: border-box; }
+
     body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center;
-      padding: 20px; background: #100b1d; color: #f5efff;
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: #100b1d;
+      color: #f5efff;
       font-family: Arial, sans-serif;
     }
+
     .panel {
-      width: 100%; max-width: 420px; padding: 28px;
-      background: #1c1430; border: 1px solid #49336b;
+      width: 100%;
+      max-width: 420px;
+      padding: 28px;
+      background: #1c1430;
+      border: 1px solid #49336b;
       border-radius: 18px;
     }
-    h1 { text-align: center; color: #c7a5ff; margin-top: 0; }
-    p { color: #c9bfd9; line-height: 1.5; }
-    label { display: block; margin: 15px 0 7px; }
+
+    h1 {
+      text-align: center;
+      color: #c7a5ff;
+      margin-top: 0;
+    }
+
+    p {
+      color: #c9bfd9;
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      margin: 15px 0 7px;
+    }
+
     input {
-      width: 100%; padding: 13px; border-radius: 9px;
-      border: 1px solid #594477; background: #100b1d;
-      color: white; font-size: 16px;
+      width: 100%;
+      padding: 13px;
+      border-radius: 9px;
+      border: 1px solid #594477;
+      background: #100b1d;
+      color: white;
+      font-size: 16px;
     }
+
     button {
-      width: 100%; padding: 13px; margin-top: 14px;
-      border: 0; border-radius: 9px; background: #9b6bdf;
-      color: white; font-weight: bold; font-size: 16px;
+      width: 100%;
+      padding: 13px;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 9px;
+      background: #9b6bdf;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
     }
-    button.secondary { background: #392750; }
-    #message { overflow-wrap: anywhere; margin-top: 16px; }
-    a { color: #c7a5ff; }
+
+    button.secondary {
+      background: #392750;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    #message {
+      overflow-wrap: anywhere;
+      margin-top: 16px;
+    }
+
+    a {
+      color: #c7a5ff;
+    }
   </style>
 </head>
+
 <body>
   <main class="panel">
     <h1>Novelia</h1>
@@ -42,13 +94,28 @@
 
     <form id="authForm">
       <label for="email">Adresse e-mail</label>
-      <input id="email" type="email" autocomplete="email" required>
+      <input
+        id="email"
+        type="email"
+        autocomplete="email"
+        placeholder="exemple@email.com"
+        required
+      >
 
       <label for="password">Mot de passe</label>
-      <input id="password" type="password"
-             autocomplete="current-password" minlength="6" required>
+      <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        minlength="6"
+        placeholder="6 caractères minimum"
+        required
+      >
 
-      <button type="submit" id="loginBtn">Se connecter</button>
+      <button type="submit" id="loginBtn">
+        Se connecter
+      </button>
+
       <button type="button" class="secondary" id="signupBtn">
         Créer un compte
       </button>
@@ -62,67 +129,110 @@
     import { createClient } from
       "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-    const SUPABASE_URL = "COLLE_ICI_TON_PROJECT_URL";
-    const SUPABASE_KEY = "COLLE_ICI_TA_CLE_PUBLIQUE";
+    const SUPABASE_URL =
+      "https://czwaokqpqgrghxeeyguq.supabase.co";
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    const message = document.getElementById("message");
+    const SUPABASE_KEY =
+      "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg";
+
+    const supabase = createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
     const form = document.getElementById("authForm");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
     const signupBtn = document.getElementById("signupBtn");
+    const message = document.getElementById("message");
 
     function showMessage(text) {
       message.textContent = text;
     }
 
+    function setLoading(loading) {
+      loginBtn.disabled = loading;
+      signupBtn.disabled = loading;
+    }
+
+    // Connexion
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      setLoading(true);
       showMessage("Connexion en cours...");
 
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email, password
-      });
+        if (error) {
+          showMessage("Erreur : " + error.message);
+          return;
+        }
 
-      if (error) {
-        showMessage("Connexion impossible : " + error.message);
-        return;
+        showMessage("Connexion réussie !");
+        window.location.href = "./index.html";
+      } catch (error) {
+        showMessage("Une erreur réseau est survenue. Réessaie.");
+      } finally {
+        setLoading(false);
       }
-
-      window.location.href = "./index.html";
     });
 
+    // Inscription
     signupBtn.addEventListener("click", async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email) {
+        showMessage("Entre ton adresse e-mail.");
+        emailInput.focus();
+        return;
+      }
+
+      if (password.length < 6) {
+        showMessage("Le mot de passe doit contenir au moins 6 caractères.");
+        passwordInput.focus();
+        return;
+      }
+
+      setLoading(true);
       showMessage("Création du compte en cours...");
 
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo:
+              "https://johntoulassi31-rgb.github.io/novelia/"
+          }
+        });
 
-      if (!email || password.length < 6) {
-        showMessage("Entre un e-mail valide et un mot de passe d’au moins 6 caractères.");
-        return;
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin +
-            window.location.pathname.replace(/[^/]*$/, "index.html")
+        if (error) {
+          showMessage("Erreur : " + error.message);
+          return;
         }
-      });
 
-      if (error) {
-        showMessage("Inscription impossible : " + error.message);
-        return;
-      }
-
-      if (data.session) {
-        showMessage("Compte créé. Redirection...");
-        window.location.href = "./index.html";
-      } else {
-        showMessage("Compte créé. Consulte tes e-mails pour confirmer ton inscription avant de te connecter.");
+        if (data.session) {
+          showMessage("Compte créé. Redirection...");
+          window.location.href = "./index.html";
+        } else {
+          showMessage(
+            "Inscription enregistrée. Consulte tes e-mails pour confirmer ton compte, puis connecte-toi."
+          );
+        }
+      } catch (error) {
+        showMessage("Une erreur réseau est survenue. Réessaie.");
+      } finally {
+        setLoading(false);
       }
     });
   </script>
