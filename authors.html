@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Découvrir les auteurs — Novelia</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 22px 16px;
+      background: #100d19;
+      color: #f5f1ff;
+      font-family: Arial, sans-serif;
+    }
+    main { max-width: 700px; margin: 20px auto; }
+    .panel, .author {
+      background: #1c1729;
+      border: 1px solid #382b50;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+    h1, h2 { color: #c5a3ff; }
+    .muted { color: #c5bdd6; }
+    input {
+      width: 100%;
+      padding: 13px;
+      border-radius: 9px;
+      border: 1px solid #49365f;
+      background: #110e19;
+      color: white;
+      font-size: 16px;
+      margin: 8px 0 12px;
+    }
+    button, .link {
+      display: inline-block;
+      padding: 11px 15px;
+      border: 0;
+      border-radius: 9px;
+      background: #9b6bff;
+      color: white;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .author h3 { margin: 0 0 8px; }
+    #status { overflow-wrap: anywhere; }
+    .error { color: #ffaaaa; }
+    .results { margin-top: 20px; }
+  </style>
+</head>
+<body>
+<main>
+  <a class="link" href="index.html">← Accueil Novelia</a>
+
+  <section class="panel">
+    <h1>Découvrir les auteurs</h1>
+    <p class="muted">
+      Recherche un auteur par son pseudonyme ou son nom affiché.
+    </p>
+
+    <form id="searchForm">
+      <label for="searchInput">Nom ou pseudonyme</label>
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Ex. : PlumeObsidienne"
+        minlength="1"
+        maxlength="50"
+        autocomplete="off"
+        required
+      >
+      <button type="submit" id="searchButton">
+        Rechercher
+      </button>
+    </form>
+
+    <p id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="results">
+    <h2>Résultats</h2>
+    <div id="results">
+      <p class="muted">
+        Entre un pseudonyme pour rechercher un auteur.
+      </p>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { createClient } from
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const supabase = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
+
+const $ = id => document.getElementById(id);
+
+function showStatus(text, isError = false) {
+  $("status").textContent = text;
+  $("status").className = isError ? "error" : "muted";
+}
+
+function renderAuthors(profiles) {
+  const container = $("results");
+  container.replaceChildren();
+
+  if (!profiles || profiles.length === 0) {
+    container.textContent = "Aucun auteur trouvé.";
+    return;
+  }
+
+  profiles.forEach(profile => {
+    const card = document.createElement("article");
+    card.className = "author";
+
+    const name = document.createElement("h3");
+    name.textContent =
+      profile.display_name || profile.username || "Auteur Novelia";
+
+    const username = document.createElement("p");
+    username.className = "muted";
+    username.textContent = "@" + profile.username;
+
+    const link = document.createElement("a");
+    link.className = "link";
+    link.textContent = "Voir le profil";
+    link.href =
+      "public-profile.html?username=" +
+      encodeURIComponent(profile.username);
+
+    card.append(name, username, link);
+    container.append(card);
+  });
+}
+
+$("searchForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const term = $("searchInput").value.trim().replace(/^@/, "");
+
+  if (!term) {
+    showStatus("Entre un pseudonyme.", true);
+    return;
+  }
+
+  const button = $("searchButton");
+  button.disabled = true;
+  showStatus("Recherche en cours...");
+
+  try {
+    // Recherche exacte du pseudonyme, sans distinction majuscules/minuscules.
+    const { data: exactMatches, error: exactError } = await supabase
+      .from("profiles")
+      .select("id, username, display_name")
+      .ilike("username", term)
+      .limit(20);
+
+    if (exactError) throw exactError;
+
+    let profiles = exactMatches || [];
+
+    // Si aucun pseudonyme exact ne correspond, rechercher les noms affichés.
+    if (profiles.length === 0) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, display_name")
+        .ilike("display_name", "%" + term + "%")
+        .limit(20);
+
+      if (error) throw error;
+      profiles = data || [];
+    }
+
+    renderAuthors(profiles);
+    showStatus(
+      profiles.length + " résultat(s) trouvé(s)."
+    );
+  } catch (error) {
+    console.error("Recherche des auteurs :", error);
+    $("results").replaceChildren();
+    showStatus(
+      "La recherche a échoué : " +
+      (error.message || "erreur inconnue.") +
+      " Vérifie notamment les autorisations de lecture de profiles.",
+      true
+    );
+  } finally {
+    button.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
