@@ -28,6 +28,9 @@ h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .primary{background:var(--purple);color:white}
 .secondary,.favorite-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
 .favorite-button.is-favorite{background:#4a1949;border-color:#c084fc}
+.story-like-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
+.story-like-button.is-liked{background:#4a1949;border-color:#c084fc;color:#ffb1d6}
+.like-counter{color:var(--muted);font-size:13px;margin:8px 0 0;overflow-wrap:anywhere}
 .details{padding:0 20px 20px;color:var(--muted);font-size:13px}
 .reader{margin-top:28px;scroll-margin-top:15px}
 .chapter{padding:22px}
@@ -83,7 +86,10 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
         <button class="button primary" id="startReading">Commencer la lecture</button>
         <button class="button primary" id="resumeReading" hidden>Reprendre la lecture</button>
         <button class="button favorite-button" id="favoriteButton">♡ Ajouter aux favoris</button>
+        <button class="button story-like-button" id="storyLikeButton" hidden aria-pressed="false">♡ J’aime cette œuvre</button>
       </div>
+      <p class="like-counter" id="storyLikeCount" role="status" hidden>Chargement des J’aime…</p>
+      <p class="summary" id="storyLikeMessage" role="status" aria-live="polite"></p>
       <p class="summary" id="favoriteMessage" role="status"></p>
       <p class="summary" id="progressMessage" role="status"></p>
     </div>
@@ -193,6 +199,9 @@ let currentUser = null;
 let isDatabaseStory = Boolean(dbStoryId);
 let librarySyncReady = false;
 let librarySyncQueue = Promise.resolve();
+let storyLiked = false;
+let storyLikeCount = 0;
+let storyLikeBusy = false;
 
 const $ = id => document.getElementById(id);
 const cover = $("cover");
@@ -355,6 +364,92 @@ function saveProgress() {
     }
   } catch {
     $("savedMessage").textContent = "La sauvegarde est indisponible sur cet appareil.";
+  }
+}
+
+async function refreshStoryLikes() {
+  const button = $("storyLikeButton");
+  const countLabel = $("storyLikeCount");
+  button.hidden = !isDatabaseStory || !story?.id;
+  countLabel.hidden = !isDatabaseStory || !story?.id;
+  if (!isDatabaseStory || !story?.id) return;
+
+  button.disabled = true;
+  countLabel.textContent = "Chargement des J’aime…";
+  const { count, error: countError } = await supabase
+    .from("story_likes")
+    .select("user_id", { count: "exact", head: true })
+    .eq("story_id", story.id);
+
+  if (countError) {
+    console.warn("Compteur des J’aime indisponible :", countError.message);
+    countLabel.textContent = "Nombre de J’aime indisponible.";
+    button.disabled = false;
+    $("storyLikeMessage").textContent = "Impossible de charger les J’aime. Vérifie la table story_likes et ses règles RLS.";
+    return;
+  }
+
+  storyLikeCount = count ?? 0;
+  countLabel.textContent = storyLikeCount + " J’aime";
+  storyLiked = false;
+
+  if (currentUser) {
+    const { data, error } = await supabase
+      .from("story_likes")
+      .select("story_id")
+      .eq("story_id", story.id)
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.warn("Vérification du J’aime impossible :", error.message);
+      $("storyLikeMessage").textContent = "Impossible de vérifier ton J’aime : " + error.message;
+    } else {
+      storyLiked = Boolean(data);
+      $("storyLikeMessage").textContent = "";
+    }
+  } else {
+    $("storyLikeMessage").textContent = "Connecte-toi pour aimer cette œuvre.";
+  }
+
+  button.classList.toggle("is-liked", storyLiked);
+  button.setAttribute("aria-pressed", String(storyLiked));
+  button.textContent = storyLiked ? "♥ Tu aimes cette œuvre" : "♡ J’aime cette œuvre";
+  button.disabled = false;
+}
+
+async function toggleStoryLike() {
+  if (!isDatabaseStory || !story?.id || storyLikeBusy) return;
+  if (!currentUser) {
+    $("storyLikeMessage").textContent = "Connecte-toi pour aimer cette œuvre. Ton J’aime n’a pas été enregistré.";
+    return;
+  }
+
+  storyLikeBusy = true;
+  const button = $("storyLikeButton");
+  button.disabled = true;
+  const wasLiked = storyLiked;
+  try {
+    const result = wasLiked
+      ? await supabase.from("story_likes").delete().eq("story_id", story.id).eq("user_id", currentUser.id)
+      : await supabase.from("story_likes").insert({ story_id: story.id, user_id: currentUser.id });
+    if (result.error) throw result.error;
+
+    storyLiked = !wasLiked;
+    storyLikeCount = Math.max(0, storyLikeCount + (wasLiked ? -1 : 1));
+    button.classList.toggle("is-liked", storyLiked);
+    button.setAttribute("aria-pressed", String(storyLiked));
+    button.textContent = storyLiked ? "♥ Tu aimes cette œuvre" : "♡ J’aime cette œuvre";
+    $("storyLikeCount").textContent = storyLikeCount + " J’aime";
+    $("storyLikeMessage").textContent = storyLiked
+      ? "Ton J’aime a été enregistré."
+      : "Ton J’aime a été retiré.";
+  } catch (error) {
+    console.error("Erreur du J’aime :", error);
+    $("storyLikeMessage").textContent = "Impossible d’enregistrer ton J’aime : " + (error?.message || "erreur inconnue.");
+    await refreshStoryLikes();
+  } finally {
+    storyLikeBusy = false;
+    button.disabled = false;
   }
 }
 
@@ -549,6 +644,10 @@ function showStory() {
   setCover(story.cover, story.title);
   updateFavoriteButton();
   updateResumeButton();
+  // Les œuvres de démonstration locales n'ont pas d'UUID dans public.stories.
+  $("storyLikeButton").hidden = !isDatabaseStory;
+  $("storyLikeCount").hidden = !isDatabaseStory;
+  $("storyLikeMessage").textContent = "";
 
   const saved = savedChapterIndex();
   if (saved !== null) {
@@ -558,6 +657,8 @@ function showStory() {
   $("startReading").disabled = chapters.length === 0;
   $("resumeReading").disabled = chapters.length === 0;
 }
+
+$("storyLikeButton").addEventListener("click", toggleStoryLike);
 
 $("favoriteButton").addEventListener("click", async () => {
   const list = getFavorites();
@@ -630,6 +731,9 @@ async function refreshUser() {
   } else {
     librarySyncReady = false;
   }
+
+  // Le total est public ; le statut du J’aime dépend du compte connecté.
+  await refreshStoryLikes();
 }
 
 function safeDate(value) {
