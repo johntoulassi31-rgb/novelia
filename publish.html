@@ -1,281 +1,522 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Publier une histoire — Novelia</title>
+<meta name="theme-color" content="#100d19">
+<meta name="description" content="Publie, modifie et organise tes histoires sur Novelia.">
+<title>Publier et gérer mes histoires — Novelia</title>
 <style>
-:root {
-  color-scheme: dark;
-  --bg: #100d19;
-  --panel: #1c1729;
-  --purple: #a78bfa;
-  --text: #f5f3ff;
-  --muted: #b7aecb;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  padding: 20px;
-  background: var(--bg);
-  color: var(--text);
-  font-family: Arial, sans-serif;
-}
-main { max-width: 760px; margin: auto; }
-header { margin-bottom: 24px; }
-a { color: var(--purple); }
-h1 { margin-bottom: 8px; }
-p { line-height: 1.5; }
-.panel {
-  background: var(--panel);
-  border: 1px solid #382d50;
-  border-radius: 16px;
-  padding: 22px;
-}
-label {
-  display: block;
-  margin: 18px 0 8px;
-  font-weight: bold;
-}
-input, textarea, select {
-  width: 100%;
-  padding: 13px;
-  border-radius: 9px;
-  border: 1px solid #514365;
-  background: #100d19;
-  color: white;
-  font: inherit;
-}
-textarea { min-height: 130px; resize: vertical; }
-button {
-  width: 100%;
-  margin-top: 20px;
-  padding: 14px;
-  border: 0;
-  border-radius: 9px;
-  background: var(--purple);
-  color: #170f29;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-}
-button:disabled { opacity: .6; cursor: wait; }
-#message {
-  margin-top: 18px;
-  padding: 12px;
-  border-radius: 9px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.note { color: var(--muted); font-size: 14px; }
-.hidden { display: none; }
+:root{color-scheme:dark;--bg:#100d19;--panel:#1c1729;--purple:#a78bfa;--text:#f5f3ff;--muted:#b7aecb;--line:#382d50;--input:#100d19}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+main{max-width:850px;margin:auto}
+header{margin-bottom:22px}
+a{color:var(--purple)}
+h1{font-size:28px;margin:10px 0 8px}h2{font-size:21px;margin-top:0}h3{font-size:17px}
+p{line-height:1.5}.note{color:var(--muted);font-size:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}
+label{display:block;margin:17px 0 8px;font-weight:bold;font-size:14px}
+input,textarea,select{width:100%;padding:13px;border-radius:9px;border:1px solid #514365;background:var(--input);color:white;font:inherit;min-width:0}
+textarea{min-height:130px;resize:vertical;line-height:1.55}
+button,.button-link{border:0;border-radius:9px;background:var(--purple);color:#170f29;font-size:15px;font-weight:bold;padding:12px 15px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button:disabled{opacity:.6;cursor:wait}.secondary{background:#302440;border:1px solid #624a80;color:#f5f3ff}.small{font-size:13px;padding:9px 11px}.danger{background:#522737;color:#ffe3eb;border:1px solid #8c435e}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab{flex:1;min-width:135px;background:#211630;color:#e4d6ff;border:1px solid #49345f}.tab.active{background:var(--purple);color:#170f29}
+.hidden{display:none!important}.muted{color:var(--muted)}.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.form-actions button{flex:1}.section-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+#message{margin-top:16px;padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}#message:empty{display:none}.success{background:#173c2c;color:#b9f6d0}.error{background:#38202d;color:#ffd5df}.info-message{background:#28203c;color:#e5d7ff}
+.story-list{display:grid;gap:12px}.story-item{border:1px solid #46365c;border-radius:12px;padding:14px;background:#171221}.story-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.story-top h3{margin:0 0 6px;overflow-wrap:anywhere}.story-meta{font-size:13px;color:var(--muted);line-height:1.5}.status{display:inline-block;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:bold;background:#332448;color:#decaff;white-space:nowrap}.status.published{background:#173c2c;color:#b9f6d0}.story-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.story-actions button{flex:0 0 auto}
+.chapter-item{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #382d50;padding:12px 0}.chapter-item:last-child{border-bottom:0}.chapter-name{min-width:0;overflow-wrap:anywhere}.chapter-name strong{display:block;margin-bottom:5px}.empty{padding:16px;background:#171221;border:1px dashed #514365;border-radius:10px;color:var(--muted);line-height:1.5}
+hr{border:0;border-top:1px solid var(--line);margin:24px 0}
+@media(max-width:540px){body{padding:12px}.panel{padding:15px}h1{font-size:24px}.field-row{grid-template-columns:1fr}.story-top{display:block}.story-top .status{margin-top:8px}.chapter-item{align-items:flex-start}.chapter-item button{flex-shrink:0}}
 </style>
 </head>
 <body>
 <main>
 <header>
   <p><a href="index.html">← Retour à Novelia</a></p>
-  <h1>Publier une histoire</h1>
-  <p class="note">Présente ton univers et ajoute le premier chapitre de ton histoire.</p>
+  <h1>Publier et gérer mes histoires</h1>
+  <p class="note">Crée une histoire, garde-la en brouillon, modifie ses informations et ajoute des chapitres au fil de ton écriture.</p>
   <p id="account">Vérification de la connexion…</p>
+  <p id="loginArea" class="hidden"><a class="button-link" href="login.html">Se connecter</a></p>
 </header>
 
-<section class="panel">
-  <form id="publishForm" class="hidden">
-    <label for="title">Titre de l'histoire *</label>
-    <input id="title" maxlength="150" required placeholder="Ex. : Les Roses de minuit">
+<div id="workspace" class="hidden">
+  <div class="tabs" role="tablist" aria-label="Gestion des histoires">
+    <button type="button" class="tab active" data-tab="create">＋ Nouvelle histoire</button>
+    <button type="button" class="tab" data-tab="manage">Mes histoires</button>
+  </div>
 
-    <label for="description">Résumé *</label>
-    <textarea id="description" maxlength="5000" required
-      placeholder="Présente ton histoire aux lecteurs…"></textarea>
+  <section id="createPanel" class="panel" data-panel="create">
+    <h2>Créer une histoire</h2>
+    <p class="note">Les champs marqués d’un astérisque sont obligatoires. Le premier chapitre est enregistré en même temps que l’histoire.</p>
+    <form id="createForm">
+      <label for="title">Titre de l'histoire *</label>
+      <input id="title" maxlength="150" required placeholder="Ex. : Les Roses de minuit">
 
-    <label for="type">Format *</label>
-    <select id="type" required>
-      <option value="roman">Roman</option>
-      <option value="webtoon">Webtoon</option>
-    </select>
+      <label for="description">Résumé *</label>
+      <textarea id="description" maxlength="5000" required placeholder="Présente ton histoire aux lecteurs…"></textarea>
 
-    <label for="genre">Genre</label>
-    <select id="genre">
-      <option>Romance</option>
-      <option>Dark romance</option>
-      <option>Fantasy</option>
-      <option>Mystère</option>
-      <option>Thriller</option>
-      <option>Science-fiction</option>
-      <option>Drame</option>
-      <option>Autre</option>
-    </select>
+      <div class="field-row">
+        <div>
+          <label for="type">Format *</label>
+          <select id="type" required>
+            <option value="roman">Roman</option>
+            <option value="webtoon">Webtoon</option>
+          </select>
+        </div>
+        <div>
+          <label for="genre">Genre</label>
+          <select id="genre">
+            <option>Romance</option><option>Dark romance</option><option>Fantasy</option>
+            <option>Mystère</option><option>Thriller</option><option>Science-fiction</option>
+            <option>Drame</option><option>Autre</option>
+          </select>
+        </div>
+      </div>
 
-    <label for="cover">URL de la couverture (facultatif)</label>
-    <input id="cover" type="url" placeholder="https://exemple.com/couverture.jpg">
-    <p class="note">Utilise une image dont tu as le droit de te servir.</p>
+      <label for="cover">URL de la couverture (facultatif)</label>
+      <input id="cover" type="url" maxlength="2000" placeholder="https://exemple.com/couverture.jpg">
+      <p class="note">Utilise une image dont tu as le droit de te servir.</p>
+      <hr>
+      <h3>Premier chapitre</h3>
+      <label for="chapterTitle">Titre du chapitre *</label>
+      <input id="chapterTitle" maxlength="200" required placeholder="Ex. : Chapitre 1 — La rencontre">
+      <label for="content">Contenu du chapitre *</label>
+      <textarea id="content" required placeholder="Commence à écrire ici…"></textarea>
+      <p class="note">Pour un webtoon, tu peux pour le moment saisir du texte et des liens d’images dans le contenu.</p>
+      <label for="status">Visibilité</label>
+      <select id="status"><option value="published">Publier maintenant</option><option value="draft">Garder en brouillon</option></select>
+      <button id="createButton" type="submit" style="width:100%;margin-top:20px">Enregistrer mon histoire</button>
+    </form>
+  </section>
 
-    <hr style="border-color:#382d50;margin-top:26px">
+  <section id="managePanel" class="hidden" data-panel="manage">
+    <div class="panel">
+      <div class="section-heading"><h2>Mes histoires</h2><button type="button" id="refreshStories" class="secondary small">Actualiser</button></div>
+      <p class="note">Cette liste comprend tes histoires publiées et tes brouillons. Seul leur auteur peut les gérer.</p>
+      <div id="storyList" class="story-list"><p class="muted">Chargement de tes histoires…</p></div>
+    </div>
 
-    <h2>Premier chapitre</h2>
+    <section id="editStoryPanel" class="panel hidden">
+      <h2>Modifier les informations</h2>
+      <p id="editingStoryLabel" class="note"></p>
+      <form id="editStoryForm">
+        <input id="editStoryId" type="hidden">
+        <label for="editTitle">Titre *</label><input id="editTitle" maxlength="150" required>
+        <label for="editDescription">Résumé *</label><textarea id="editDescription" maxlength="5000" required></textarea>
+        <div class="field-row">
+          <div><label for="editType">Format *</label><select id="editType" required><option value="roman">Roman</option><option value="webtoon">Webtoon</option></select></div>
+          <div><label for="editGenre">Genre</label><select id="editGenre"><option>Romance</option><option>Dark romance</option><option>Fantasy</option><option>Mystère</option><option>Thriller</option><option>Science-fiction</option><option>Drame</option><option>Autre</option></select></div>
+        </div>
+        <label for="editCover">URL de la couverture</label><input id="editCover" type="url" maxlength="2000" placeholder="https://exemple.com/couverture.jpg">
+        <label for="editStatus">Visibilité</label><select id="editStatus"><option value="draft">Brouillon</option><option value="published">Publié</option></select>
+        <div class="form-actions"><button id="saveStoryButton" type="submit">Enregistrer les modifications</button><button type="button" id="cancelEditStory" class="secondary">Fermer</button></div>
+      </form>
 
-    <label for="chapterTitle">Titre du chapitre *</label>
-    <input id="chapterTitle" maxlength="200" required
-      placeholder="Ex. : Chapitre 1 — La rencontre">
+      <hr>
+      <div class="section-heading"><h2>Chapitres</h2><button type="button" id="showAddChapter" class="small">＋ Ajouter un chapitre</button></div>
+      <div id="chapterList"><p class="muted">Sélectionne une histoire pour charger ses chapitres.</p></div>
 
-    <label for="content">Contenu du chapitre *</label>
-    <textarea id="content" required
-      placeholder="Commence à écrire ici…" ></textarea>
-    <p class="note">
-      Pour un roman, colle le texte du chapitre. Pour un webtoon,
-      cette première version accepte du texte et des liens d'images dans le contenu.
-    </p>
+      <form id="chapterForm" class="hidden">
+        <hr>
+        <h3 id="chapterFormTitle">Ajouter un chapitre</h3>
+        <input id="chapterId" type="hidden">
+        <label for="chapterEditTitle">Titre du chapitre *</label><input id="chapterEditTitle" maxlength="200" required placeholder="Ex. : Chapitre 2 — Le secret">
+        <label for="chapterEditContent">Contenu *</label><textarea id="chapterEditContent" required placeholder="Écris le contenu du chapitre…"></textarea>
+        <p id="chapterNumberHint" class="note"></p>
+        <div class="form-actions"><button id="saveChapterButton" type="submit">Enregistrer le chapitre</button><button type="button" id="cancelChapter" class="secondary">Annuler</button></div>
+      </form>
+    </section>
+  </section>
 
-    <label for="status">Visibilité</label>
-    <select id="status">
-      <option value="published">Publier maintenant</option>
-      <option value="draft">Garder en brouillon</option>
-    </select>
-
-    <button id="submitButton" type="submit">Enregistrer mon histoire</button>
-  </form>
-
-  <div id="message" role="status"></div>
-</section>
+  <div id="message" role="status" aria-live="polite"></div>
+</div>
 </main>
 
 <script type="module">
-import { createClient } from
-  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 const supabase = createClient(
   "https://czwaokqpqgrghxeeyguq.supabase.co",
   "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
 );
 
-const form = document.getElementById("publishForm");
-const account = document.getElementById("account");
-const message = document.getElementById("message");
-const button = document.getElementById("submitButton");
+const $ = id => document.getElementById(id);
+const account = $("account");
+const loginArea = $("loginArea");
+const workspace = $("workspace");
+const message = $("message");
+const storyList = $("storyList");
+const chapterList = $("chapterList");
+const createForm = $("createForm");
+const createButton = $("createButton");
+const editStoryForm = $("editStoryForm");
+const saveStoryButton = $("saveStoryButton");
+const chapterForm = $("chapterForm");
+const saveChapterButton = $("saveChapterButton");
 
 let currentUser = null;
+let ownedStories = [];
+let selectedStory = null;
+let chaptersForSelectedStory = [];
+let chapterMode = "add";
 
-function showMessage(text, success = false) {
-  message.textContent = text;
-  message.style.background = success ? "#173c2c" : "#38202d";
-  message.style.color = success ? "#b9f6d0" : "#ffd5df";
+function showMessage(text, kind = "info-message") {
+  message.textContent = text || "";
+  message.className = text ? kind : "";
+}
+
+function setBusy(button, busy, busyText, normalText) {
+  button.disabled = busy;
+  button.textContent = busy ? busyText : normalText;
+}
+
+function switchTab(tabName) {
+  document.querySelectorAll("[data-tab]").forEach(button => {
+    button.classList.toggle("active", button.dataset.tab === tabName);
+    button.setAttribute("aria-selected", String(button.dataset.tab === tabName));
+  });
+  $("createPanel").classList.toggle("hidden", tabName !== "create");
+  $("managePanel").classList.toggle("hidden", tabName !== "manage");
+  showMessage("");
+  if (tabName === "manage") loadOwnStories();
+}
+
+document.querySelectorAll("[data-tab]").forEach(button => {
+  button.addEventListener("click", () => switchTab(button.dataset.tab));
+});
+
+function make(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+
+function storyTypeLabel(value) {
+  return value === "webtoon" ? "Webtoon" : "Roman";
+}
+
+function statusLabel(value) {
+  return value === "published" ? "Publié" : "Brouillon";
 }
 
 async function initialize() {
   const { data, error } = await supabase.auth.getUser();
-
   if (error || !data.user) {
-    account.textContent = "Tu dois être connecté pour publier.";
-    showMessage("Connecte-toi à ton compte Novelia avant de publier.");
-    message.innerHTML = "";
-    const link = document.createElement("a");
-    link.href = "login.html";
-    link.textContent = "Se connecter";
-    message.appendChild(link);
+    account.textContent = "Tu dois être connecté pour publier ou gérer tes histoires.";
+    loginArea.classList.remove("hidden");
+    workspace.classList.add("hidden");
+    showMessage("Connecte-toi à ton compte Novelia avant de continuer.", "error");
     return;
   }
-
   currentUser = data.user;
-  account.textContent = "Connecté : " + currentUser.email;
-  form.classList.remove("hidden");
+  account.textContent = "Connecté : " + (currentUser.email || "compte Novelia");
+  workspace.classList.remove("hidden");
+  await loadOwnStories();
 }
 
-await initialize();
+async function loadOwnStories() {
+  if (!currentUser) return;
+  storyList.replaceChildren(make("p", "muted", "Chargement de tes histoires…"));
+  const { data, error } = await supabase
+    .from("stories")
+    .select("id,title,description,cover_url,story_type,genre,status,created_at")
+    .eq("author_id", currentUser.id)
+    .order("created_at", { ascending: false });
 
-form.addEventListener("submit", async (event) => {
+  if (error) {
+    storyList.replaceChildren(make("p", "empty", "Impossible de charger tes histoires : " + error.message));
+    return;
+  }
+  ownedStories = data || [];
+  renderOwnStories();
+}
+
+function renderOwnStories() {
+  storyList.replaceChildren();
+  if (!ownedStories.length) {
+    storyList.appendChild(make("p", "empty", "Tu n’as pas encore créé d’histoire avec ce compte. Utilise « Nouvelle histoire » pour commencer."));
+    return;
+  }
+  ownedStories.forEach(story => {
+    const item = make("article", "story-item");
+    const top = make("div", "story-top");
+    const details = make("div", "");
+    details.appendChild(make("h3", "", story.title || "Sans titre"));
+    details.appendChild(make("div", "story-meta", storyTypeLabel(story.story_type) + " · " + (story.genre || "Autre")));
+    const status = make("span", "status" + (story.status === "published" ? " published" : ""), statusLabel(story.status));
+    top.append(details, status);
+    item.appendChild(top);
+    if (story.description) item.appendChild(make("p", "story-meta", story.description.length > 180 ? story.description.slice(0, 180) + "…" : story.description));
+    const actions = make("div", "story-actions");
+    const edit = make("button", "small", "Modifier / chapitres");
+    edit.type = "button";
+    edit.addEventListener("click", () => openStoryEditor(story.id));
+    actions.appendChild(edit);
+    if (story.status === "published") {
+      const view = make("a", "button-link secondary small", "Voir l’histoire");
+      view.href = "reader.html?db_story=" + encodeURIComponent(story.id);
+      view.target = "_blank";
+      view.rel = "noopener";
+      actions.appendChild(view);
+    }
+    item.appendChild(actions);
+    storyList.appendChild(item);
+  });
+}
+
+createForm.addEventListener("submit", async event => {
   event.preventDefault();
+  if (!currentUser) return showMessage("Connecte-toi avant de publier.", "error");
 
-  if (!currentUser) {
-    showMessage("Connecte-toi avant de publier.");
-    return;
-  }
+  const title = $("title").value.trim();
+  const description = $("description").value.trim();
+  const storyType = $("type").value;
+  const genre = $("genre").value;
+  const coverUrl = $("cover").value.trim();
+  const chapterTitle = $("chapterTitle").value.trim();
+  const content = $("content").value.trim();
+  const status = $("status").value;
+  if (!title || !description || !chapterTitle || !content) return showMessage("Remplis tous les champs obligatoires.", "error");
 
-  const title = document.getElementById("title").value.trim();
-  const description = document.getElementById("description").value.trim();
-  const storyType = document.getElementById("type").value;
-  const genre = document.getElementById("genre").value;
-  const coverUrl = document.getElementById("cover").value.trim();
-  const chapterTitle = document.getElementById("chapterTitle").value.trim();
-  const content = document.getElementById("content").value.trim();
-  const status = document.getElementById("status").value;
-
-  if (!title || !description || !chapterTitle || !content) {
-    showMessage("Remplis tous les champs obligatoires.");
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = "Enregistrement…";
+  setBusy(createButton, true, "Enregistrement…", "Enregistrer mon histoire");
   showMessage("Enregistrement de ton histoire en cours…");
-
+  let createdStoryId = null;
   try {
     const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", currentUser.id)
-      .maybeSingle();
-
+      .from("profiles").select("id").eq("id", currentUser.id).maybeSingle();
     if (profileError) throw profileError;
-
-    if (!profile) {
-      throw new Error(
-        "Ton profil Novelia n'existe pas encore. Déconnecte-toi, reconnecte-toi puis réessaie."
-      );
-    }
+    if (!profile) throw new Error("Ton profil Novelia n’existe pas encore. Déconnecte-toi, reconnecte-toi puis réessaie.");
 
     const { data: story, error: storyError } = await supabase
       .from("stories")
-      .insert({
-        author_id: currentUser.id,
-        title,
-        description,
-        cover_url: coverUrl,
-        story_type: storyType,
-        genre,
-        status
-      })
+      .insert({ author_id: currentUser.id, title, description, cover_url: coverUrl || null, story_type: storyType, genre, status })
       .select("id")
       .single();
-
     if (storyError) throw storyError;
+    createdStoryId = story.id;
 
-    const { error: chapterError } = await supabase
-      .from("chapters")
-      .insert({
-        story_id: story.id,
-        title: chapterTitle,
-        content,
-        chapter_number: 1
-      });
-
+    const { error: chapterError } = await supabase.from("chapters").insert({
+      story_id: story.id, title: chapterTitle, content, chapter_number: 1
+    });
     if (chapterError) {
-      showMessage(
-        "L'histoire a été créée, mais le premier chapitre n'a pas été enregistré. " +
-        "Garde cet identifiant pour assistance : " + story.id +
-        "\nErreur : " + chapterError.message
-      );
+      showMessage("L’histoire a été créée, mais le premier chapitre n’a pas été enregistré. L’histoire n’a pas été supprimée.\nIdentifiant de l’histoire : " + story.id + "\nErreur : " + chapterError.message, "error");
       return;
     }
 
-    showMessage(
-      status === "published"
-        ? "Histoire publiée dans la base de données Novelia !\n" +
-          "Le premier chapitre a été enregistré. L'affichage dans le catalogue et le lecteur sera connecté à cette base dans une prochaine étape."
-        : "Brouillon enregistré avec son premier chapitre.\n" +
-          "Tu pourras le publier plus tard.",
-      true
-    );
-
-    form.reset();
+    showMessage(status === "published"
+      ? "Histoire publiée et premier chapitre enregistré. Tu peux la gérer dans « Mes histoires »."
+      : "Brouillon enregistré avec son premier chapitre. Tu pourras modifier son contenu ou la publier depuis « Mes histoires ».", "success");
+    createForm.reset();
+    await loadOwnStories();
+    switchTab("manage");
+    if (createdStoryId) await openStoryEditor(createdStoryId);
   } catch (error) {
-    showMessage("Impossible d'enregistrer : " + error.message);
+    showMessage("Impossible d’enregistrer : " + (error?.message || String(error)), "error");
   } finally {
-    button.disabled = false;
-    button.textContent = "Enregistrer mon histoire";
+    setBusy(createButton, false, "Enregistrement…", "Enregistrer mon histoire");
   }
 });
+
+async function openStoryEditor(storyId) {
+  showMessage("");
+  const story = ownedStories.find(item => item.id === storyId);
+  if (!story || !currentUser) {
+    showMessage("Cette histoire n’est pas disponible dans ta liste. Actualise la liste puis réessaie.", "error");
+    return;
+  }
+  selectedStory = story;
+  $("editStoryId").value = story.id;
+  $("editingStoryLabel").textContent = "Modification de : " + story.title;
+  $("editTitle").value = story.title || "";
+  $("editDescription").value = story.description || "";
+  $("editType").value = story.story_type || "roman";
+  setSelectValue($("editGenre"), story.genre || "Autre");
+  $("editCover").value = story.cover_url || "";
+  $("editStatus").value = story.status || "draft";
+  $("editStoryPanel").classList.remove("hidden");
+  chapterForm.classList.add("hidden");
+  await loadChapters(story.id);
+  $("editStoryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function setSelectValue(select, value) {
+  const found = Array.from(select.options).some(option => option.value === value || option.textContent === value);
+  if (found) select.value = value;
+  else {
+    const option = make("option", "", value);
+    option.value = value;
+    select.appendChild(option);
+    select.value = value;
+  }
+}
+
+$("cancelEditStory").addEventListener("click", () => {
+  $("editStoryPanel").classList.add("hidden");
+  selectedStory = null;
+  chaptersForSelectedStory = [];
+  showMessage("");
+});
+
+editStoryForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser || !selectedStory) return showMessage("Sélectionne une de tes histoires avant de la modifier.", "error");
+  const title = $("editTitle").value.trim();
+  const description = $("editDescription").value.trim();
+  if (!title || !description) return showMessage("Le titre et le résumé sont obligatoires.", "error");
+  setBusy(saveStoryButton, true, "Enregistrement…", "Enregistrer les modifications");
+  try {
+    const updates = {
+      title,
+      description,
+      story_type: $("editType").value,
+      genre: $("editGenre").value,
+      cover_url: $("editCover").value.trim() || null,
+      status: $("editStatus").value
+    };
+    const { data, error } = await supabase.from("stories")
+      .update(updates)
+      .eq("id", selectedStory.id)
+      .eq("author_id", currentUser.id)
+      .select("id,title,description,cover_url,story_type,genre,status,created_at")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("Aucune histoire n’a été modifiée. Vérifie que tu es connecté au compte auteur et que les autorisations Supabase permettent la modification.");
+    selectedStory = data;
+    ownedStories = ownedStories.map(item => item.id === data.id ? data : item);
+    $("editingStoryLabel").textContent = "Modification de : " + data.title;
+    renderOwnStories();
+    showMessage("Les informations de l’histoire ont été mises à jour.", "success");
+  } catch (error) {
+    showMessage("Impossible de modifier l’histoire : " + (error?.message || String(error)), "error");
+  } finally {
+    setBusy(saveStoryButton, false, "Enregistrement…", "Enregistrer les modifications");
+  }
+});
+
+async function loadChapters(storyId) {
+  chapterList.replaceChildren(make("p", "muted", "Chargement des chapitres…"));
+  const { data, error } = await supabase.from("chapters")
+    .select("id,story_id,title,content,chapter_number")
+    .eq("story_id", storyId)
+    .order("chapter_number", { ascending: true });
+  if (error) {
+    chaptersForSelectedStory = [];
+    chapterList.replaceChildren(make("p", "empty", "Impossible de charger les chapitres : " + error.message));
+    return;
+  }
+  chaptersForSelectedStory = data || [];
+  renderChapters();
+}
+
+function renderChapters() {
+  chapterList.replaceChildren();
+  if (!chaptersForSelectedStory.length) {
+    chapterList.appendChild(make("p", "empty", "Aucun chapitre enregistré. Utilise « Ajouter un chapitre » pour commencer."));
+    return;
+  }
+  chaptersForSelectedStory.forEach(chapter => {
+    const item = make("div", "chapter-item");
+    const details = make("div", "chapter-name");
+    details.appendChild(make("strong", "", "Chapitre " + chapter.chapter_number + " — " + chapter.title));
+    const preview = (chapter.content || "").replace(/\s+/g, " ").trim();
+    details.appendChild(make("span", "story-meta", preview.length > 110 ? preview.slice(0, 110) + "…" : preview));
+    const edit = make("button", "secondary small", "Modifier");
+    edit.type = "button";
+    edit.addEventListener("click", () => openChapterEditor(chapter));
+    item.append(details, edit);
+    chapterList.appendChild(item);
+  });
+}
+
+function openChapterEditor(chapter = null) {
+  if (!selectedStory) return showMessage("Sélectionne d’abord une histoire.", "error");
+  chapterMode = chapter ? "edit" : "add";
+  $("chapterId").value = chapter?.id || "";
+  $("chapterFormTitle").textContent = chapter ? "Modifier le chapitre" : "Ajouter un chapitre";
+  $("chapterEditTitle").value = chapter?.title || "";
+  $("chapterEditContent").value = chapter?.content || "";
+  const nextNumber = chaptersForSelectedStory.reduce((max, item) => Math.max(max, Number(item.chapter_number) || 0), 0) + 1;
+  $("chapterNumberHint").textContent = chapter
+    ? "Numéro actuel : chapitre " + chapter.chapter_number + ". Le numéro reste inchangé lors de la modification."
+    : "Le nouveau chapitre sera enregistré sous le numéro " + nextNumber + ".";
+  setBusy(saveChapterButton, false, "Enregistrement…", chapter ? "Enregistrer les modifications" : "Enregistrer le chapitre");
+  chapterForm.classList.remove("hidden");
+  chapterForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+$("showAddChapter").addEventListener("click", () => openChapterEditor());
+$("cancelChapter").addEventListener("click", () => {
+  chapterForm.reset();
+  chapterForm.classList.add("hidden");
+  showMessage("");
+});
+
+chapterForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser || !selectedStory) return showMessage("Sélectionne une de tes histoires avant d’ajouter un chapitre.", "error");
+  const title = $("chapterEditTitle").value.trim();
+  const content = $("chapterEditContent").value.trim();
+  if (!title || !content) return showMessage("Le titre et le contenu du chapitre sont obligatoires.", "error");
+  setBusy(saveChapterButton, true, "Enregistrement…", chapterMode === "edit" ? "Enregistrer les modifications" : "Enregistrer le chapitre");
+  try {
+    if (chapterMode === "edit") {
+      const chapterId = $("chapterId").value;
+      const { data, error } = await supabase.from("chapters")
+        .update({ title, content })
+        .eq("id", chapterId)
+        .eq("story_id", selectedStory.id)
+        .select("id,story_id,title,content,chapter_number")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Le chapitre n’a pas été modifié. Vérifie les autorisations de la base de données.");
+      chaptersForSelectedStory = chaptersForSelectedStory.map(item => item.id === data.id ? data : item);
+      showMessage("Chapitre modifié avec succès.", "success");
+    } else {
+      const nextNumber = chaptersForSelectedStory.reduce((max, item) => Math.max(max, Number(item.chapter_number) || 0), 0) + 1;
+      const { data, error } = await supabase.from("chapters")
+        .insert({ story_id: selectedStory.id, title, content, chapter_number: nextNumber })
+        .select("id,story_id,title,content,chapter_number")
+        .single();
+      if (error) throw error;
+      chaptersForSelectedStory.push(data);
+      chaptersForSelectedStory.sort((a, b) => Number(a.chapter_number) - Number(b.chapter_number));
+      showMessage("Chapitre " + nextNumber + " enregistré avec succès.", "success");
+    }
+    renderChapters();
+    chapterForm.reset();
+    chapterForm.classList.add("hidden");
+  } catch (error) {
+    showMessage("Impossible d’enregistrer le chapitre : " + (error?.message || String(error)), "error");
+  } finally {
+    setBusy(saveChapterButton, false, "Enregistrement…", chapterMode === "edit" ? "Enregistrer les modifications" : "Enregistrer le chapitre");
+  }
+});
+
+$("refreshStories").addEventListener("click", async () => {
+  await loadOwnStories();
+  if (selectedStory) {
+    const refreshed = ownedStories.find(item => item.id === selectedStory.id);
+    if (refreshed) await openStoryEditor(refreshed.id);
+    else {
+      $("editStoryPanel").classList.add("hidden");
+      selectedStory = null;
+    }
+  }
+  showMessage("Liste des histoires actualisée.", "success");
+});
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (!session?.user) {
+    currentUser = null;
+    account.textContent = "Tu n’es plus connecté. Reconnecte-toi pour gérer tes histoires.";
+    loginArea.classList.remove("hidden");
+    workspace.classList.add("hidden");
+  }
+});
+
+await initialize();
 </script>
 </body>
 </html>
