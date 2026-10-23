@@ -14,10 +14,7 @@
       color: #f5f1ff;
       font-family: Arial, sans-serif;
     }
-    main {
-      max-width: 650px;
-      margin: 25px auto;
-    }
+    main { max-width: 650px; margin: 25px auto; }
     .panel, .story {
       background: #1c1729;
       border: 1px solid #382b50;
@@ -38,9 +35,11 @@
       text-decoration: none;
       cursor: pointer;
     }
-    button:disabled { opacity: .6; }
+    button:disabled { opacity: .6; cursor: wait; }
     .story h3 { margin-top: 0; }
     #status { overflow-wrap: anywhere; }
+    .error { color: #ffaaaa; }
+    .success { color: #a9efbd; }
   </style>
 </head>
 <body>
@@ -50,13 +49,13 @@
   <section class="panel">
     <h1 id="name">Profil public</h1>
     <p id="username" class="muted">Chargement...</p>
-    <p id="emailNote" class="muted">
-      Les adresses e-mail restent privées.
-    </p>
-
+    <p class="muted">Les adresses e-mail restent privées.</p>
     <p id="counts" class="muted"></p>
-    <button id="followButton" hidden>S'abonner</button>
-    <p id="status" role="status"></p>
+
+    <button id="followButton" type="button" hidden>
+      S'abonner
+    </button>
+    <p id="status" role="status" aria-live="polite"></p>
   </section>
 
   <section>
@@ -68,38 +67,129 @@
 </main>
 
 <script type="module">
-  import { createClient } from
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  const supabase = createClient(
-    "https://czwaokqpqgrghxeeyguq.supabase.co",
-    "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
-  );
+const supabase = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
 
-  const $ = id => document.getElementById(id);
-  const params = new URLSearchParams(location.search);
-  const requestedUsername = (params.get("username") || "")
-    .trim().replace(/^@/, "");
+const $ = id => document.getElementById(id);
 
-  let profile = null;
-  let currentUser = null;
-  let following = false;
+const params = new URLSearchParams(location.search);
+const requestedUsername = (params.get("username") || "")
+  .trim().replace(/^@/, "");
 
-  function message(text) {
-    $("status").textContent = text;
+let profile = null;
+let currentUser = null;
+let following = false;
+let loadingAction = false;
+
+function message(text, type = "") {
+  $("status").textContent = text;
+  $("status").className = type;
+}
+
+function renderStories(stories) {
+  const container = $("stories");
+  container.replaceChildren();
+
+  if (!stories || stories.length === 0) {
+    container.textContent =
+      "Cet auteur n'a pas encore publié d'histoire.";
+    return;
   }
 
-  async function loadPage() {
-    if (!requestedUsername) {
-      $("name").textContent = "Profil introuvable";
-      $("username").textContent =
-        "Ajoute un pseudonyme dans l'adresse de la page.";
-      $("stories").textContent = "";
-      return;
-    }
+  stories.forEach(story => {
+    const card = document.createElement("article");
+    card.className = "story";
 
-    const { data: authData } = await supabase.auth.getUser();
-    currentUser = authData?.user || null;
+    const title = document.createElement("h3");
+    title.textContent = story.title || "Sans titre";
+
+    const genre = document.createElement("p");
+    genre.className = "muted";
+    genre.textContent =
+      (story.story_type === "webtoon" ? "Webtoon" : "Roman") +
+      " · " + (story.genre || "Autre");
+
+    const description = document.createElement("p");
+    description.textContent = story.description || "";
+
+    card.append(title, genre, description);
+    container.append(card);
+  });
+}
+
+async function refreshFollowButton() {
+  if (!profile) return;
+
+  const button = $("followButton");
+
+  // Profil personnel : impossible de s'abonner à soi-même.
+  if (currentUser && currentUser.id === profile.id) {
+    button.hidden = true;
+    message("C'est ton propre profil.", "");
+    return;
+  }
+
+  // Visiteur non connecté : proposer la connexion.
+  button.hidden = false;
+
+  if (!currentUser) {
+    following = false;
+    button.textContent = "Se connecter pour suivre";
+    message("Connecte-toi pour t'abonner à cet auteur.");
+    return;
+  }
+
+  button.textContent = "Vérification...";
+  button.disabled = true;
+
+  const { data, error } = await supabase
+    .from("follows")
+    .select("follower_id")
+    .eq("follower_id", currentUser.id)
+    .eq("followed_id", profile.id)
+    .maybeSingle();
+
+  button.disabled = false;
+
+  if (error) {
+    button.textContent = "Réessayer";
+    message(
+      "Impossible de vérifier l'abonnement : " + error.message,
+      "error"
+    );
+    return;
+  }
+
+  following = Boolean(data);
+  button.textContent = following ? "Se désabonner" : "S'abonner";
+  message("");
+}
+
+async function loadPage() {
+  $("followButton").hidden = true;
+  message("Chargement du profil...");
+
+  if (!requestedUsername) {
+    $("name").textContent = "Profil introuvable";
+    $("username").textContent =
+      "Adresse incomplète : ajoute ?username=pseudonyme à l'URL.";
+    $("stories").textContent = "";
+    message("Aucun pseudonyme n'a été fourni.", "error");
+    return;
+  }
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    currentUser = sessionData.session?.user || null;
 
     const { data, error } = await supabase
       .from("profiles")
@@ -107,25 +197,34 @@
       .ilike("username", requestedUsername)
       .maybeSingle();
 
-    if (error || !data) {
+    if (error) throw error;
+
+    if (!data) {
       $("name").textContent = "Profil introuvable";
       $("username").textContent =
-        "Vérifie le pseudonyme ou réessaie plus tard.";
+        "Vérifie le pseudonyme dans l'adresse.";
+      $("counts").textContent = "";
       $("stories").textContent = "";
+      message("Aucun profil ne correspond à ce pseudonyme.", "error");
       return;
     }
 
     profile = data;
+
     $("name").textContent =
       profile.display_name || profile.username || "Lecteur Novelia";
     $("username").textContent = "@" + profile.username;
 
     const [followersResult, followingResult, storiesResult] =
       await Promise.all([
-        supabase.from("follows").select("follower_id", { count: "exact", head: true })
+        supabase.from("follows")
+          .select("follower_id", { count: "exact", head: true })
           .eq("followed_id", profile.id),
-        supabase.from("follows").select("followed_id", { count: "exact", head: true })
+
+        supabase.from("follows")
+          .select("followed_id", { count: "exact", head: true })
           .eq("follower_id", profile.id),
+
         supabase.from("stories")
           .select("id, title, description, genre, story_type")
           .eq("author_id", profile.id)
@@ -133,104 +232,113 @@
           .order("created_at", { ascending: false })
       ]);
 
-    $("counts").textContent =
-      (followersResult.count ?? 0) + " abonné(s) · " +
-      (followingResult.count ?? 0) + " abonnement(s)";
+    if (followersResult.error || followingResult.error) {
+      $("counts").textContent =
+        "Les compteurs d'abonnements sont indisponibles.";
+    } else {
+      $("counts").textContent =
+        (followersResult.count ?? 0) + " abonné(s) · " +
+        (followingResult.count ?? 0) + " abonnement(s)";
+    }
 
     if (storiesResult.error) {
       $("stories").textContent =
         "Impossible de charger les histoires.";
-    } else if (!storiesResult.data?.length) {
-      $("stories").textContent =
-        "Cet auteur n'a pas encore publié d'histoire.";
     } else {
-      $("stories").replaceChildren();
-
-      storiesResult.data.forEach(story => {
-        const card = document.createElement("article");
-        card.className = "story";
-
-        const title = document.createElement("h3");
-        title.textContent = story.title;
-
-        const genre = document.createElement("p");
-        genre.className = "muted";
-        genre.textContent =
-          (story.story_type === "webtoon" ? "Webtoon" : "Roman") +
-          " · " + (story.genre || "Autre");
-
-        const description = document.createElement("p");
-        description.textContent = story.description || "";
-
-        card.append(title, genre, description);
-        $("stories").append(card);
-      });
+      renderStories(storiesResult.data);
     }
 
-    if (currentUser && currentUser.id !== profile.id) {
-      $("followButton").hidden = false;
-      await refreshFollowButton();
-    } else if (!currentUser) {
-      message("Connecte-toi pour t'abonner à cet auteur.");
-    }
+    await refreshFollowButton();
+
+  } catch (error) {
+    console.error("Erreur de chargement du profil :", error);
+    $("name").textContent = "Chargement impossible";
+    $("username").textContent =
+      "Vérifie ta connexion puis réessaie.";
+    message(
+      "Erreur : " + (error.message || "problème inattendu."),
+      "error"
+    );
+  }
+}
+
+$("followButton").addEventListener("click", async () => {
+  if (loadingAction || !profile) return;
+
+  if (!currentUser) {
+    location.href = "login.html";
+    return;
   }
 
-  async function refreshFollowButton() {
-    const { data, error } = await supabase
-      .from("follows")
-      .select("follower_id")
-      .eq("follower_id", currentUser.id)
-      .eq("followed_id", profile.id)
-      .maybeSingle();
-
-    if (error) {
-      message("Impossible de vérifier l'abonnement.");
-      return;
-    }
-
-    following = !!data;
-    $("followButton").textContent =
-      following ? "Se désabonner" : "S'abonner";
+  if (currentUser.id === profile.id) {
+    message("Tu ne peux pas t'abonner à ton propre profil.", "error");
+    return;
   }
 
-  $("followButton").addEventListener("click", async () => {
-    if (!currentUser) {
-      location.href = "login.html";
-      return;
-    }
+  loadingAction = true;
+  const button = $("followButton");
+  button.disabled = true;
+  message("Enregistrement de ton choix...");
 
-    $("followButton").disabled = true;
-
+  try {
     let result;
 
     if (following) {
-      result = await supabase.from("follows")
+      result = await supabase
+        .from("follows")
         .delete()
         .eq("follower_id", currentUser.id)
         .eq("followed_id", profile.id);
     } else {
-      result = await supabase.from("follows")
+      result = await supabase
+        .from("follows")
         .insert({
           follower_id: currentUser.id,
           followed_id: profile.id
         });
     }
 
-    $("followButton").disabled = false;
+    if (result.error) throw result.error;
 
-    if (result.error) {
-      message("Erreur : " + result.error.message);
-      return;
+    message(
+      following
+        ? "Tu ne suis plus cet auteur."
+        : "Tu suis maintenant cet auteur.",
+      "success"
+    );
+
+    // Recharge l'état et les compteurs sans recharger toute la page.
+    following = !following;
+    await refreshFollowButton();
+
+    const { count, error } = await supabase
+      .from("follows")
+      .select("follower_id", { count: "exact", head: true })
+      .eq("followed_id", profile.id);
+
+    if (!error) {
+      const oldText = $("counts").textContent;
+      const match = oldText.match(/·\s*(\d+)\s*abonnement/);
+      const followingCount = match ? match[1] : "0";
+      $("counts").textContent =
+        (count ?? 0) + " abonné(s) · " +
+        followingCount + " abonnement(s)";
     }
 
-    message(following
-      ? "Tu ne suis plus cet auteur."
-      : "Tu suis maintenant cet auteur.");
+  } catch (error) {
+    console.error("Erreur d'abonnement :", error);
+    message(
+      "Impossible d'enregistrer l'abonnement : " +
+      (error.message || "erreur inconnue."),
+      "error"
+    );
+  } finally {
+    loadingAction = false;
+    button.disabled = false;
+  }
+});
 
-    await loadPage();
-  });
-
-  loadPage();
+loadPage();
 </script>
 </body>
 </html>
