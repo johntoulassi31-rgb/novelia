@@ -59,6 +59,18 @@ footer{padding:24px 16px;text-align:center;color:#b8abc9;border-top:1px solid #3
 .notification-link{display:inline-flex;align-items:center;gap:6px}
 .notification-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#ff5d9e;color:#190f20;font-size:11px;font-weight:bold;line-height:1}
 .notification-badge[hidden]{display:none}
+.report-button{display:inline-block;margin-top:10px;padding:8px 11px;border:1px solid #654b7d;border-radius:9px;background:#211630;color:#d8c9f5;font-size:12px;font-weight:bold;cursor:pointer}
+.report-button:hover{background:#382750}
+.report-overlay{position:fixed;inset:0;z-index:1000;background:#08050dcc;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.report-overlay[hidden]{display:none}
+.report-dialog{width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#1c1729;border:1px solid #654b7d;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+.report-dialog h2{margin-top:0;color:#c5a3ff}
+.report-dialog label{display:block;margin:14px 0 6px;color:#e7dcf8;font-weight:bold;font-size:14px}
+.report-dialog select,.report-dialog textarea{width:100%;padding:12px;border:1px solid #49365f;border-radius:9px;background:#110e19;color:#fff;font:inherit}
+.report-dialog textarea{min-height:100px;resize:vertical}
+.report-dialog-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+.report-status{overflow-wrap:anywhere;color:#c5bdd6;font-size:13px}
+.report-status.error{color:#ffaaaa}.report-status.success{color:#a9efbd}
 @media(min-width:700px){.hero,main{max-width:1000px;margin-left:auto;margin-right:auto}.stories{grid-template-columns:repeat(4,minmax(0,1fr))}.hero h1{font-size:48px}}
 </style>
 </head>
@@ -126,6 +138,33 @@ footer{padding:24px 16px;text-align:center;color:#b8abc9;border-top:1px solid #3
   </div>
   <p id="message" aria-live="polite"></p>
 </main>
+<div id="reportOverlay" class="report-overlay" hidden>
+  <section class="report-dialog" role="dialog" aria-modal="true" aria-labelledby="reportHeading">
+    <h2 id="reportHeading">Signaler une œuvre</h2>
+    <p id="reportTargetLabel" class="muted"></p>
+    <form id="reportForm">
+      <label for="reportReason">Motif du signalement *</label>
+      <select id="reportReason" required>
+        <option value="spam">Spam ou publicité abusive</option>
+        <option value="harassment">Harcèlement ou intimidation</option>
+        <option value="hate">Discours haineux</option>
+        <option value="sexual_content">Contenu sexuel inapproprié</option>
+        <option value="violence">Violence ou contenu dangereux</option>
+        <option value="copyright">Atteinte aux droits d’auteur</option>
+        <option value="other">Autre motif</option>
+      </select>
+      <label for="reportDetails">Précisions (facultatif)</label>
+      <textarea id="reportDetails" maxlength="2000" placeholder="Explique brièvement le problème…"></textarea>
+      <p id="reportStatus" class="report-status" role="status" aria-live="polite"></p>
+      <div class="report-dialog-actions">
+        <a id="reportLoginLink" class="account-button" href="login.html" hidden>Se connecter</a>
+        <button type="button" id="cancelReport" class="account-button">Annuler</button>
+        <button type="submit" id="submitReport" class="button">Envoyer le signalement</button>
+      </div>
+    </form>
+  </section>
+</div>
+
 <footer>© Novelia — Version bêta 0.7<br>Découvre des histoires et partage ton univers.</footer>
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -237,6 +276,8 @@ function addPublishedStory(story) {
   card.dataset.id = String(story.id);
   card.dataset.type = type;
   card.dataset.dbStory = "true";
+  card.dataset.storyTitle = story.title || "Œuvre Novelia";
+  card.dataset.storyDescription = story.description || "";
 
   if (story.cover_url) {
     const img = makeElement("img", "cover-image");
@@ -284,6 +325,11 @@ function addPublishedStory(story) {
   likeCount.dataset.likeCount = String(story.id);
   likeArea.append(likeButton, likeCount);
   info.appendChild(likeArea);
+
+  const reportButton = makeElement("button", "report-button", "Signaler cette œuvre");
+  reportButton.type = "button";
+  reportButton.dataset.reportStory = String(story.id);
+  info.appendChild(reportButton);
 
   card.appendChild(info);
   grid.appendChild(card);
@@ -590,7 +636,102 @@ async function changeFavorite(storyKey, button) {
   }
 }
 
+let reportTarget = null;
+let reportSubmitting = false;
+
+function openReportModal(target) {
+  reportTarget = target;
+  document.getElementById("reportTargetLabel").textContent =
+    "Contenu concerné : " + (target.title || "Œuvre Novelia");
+  document.getElementById("reportDetails").value = "";
+  const status = document.getElementById("reportStatus");
+  status.className = "report-status";
+  status.textContent = currentUser
+    ? "Les signalements sont examinés par l’équipe de modération."
+    : "Connecte-toi pour envoyer un signalement.";
+  document.getElementById("reportLoginLink").hidden = Boolean(currentUser);
+  document.getElementById("submitReport").disabled = !currentUser;
+  document.getElementById("cancelReport").disabled = false;
+  document.getElementById("reportOverlay").hidden = false;
+  document.getElementById("reportReason").focus();
+}
+
+function closeReportModal() {
+  if (reportSubmitting) return;
+  document.getElementById("reportOverlay").hidden = true;
+  reportTarget = null;
+}
+
+document.getElementById("cancelReport").addEventListener("click", closeReportModal);
+document.getElementById("reportOverlay").addEventListener("click", event => {
+  if (event.target === document.getElementById("reportOverlay")) closeReportModal();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !document.getElementById("reportOverlay").hidden) closeReportModal();
+});
+document.getElementById("reportForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (reportSubmitting || !reportTarget) return;
+  if (!currentUser) {
+    document.getElementById("reportStatus").textContent = "Connecte-toi avant d’envoyer un signalement.";
+    document.getElementById("reportLoginLink").hidden = false;
+    return;
+  }
+
+  reportSubmitting = true;
+  const submit = document.getElementById("submitReport");
+  const cancel = document.getElementById("cancelReport");
+  const status = document.getElementById("reportStatus");
+  submit.disabled = true;
+  cancel.disabled = true;
+  status.className = "report-status";
+  status.textContent = "Envoi du signalement…";
+
+  try {
+    const { error } = await supabase.from("content_reports").insert({
+      reporter_id: currentUser.id,
+      target_type: reportTarget.type,
+      target_id: reportTarget.id,
+      target_title: (reportTarget.title || "Œuvre Novelia").slice(0, 300),
+      target_excerpt: (reportTarget.excerpt || "").slice(0, 1000) || null,
+      reason: document.getElementById("reportReason").value,
+      details: document.getElementById("reportDetails").value.trim() || null,
+      status: "pending"
+    });
+    if (error) throw error;
+    status.className = "report-status success";
+    status.textContent = "Signalement envoyé. Merci de contribuer à la sécurité de Novelia.";
+    message.textContent = "Ton signalement a été envoyé à l’équipe de modération.";
+    window.setTimeout(() => {
+      document.getElementById("reportOverlay").hidden = true;
+      reportTarget = null;
+      reportSubmitting = false;
+      submit.disabled = false;
+      cancel.disabled = false;
+    }, 1200);
+  } catch (error) {
+    console.error("Erreur de signalement :", error);
+    status.className = "report-status error";
+    status.textContent = "Impossible d’envoyer le signalement : " + (error?.message || "erreur inconnue.");
+    reportSubmitting = false;
+    submit.disabled = !currentUser;
+    cancel.disabled = false;
+  }
+});
+
 grid.addEventListener("click", event => {
+  const reportButton = event.target.closest("button[data-report-story]");
+  if (reportButton) {
+    const card = reportButton.closest(".story");
+    openReportModal({
+      type: "story",
+      id: reportButton.dataset.reportStory,
+      title: card?.dataset.storyTitle || "Œuvre Novelia",
+      excerpt: card?.dataset.storyDescription || ""
+    });
+    return;
+  }
+
   const likeButton = event.target.closest("button[data-like-story]");
   if (likeButton) {
     const id = likeButton.dataset.likeStory;
