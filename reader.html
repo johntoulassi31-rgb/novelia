@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -232,7 +231,7 @@ const params = new URLSearchParams(location.search);
 const dbStoryId = params.get("db_story");
 const demoId = params.get("story");
 // Paramètre utilisé par les notifications pour ouvrir directement un chapitre précis.
-const requestedChapterId = params.get("chapter_id");
+const requestedChapterId = params.get("chapter_id") || params.get("chapter");
 const storyKey = dbStoryId ? "db_" + dbStoryId : demoId;
 
 let story = null;
@@ -768,6 +767,7 @@ async function loadDatabaseStory() {
 
   chapters = (chapterRows || []).map(ch => ({
     id: ch.id,
+    chapterNumber: ch.chapter_number,
     title: ch.title,
     content: ch.content || ""
   }));
@@ -1016,8 +1016,10 @@ async function main() {
     // Si la page a été ouverte depuis une notification, privilégier le chapitre visé
     // plutôt que la dernière progression enregistrée dans la bibliothèque.
     if (isDatabaseStory && requestedChapterId) {
-      const chapterIndex = chapters.findIndex(
-        chapter => String(chapter.id) === String(requestedChapterId)
+      const chapterIndex = chapters.findIndex(chapter =>
+        String(chapter.id) === String(requestedChapterId) ||
+        (Number.isInteger(Number(requestedChapterId)) &&
+          Number(chapter.chapterNumber) === Number(requestedChapterId))
       );
 
       if (chapterIndex >= 0) {
