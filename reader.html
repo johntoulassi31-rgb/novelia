@@ -1,1 +1,1048 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#100b18">
+<meta name="description" content="Lis des romans et webtoons sur Novelia.">
+<title>Lecture — Novelia</title>
+<style>
+:root{--bg:#100b18;--panel:#1b1326;--purple:#a855f7;--text:#f7f1ff;--muted:#b8a9c9;--border:#39234e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;line-height:1.7}
+header{padding:18px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header a,.back-link{color:#c4a5ff;text-decoration:none;font-weight:bold}
+.container{width:min(850px,100%);margin:auto;padding:24px 16px 60px}
+.back-link{display:inline-block;margin-bottom:20px}
+.book-card,.chapter,.comments-panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.book-top{display:grid;grid-template-columns:minmax(110px,200px) minmax(0,1fr);gap:20px;padding:20px}
+.cover,.cover-fallback{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:10px;background:linear-gradient(145deg,#392456,#7f1d3d,#100b18)}
+.cover-fallback{padding:12px;display:flex;align-items:end;font:bold 21px Georgia,serif}
+.eyebrow{color:#c4a5ff;text-transform:uppercase;letter-spacing:2px;font-size:11px;font-weight:bold}
+h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.tag{background:#30203f;border:1px solid #49345f;color:#e9d5ff;border-radius:20px;padding:4px 10px;font-size:12px}
+.summary,.reading-info{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.button{border:0;border-radius:9px;padding:11px 14px;font-size:14px;font-weight:bold;cursor:pointer;text-decoration:none;text-align:center;font-family:inherit}
+.primary{background:var(--purple);color:white}
+.secondary,.favorite-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
+.favorite-button.is-favorite{background:#4a1949;border-color:#c084fc}
+.story-like-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
+.story-like-button.is-liked{background:#4a1949;border-color:#c084fc;color:#ffb1d6}
+.like-counter{color:var(--muted);font-size:13px;margin:8px 0 0;overflow-wrap:anywhere}
+.details{padding:0 20px 20px;color:var(--muted);font-size:13px}
+.reader{margin-top:28px;scroll-margin-top:15px}
+.chapter{padding:22px}
+.chapter h2{color:#d8b4fe;font-size:21px;line-height:1.4}
+.progress-track{width:100%;height:7px;border-radius:20px;background:#30203f;overflow:hidden;margin:12px 0 22px}
+.progress-fill{height:100%;width:0;background:var(--purple);transition:width .2s}
+.novel-text{font-family:Georgia,"Times New Roman",serif;font-size:18px;line-height:2;overflow-wrap:anywhere}
+.novel-text p{margin:0 0 22px;white-space:pre-wrap}
+.webtoon-content{margin:0 -16px;background:#09070e}
+.webtoon-content img{display:block;width:100%;height:auto;object-fit:contain}
+.notice{margin-top:20px;padding:14px;border-left:3px solid var(--purple);color:var(--muted);background:#1b1326;font-size:14px}
+.chapter-nav{display:flex;justify-content:space-between;gap:12px;margin-top:20px}
+button:disabled{opacity:.4;cursor:not-allowed}
+.comments-panel{margin-top:24px;padding:20px}
+.comments-panel h2{font-size:21px}
+.comments-panel textarea{width:100%;min-height:110px;padding:12px;background:#100b18;color:white;border:1px solid #49345f;border-radius:9px;font:inherit}
+.comment{padding:14px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.comment:last-child{border-bottom:0}
+.comment-author{font-weight:bold;color:#d8b4fe}
+.comment-date{font-size:12px;color:var(--muted)}
+.comment-text{white-space:pre-wrap;overflow-wrap:anywhere}
+#status,#commentsStatus{color:#c4a5ff;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+.report-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
+.report-overlay{position:fixed;inset:0;z-index:1000;background:#08050dcc;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.report-overlay[hidden]{display:none}
+.report-dialog{width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:1px solid #654b7d;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+.report-dialog h2{margin-top:0;color:#d8b4fe}
+.report-dialog label{display:block;margin:14px 0 6px;color:#e7dcf8;font-weight:bold;font-size:14px}
+.report-dialog select,.report-dialog textarea{width:100%;padding:12px;border:1px solid #49365f;border-radius:9px;background:#100b18;color:#fff;font:inherit}
+.report-dialog textarea{min-height:100px;resize:vertical}
+.report-dialog-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+.report-status{overflow-wrap:anywhere;color:var(--muted);font-size:13px}
+.report-status.error{color:#ffaaaa}.report-status.success{color:#a9efbd}
+@media(max-width:520px){.book-top{grid-template-columns:100px minmax(0,1fr);gap:14px;padding:14px}.book-top h1{font-size:24px}.summary{font-size:13px}.chapter{padding:16px}.details{padding:0 14px 16px}.novel-text{font-size:17px}.button{padding:10px}.comments-panel{padding:15px}}
+@media(max-width:360px){.book-top{grid-template-columns:1fr}.cover,.cover-fallback{width:65%}}
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">✦ NOVELIA</a>
+  <a href="index.html#histoires">Toutes les œuvres</a>
+</header>
+
+<main class="container">
+<a class="back-link" href="index.html#histoires">← Retour aux histoires</a>
+
+<section class="book-card" id="bookCard">
+  <div class="book-top">
+    <div>
+      <img id="cover" class="cover" alt="" hidden>
+      <div id="coverFallback" class="cover-fallback"></div>
+    </div>
+    <div>
+      <div class="eyebrow" id="type">Œuvre Novelia</div>
+      <h1 id="title">Chargement…</h1>
+      <div class="meta">
+        <span class="tag" id="genre"></span>
+        <span class="tag" id="format"></span>
+      </div>
+      <p class="summary" id="description"></p>
+      <div class="actions">
+        <button class="button primary" id="startReading">Commencer la lecture</button>
+        <button class="button primary" id="resumeReading" hidden>Reprendre la lecture</button>
+        <button class="button favorite-button" id="favoriteButton">♡ Ajouter aux favoris</button>
+        <button class="button story-like-button" id="storyLikeButton" hidden aria-pressed="false">♡ J’aime cette œuvre</button>
+        <button class="button secondary report-button" id="reportStoryButton" hidden type="button">Signaler cette œuvre</button>
+      </div>
+      <p class="like-counter" id="storyLikeCount" role="status" hidden>Chargement des J’aime…</p>
+      <p class="summary" id="storyLikeMessage" role="status" aria-live="polite"></p>
+      <p class="summary" id="favoriteMessage" role="status"></p>
+      <p class="summary" id="progressMessage" role="status"></p>
+    </div>
+  </div>
+  <div class="details"><span id="chapterCount"></span></div>
+</section>
+
+<section class="reader" id="reader" hidden>
+  <div class="chapter">
+    <div class="eyebrow" id="readingType">Lecture</div>
+    <h2 id="chapterTitle"></h2>
+    <p class="reading-info" id="chapterCounter"></p>
+    <div class="actions" style="margin:8px 0 14px">
+      <button class="button secondary report-button" id="reportChapterButton" hidden type="button">Signaler ce chapitre</button>
+    </div>
+    <div class="progress-track" id="progressTrack" role="progressbar" aria-label="Progression de lecture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div id="content" class="novel-text"></div>
+    <p class="reading-info" id="savedMessage" role="status"></p>
+    <div class="chapter-nav">
+      <button class="button secondary" id="previousChapter" disabled>← Précédent</button>
+      <button class="button secondary" id="nextChapter" disabled>Suivant →</button>
+    </div>
+  </div>
+
+  <section class="comments-panel" id="commentsPanel">
+    <h2>Commentaires du chapitre</h2>
+    <p id="commentsStatus" role="status" aria-live="polite"></p>
+    <form id="commentForm" hidden>
+      <label for="commentInput">Écris ton commentaire</label>
+      <textarea id="commentInput" maxlength="2000" required placeholder="Que penses-tu de ce chapitre ?"></textarea>
+      <button class="button primary" id="sendComment" type="submit">Publier le commentaire</button>
+    </form>
+    <p id="loginCommentNotice" hidden>Connecte-toi pour commenter un chapitre.</p>
+    <div id="commentsList"></div>
+  </section>
+</section>
+
+<p class="notice" id="errorMessage" hidden>Cette œuvre est introuvable ou n'est pas accessible.</p>
+<p id="status" role="status" aria-live="polite"></p>
+</main>
+
+<div id="reportOverlay" class="report-overlay" hidden>
+  <section class="report-dialog" role="dialog" aria-modal="true" aria-labelledby="reportHeading">
+    <h2 id="reportHeading">Signaler un contenu</h2>
+    <p id="reportTargetLabel" class="summary"></p>
+    <form id="reportForm">
+      <label for="reportReason">Motif du signalement *</label>
+      <select id="reportReason" required>
+        <option value="spam">Spam ou publicité abusive</option>
+        <option value="harassment">Harcèlement ou intimidation</option>
+        <option value="hate">Discours haineux</option>
+        <option value="sexual_content">Contenu sexuel inapproprié</option>
+        <option value="violence">Violence ou contenu dangereux</option>
+        <option value="copyright">Atteinte aux droits d’auteur</option>
+        <option value="other">Autre motif</option>
+      </select>
+      <label for="reportDetails">Précisions (facultatif)</label>
+      <textarea id="reportDetails" maxlength="2000" placeholder="Explique brièvement le problème…"></textarea>
+      <p id="reportStatus" class="report-status" role="status" aria-live="polite"></p>
+      <div class="report-dialog-actions">
+        <a id="reportLoginLink" class="button secondary" href="login.html" hidden>Se connecter</a>
+        <button type="button" id="cancelReport" class="button secondary">Annuler</button>
+        <button type="submit" id="submitReport" class="button primary">Envoyer le signalement</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<footer>Novelia · Chaque histoire mérite d’être racontée.</footer>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const supabase = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
+
+const demoStories = {
+  roses: {
+    title:"Les Roses de minuit", type:"Roman", genre:"Dark romance",
+    cover:"images/roses.png",
+    description:"Dans l'obscurité de la nuit, secrets, passions et choix dangereux bouleversent plusieurs destins.",
+    chapters:[
+      {title:"Chapitre 1 — La première page",content:["La nuit enveloppait la ville lorsque tout commença.","Derrière les fenêtres éclairées, des secrets attendaient leur heure.","Fin de cet extrait de démonstration."]},
+      {title:"Chapitre 2 — Une rencontre inattendue",content:["Le lendemain, une silhouette apparut au bout de la rue.","J'eus l'étrange impression que cette rencontre n'avait rien d'un hasard."]},
+      {title:"Chapitre 3 — Le secret",content:["Un message anonyme m'attendait devant la porte.","Ne fais confiance à personne. Mon histoire ne faisait que commencer."]}
+    ]
+  },
+  lune: {
+    title:"La Lune des oubliés", type:"Webtoon", genre:"Fantasy",
+    cover:"images/lune.png",
+    description:"Sous une lune mystérieuse, une ville cache des secrets oubliés.",
+    chapters:[
+      {title:"Épisode 1 — Le commencement",content:["La ville sous la lune.","Une silhouette apparaît au loin.","Une rencontre inattendue."]},
+      {title:"Épisode 2 — Les murmures de la nuit",content:["La lune éclaire les rues désertes.","Un murmure vient de l'ombre.","Un symbole mystérieux apparaît."]},
+      {title:"Épisode 3 — Le passage oublié",content:["Une porte apparaît dans la vieille ville.","Une lumière traverse le passage.","Quelque chose attend de l'autre côté."]}
+    ]
+  },
+  automne: {
+    title:"Un automne pour nous", type:"Roman", genre:"Romance",
+    cover:"images/automne.png",
+    description:"Les feuilles tombent, les regards se croisent et une journée ordinaire prend une tournure inattendue.",
+    chapters:[
+      {title:"Chapitre 1 — Un jour d’automne",content:["Les feuilles dansaient dans le vent lorsqu’ils se croisèrent.","Un simple regard suffit à rendre cette journée différente."]},
+      {title:"Chapitre 2 — Un café pour deux",content:["La pluie les força à se réfugier dans un petit café.","Aucun des deux ne voulait être le premier à partir."]},
+      {title:"Chapitre 3 — Avant le départ",content:["Avant de partir, il lui tendit un morceau de papier.","Elle comprit qu'ils auraient une raison de se revoir."]}
+    ]
+  },
+  ville: {
+    title:"La Ville sans ombre", type:"Webtoon", genre:"Mystère",
+    cover:"images/ville.png",
+    description:"Dans une ville silencieuse, chaque rue dissimule peut-être un indice.",
+    chapters:[
+      {title:"Épisode 1 — Une ville étrange",content:["Une ville silencieuse au petit matin.","Une rue où personne ne s’arrête.","Une porte s’ouvre dans l’obscurité."]},
+      {title:"Épisode 2 — La rue interdite",content:["Les rues semblent désertes.","Un panneau interdit une ruelle.","Une ombre disparaît derrière une porte."]},
+      {title:"Épisode 3 — Derrière la porte",content:["La ville paraît retenir son souffle.","Un symbole apparaît sur le mur.","La porte révèle un passage inconnu."]}
+    ]
+  }
+};
+
+const FAVORITES_KEY = "novelia_favorites";
+const PROGRESS_KEY = "novelia_progress";
+const params = new URLSearchParams(location.search);
+const dbStoryId = params.get("db_story");
+const demoId = params.get("story");
+// Paramètre utilisé par les notifications pour ouvrir directement un chapitre précis.
+const requestedChapterId = params.get("chapter_id");
+const storyKey = dbStoryId ? "db_" + dbStoryId : demoId;
+
+let story = null;
+let chapters = [];
+let currentChapter = 0;
+let currentUser = null;
+let isDatabaseStory = Boolean(dbStoryId);
+let librarySyncReady = false;
+let librarySyncQueue = Promise.resolve();
+let storyLiked = false;
+let storyLikeCount = 0;
+let storyLikeBusy = false;
+let reportTarget = null;
+let reportSubmitting = false;
+
+const $ = id => document.getElementById(id);
+const cover = $("cover");
+const coverFallback = $("coverFallback");
+
+function readJSON(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "null");
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
+
+function getFavorites() {
+  const value = readJSON(FAVORITES_KEY, []);
+  return Array.isArray(value) ? value : [];
+}
+
+function getProgress() {
+  const value = readJSON(PROGRESS_KEY, {});
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function isFavorite() {
+  return getFavorites().includes(storyKey);
+}
+
+function savedChapterIndex() {
+  const value = getProgress()[storyKey]?.chapter;
+  return Number.isInteger(value) && value >= 0 && value < chapters.length ? value : null;
+}
+
+/*
+  Synchronisation Supabase :
+  user_library.story_key contient l'identifiant de l'histoire.
+  La progression cloud utilise last_chapter à partir de 1.
+  La progression locale utilise chapter à partir de 0.
+*/
+async function saveLibraryToCloud() {
+  if (!currentUser || !storyKey || !librarySyncReady) return;
+
+  const progress = getProgress();
+  const localChapter = progress[storyKey]?.chapter;
+  const lastChapter = Number.isInteger(localChapter) && localChapter >= 0
+    ? localChapter + 1
+    : 0;
+
+  const payload = {
+    user_id: currentUser.id,
+    story_key: storyKey,
+    is_favorite: isFavorite(),
+    last_chapter: lastChapter,
+    updated_at: new Date().toISOString()
+  };
+
+  // Mise en file des écritures pour éviter qu'elles se remplacent dans le désordre.
+  librarySyncQueue = librarySyncQueue
+    .then(async () => {
+      const { error } = await supabase
+        .from("user_library")
+        .upsert(payload, { onConflict: "user_id,story_key" });
+
+      if (error) {
+        console.error("Synchronisation de la bibliothèque impossible :", error.message);
+        $("savedMessage").textContent =
+          "Progression enregistrée sur cet appareil. Synchronisation cloud indisponible.";
+      }
+    })
+    .catch(error => console.error("Erreur de synchronisation :", error));
+
+  await librarySyncQueue;
+}
+
+async function syncLibraryFromCloud() {
+  if (!currentUser || !storyKey) return;
+
+  librarySyncReady = false;
+  $("status").textContent = "Synchronisation de ta bibliothèque…";
+
+  const { data, error } = await supabase
+    .from("user_library")
+    .select("story_key,is_favorite,last_chapter,updated_at")
+    .eq("user_id", currentUser.id)
+    .eq("story_key", storyKey)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Lecture de la bibliothèque cloud impossible :", error.message);
+    $("status").textContent = "La synchronisation est indisponible. Les données locales restent utilisables.";
+    librarySyncReady = true;
+    return;
+  }
+
+  if (data) {
+    // Le compte connecté devient la référence pour cette histoire.
+    let favorites = getFavorites();
+    favorites = favorites.filter(key => key !== storyKey);
+    if (data.is_favorite) favorites.push(storyKey);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+
+    const progress = getProgress();
+    if (Number.isInteger(data.last_chapter) && data.last_chapter > 0 && chapters.length) {
+      const index = Math.min(data.last_chapter - 1, chapters.length - 1);
+      progress[storyKey] = {
+        chapter: index,
+        total: chapters.length,
+        updatedAt: data.updated_at || new Date().toISOString()
+      };
+    } else {
+      delete progress[storyKey];
+    }
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } else {
+    // Première connexion sur cet appareil : importer les données locales si elles existent.
+    const hasLocalData = isFavorite() || savedChapterIndex() !== null;
+    if (hasLocalData) {
+      librarySyncReady = true;
+      await saveLibraryToCloud();
+    }
+  }
+
+  librarySyncReady = true;
+  updateFavoriteButton();
+  updateResumeButton();
+
+  const saved = savedChapterIndex();
+  $("progressMessage").textContent = saved !== null
+    ? "Dernière lecture : chapitre " + (saved + 1) + "."
+    : "Aucune progression de lecture enregistrée.";
+
+  $("favoriteMessage").textContent = isFavorite()
+    ? "Cette œuvre est dans tes favoris."
+    : "";
+
+  $("status").textContent = "Bibliothèque synchronisée.";
+}
+
+function saveProgress() {
+  try {
+    const progress = getProgress();
+    progress[storyKey] = {
+      chapter: currentChapter,
+      total: chapters.length,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+
+    $("savedMessage").textContent = currentUser
+      ? "Progression enregistrée. Synchronisation avec ton compte…"
+      : "Progression sauvegardée sur cet appareil.";
+
+    $("progressMessage").textContent =
+      "Ta dernière lecture était au chapitre " + (currentChapter + 1) + ".";
+
+    updateResumeButton();
+
+    if (currentUser && librarySyncReady) {
+      saveLibraryToCloud();
+    }
+  } catch {
+    $("savedMessage").textContent = "La sauvegarde est indisponible sur cet appareil.";
+  }
+}
+
+async function refreshStoryLikes() {
+  const button = $("storyLikeButton");
+  const countLabel = $("storyLikeCount");
+  button.hidden = !isDatabaseStory || !story?.id;
+  countLabel.hidden = !isDatabaseStory || !story?.id;
+  if (!isDatabaseStory || !story?.id) return;
+
+  button.disabled = true;
+  countLabel.textContent = "Chargement des J’aime…";
+  const { count, error: countError } = await supabase
+    .from("story_likes")
+    .select("user_id", { count: "exact", head: true })
+    .eq("story_id", story.id);
+
+  if (countError) {
+    console.warn("Compteur des J’aime indisponible :", countError.message);
+    countLabel.textContent = "Nombre de J’aime indisponible.";
+    button.disabled = false;
+    $("storyLikeMessage").textContent = "Impossible de charger les J’aime. Vérifie la table story_likes et ses règles RLS.";
+    return;
+  }
+
+  storyLikeCount = count ?? 0;
+  countLabel.textContent = storyLikeCount + " J’aime";
+  storyLiked = false;
+
+  if (currentUser) {
+    const { data, error } = await supabase
+      .from("story_likes")
+      .select("story_id")
+      .eq("story_id", story.id)
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.warn("Vérification du J’aime impossible :", error.message);
+      $("storyLikeMessage").textContent = "Impossible de vérifier ton J’aime : " + error.message;
+    } else {
+      storyLiked = Boolean(data);
+      $("storyLikeMessage").textContent = "";
+    }
+  } else {
+    $("storyLikeMessage").textContent = "Connecte-toi pour aimer cette œuvre.";
+  }
+
+  button.classList.toggle("is-liked", storyLiked);
+  button.setAttribute("aria-pressed", String(storyLiked));
+  button.textContent = storyLiked ? "♥ Tu aimes cette œuvre" : "♡ J’aime cette œuvre";
+  button.disabled = false;
+}
+
+async function toggleStoryLike() {
+  if (!isDatabaseStory || !story?.id || storyLikeBusy) return;
+  if (!currentUser) {
+    $("storyLikeMessage").textContent = "Connecte-toi pour aimer cette œuvre. Ton J’aime n’a pas été enregistré.";
+    return;
+  }
+
+  storyLikeBusy = true;
+  const button = $("storyLikeButton");
+  button.disabled = true;
+  const wasLiked = storyLiked;
+  try {
+    const result = wasLiked
+      ? await supabase.from("story_likes").delete().eq("story_id", story.id).eq("user_id", currentUser.id)
+      : await supabase.from("story_likes").insert({ story_id: story.id, user_id: currentUser.id });
+    if (result.error) throw result.error;
+
+    storyLiked = !wasLiked;
+    storyLikeCount = Math.max(0, storyLikeCount + (wasLiked ? -1 : 1));
+    button.classList.toggle("is-liked", storyLiked);
+    button.setAttribute("aria-pressed", String(storyLiked));
+    button.textContent = storyLiked ? "♥ Tu aimes cette œuvre" : "♡ J’aime cette œuvre";
+    $("storyLikeCount").textContent = storyLikeCount + " J’aime";
+    $("storyLikeMessage").textContent = storyLiked
+      ? "Ton J’aime a été enregistré."
+      : "Ton J’aime a été retiré.";
+  } catch (error) {
+    console.error("Erreur du J’aime :", error);
+    $("storyLikeMessage").textContent = "Impossible d’enregistrer ton J’aime : " + (error?.message || "erreur inconnue.");
+    await refreshStoryLikes();
+  } finally {
+    storyLikeBusy = false;
+    button.disabled = false;
+  }
+}
+
+function openReportModal(target) {
+  reportTarget = target;
+  $("reportTargetLabel").textContent = "Contenu concerné : " + (target.title || "Contenu Novelia");
+  $("reportDetails").value = "";
+  $("reportStatus").className = "report-status";
+  $("reportStatus").textContent = currentUser
+    ? "Les signalements sont examinés par l’équipe de modération."
+    : "Connecte-toi pour envoyer un signalement.";
+  $("reportLoginLink").hidden = Boolean(currentUser);
+  $("submitReport").disabled = !currentUser;
+  $("cancelReport").disabled = false;
+  $("reportOverlay").hidden = false;
+  $("reportReason").focus();
+}
+
+function closeReportModal() {
+  if (reportSubmitting) return;
+  $("reportOverlay").hidden = true;
+  reportTarget = null;
+}
+
+$("cancelReport").addEventListener("click", closeReportModal);
+$("reportOverlay").addEventListener("click", event => {
+  if (event.target === $("reportOverlay")) closeReportModal();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !$("reportOverlay").hidden) closeReportModal();
+});
+$("reportForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (reportSubmitting || !reportTarget) return;
+  if (!currentUser) {
+    $("reportStatus").textContent = "Connecte-toi avant d’envoyer un signalement.";
+    $("reportLoginLink").hidden = false;
+    return;
+  }
+
+  reportSubmitting = true;
+  $("submitReport").disabled = true;
+  $("cancelReport").disabled = true;
+  $("reportStatus").className = "report-status";
+  $("reportStatus").textContent = "Envoi du signalement…";
+
+  try {
+    const { error } = await supabase.from("content_reports").insert({
+      reporter_id: currentUser.id,
+      target_type: reportTarget.type,
+      target_id: reportTarget.id,
+      target_title: (reportTarget.title || "Contenu Novelia").slice(0, 300),
+      target_excerpt: (reportTarget.excerpt || "").slice(0, 1000) || null,
+      reason: $("reportReason").value,
+      details: $("reportDetails").value.trim() || null,
+      status: "pending"
+    });
+    if (error) throw error;
+    $("reportStatus").className = "report-status success";
+    $("reportStatus").textContent = "Signalement envoyé. Merci de contribuer à la sécurité de Novelia.";
+    $("status").textContent = "Ton signalement a été envoyé à l’équipe de modération.";
+    window.setTimeout(() => {
+      $("reportOverlay").hidden = true;
+      reportTarget = null;
+      reportSubmitting = false;
+      $("submitReport").disabled = false;
+      $("cancelReport").disabled = false;
+    }, 1200);
+  } catch (error) {
+    console.error("Erreur de signalement :", error);
+    $("reportStatus").className = "report-status error";
+    $("reportStatus").textContent = "Impossible d’envoyer le signalement : " + (error?.message || "erreur inconnue.");
+    reportSubmitting = false;
+    $("submitReport").disabled = !currentUser;
+    $("cancelReport").disabled = false;
+  }
+});
+
+$("reportStoryButton").addEventListener("click", () => {
+  if (!isDatabaseStory || !story?.id) return;
+  openReportModal({
+    type: "story",
+    id: story.id,
+    title: story.title,
+    excerpt: story.description || ""
+  });
+});
+
+$("reportChapterButton").addEventListener("click", () => {
+  const chapter = chapters[currentChapter];
+  if (!isDatabaseStory || !chapter?.id) return;
+  const text = typeof chapter.content === "string" ? chapter.content : "";
+  openReportModal({
+    type: "chapter",
+    id: chapter.id,
+    title: story.title + " — " + (chapter.title || "Chapitre " + (currentChapter + 1)),
+    excerpt: text.slice(0, 1000)
+  });
+});
+
+function updateFavoriteButton() {
+  const saved = isFavorite();
+  $("favoriteButton").classList.toggle("is-favorite", saved);
+  $("favoriteButton").setAttribute("aria-pressed", String(saved));
+  $("favoriteButton").textContent = saved
+    ? "♥ Retirer des favoris"
+    : "♡ Ajouter aux favoris";
+}
+
+function updateResumeButton() {
+  const index = savedChapterIndex();
+  $("resumeReading").hidden = index === null;
+  if (index !== null) {
+    $("resumeReading").textContent = "Reprendre — chapitre " + (index + 1);
+  }
+}
+
+function showError(text) {
+  $("bookCard").hidden = true;
+  $("reader").hidden = true;
+  $("errorMessage").hidden = false;
+  $("errorMessage").textContent = text || "Cette œuvre est introuvable ou n'est pas accessible.";
+  document.title = "Œuvre introuvable — Novelia";
+}
+
+function setCover(url, title) {
+  cover.hidden = true;
+  coverFallback.hidden = false;
+  coverFallback.textContent = title;
+  if (!url) return;
+
+  cover.onload = () => {
+    cover.hidden = false;
+    coverFallback.hidden = true;
+  };
+  cover.onerror = () => {
+    cover.hidden = true;
+    coverFallback.hidden = false;
+  };
+  cover.src = url;
+  cover.alt = "Couverture de " + title;
+}
+
+function renderNovel(chapter) {
+  const container = $("content");
+  container.className = "novel-text";
+  container.replaceChildren();
+
+  const text = typeof chapter.content === "string"
+    ? chapter.content
+    : Array.isArray(chapter.content) ? chapter.content.join("\n\n") : "";
+
+  text.split(/\n\s*\n/).filter(p => p.trim()).forEach(part => {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = part.trim();
+    container.appendChild(paragraph);
+  });
+
+  if (!container.children.length) {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = "Ce chapitre ne contient pas encore de texte.";
+    container.appendChild(paragraph);
+  }
+}
+
+function renderWebtoon(chapter) {
+  const container = $("content");
+  container.className = "";
+  container.replaceChildren();
+
+  const text = typeof chapter.content === "string" ? chapter.content.trim() : "";
+  const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
+  const imageUrls = lines.filter(line =>
+    /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(line)
+  );
+
+  if (imageUrls.length) {
+    const panels = document.createElement("div");
+    panels.className = "webtoon-content";
+
+    imageUrls.forEach((url, index) => {
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = story.title + " — image " + (index + 1);
+      img.loading = "lazy";
+      img.onerror = () => {
+        const notice = document.createElement("p");
+        notice.className = "notice";
+        notice.textContent = "Impossible de charger cette image : " + url;
+        img.replaceWith(notice);
+      };
+      panels.appendChild(img);
+    });
+
+    container.appendChild(panels);
+    const remaining = lines.filter(line => !imageUrls.includes(line));
+
+    if (remaining.length) {
+      const caption = document.createElement("div");
+      caption.className = "novel-text";
+      remaining.forEach(line => {
+        const p = document.createElement("p");
+        p.textContent = line;
+        caption.appendChild(p);
+      });
+      container.appendChild(caption);
+    }
+  } else {
+    renderNovel(chapter);
+  }
+}
+
+function renderChapter() {
+  const chapter = chapters[currentChapter];
+  if (!chapter) return;
+
+  $("chapterTitle").textContent = chapter.title || "Chapitre " + (currentChapter + 1);
+  $("readingType").textContent = story.type;
+
+  if (story.type === "Webtoon") renderWebtoon(chapter);
+  else renderNovel(chapter);
+
+  const percent = Math.round(((currentChapter + 1) / chapters.length) * 100);
+  $("progressFill").style.width = percent + "%";
+  $("progressTrack").setAttribute("aria-valuenow", String(percent));
+  $("chapterCounter").textContent = "Chapitre " + (currentChapter + 1) + " sur " + chapters.length;
+  $("reportChapterButton").hidden = !isDatabaseStory || !chapter.id;
+  $("previousChapter").disabled = currentChapter === 0;
+  $("nextChapter").disabled = currentChapter >= chapters.length - 1;
+
+  saveProgress();
+  loadComments();
+}
+
+function openReader(index) {
+  if (!chapters.length) return;
+  currentChapter = Math.max(0, Math.min(index, chapters.length - 1));
+  $("reader").hidden = false;
+  renderChapter();
+  $("reader").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+async function loadDatabaseStory() {
+  const {data: row, error} = await supabase
+    .from("stories")
+    .select("id,title,description,cover_url,story_type,genre,status,author_id")
+    .eq("id", dbStoryId)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!row) throw new Error("Cette histoire n'existe pas ou n'est pas publiée.");
+
+  const {data: chapterRows, error: chapterError} = await supabase
+    .from("chapters")
+    .select("id,title,content,chapter_number,created_at")
+    .eq("story_id", row.id)
+    .order("chapter_number", {ascending:true});
+
+  if (chapterError) throw chapterError;
+
+  story = {
+    id: row.id,
+    authorId: row.author_id,
+    title: row.title,
+    description: row.description || "",
+    cover: row.cover_url || "",
+    genre: row.genre || "Autre",
+    type: row.story_type === "webtoon" ? "Webtoon" : "Roman"
+  };
+
+  chapters = (chapterRows || []).map(ch => ({
+    id: ch.id,
+    title: ch.title,
+    content: ch.content || ""
+  }));
+
+  if (!chapters.length) throw new Error("Cette histoire ne possède pas encore de chapitre.");
+}
+
+function showStory() {
+  document.title = story.title + " — Novelia";
+  $("title").textContent = story.title;
+  $("type").textContent = story.type;
+  $("genre").textContent = story.genre;
+  $("format").textContent = story.type === "Roman" ? "Lecture textuelle" : "Lecture illustrée";
+  $("description").textContent = story.description;
+  $("chapterCount").textContent = chapters.length + (story.type === "Roman" ? " chapitre(s)" : " épisode(s)");
+
+  setCover(story.cover, story.title);
+  updateFavoriteButton();
+  updateResumeButton();
+  // Les œuvres de démonstration locales n'ont pas d'UUID dans public.stories.
+  $("storyLikeButton").hidden = !isDatabaseStory;
+  $("storyLikeCount").hidden = !isDatabaseStory;
+  $("reportStoryButton").hidden = !isDatabaseStory;
+  $("storyLikeMessage").textContent = "";
+
+  const saved = savedChapterIndex();
+  if (saved !== null) {
+    $("progressMessage").textContent = "Ta dernière lecture était au chapitre " + (saved + 1) + ".";
+  }
+
+  $("startReading").disabled = chapters.length === 0;
+  $("resumeReading").disabled = chapters.length === 0;
+}
+
+$("storyLikeButton").addEventListener("click", toggleStoryLike);
+
+$("favoriteButton").addEventListener("click", async () => {
+  const list = getFavorites();
+  const wasSaved = list.includes(storyKey);
+  const updated = wasSaved
+    ? list.filter(item => item !== storyKey)
+    : [...list, storyKey];
+
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+    updateFavoriteButton();
+
+    $("favoriteMessage").textContent = wasSaved
+      ? "Retirée des favoris."
+      : "Ajoutée aux favoris.";
+
+    if (currentUser && librarySyncReady) {
+      $("favoriteMessage").textContent += " Synchronisation avec ton compte…";
+      await saveLibraryToCloud();
+      $("favoriteMessage").textContent = wasSaved
+        ? "Retirée des favoris et synchronisée."
+        : "Ajoutée aux favoris et synchronisée.";
+    } else if (!currentUser) {
+      $("favoriteMessage").textContent += " Connecte-toi pour synchroniser tes favoris entre appareils.";
+    }
+  } catch {
+    $("favoriteMessage").textContent = "Impossible d'enregistrer ce changement.";
+  }
+});
+
+$("startReading").addEventListener("click", () => openReader(0));
+$("resumeReading").addEventListener("click", () => openReader(savedChapterIndex() ?? 0));
+
+$("previousChapter").addEventListener("click", () => {
+  if (currentChapter > 0) {
+    currentChapter--;
+    renderChapter();
+    $("reader").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+});
+
+$("nextChapter").addEventListener("click", () => {
+  if (currentChapter < chapters.length - 1) {
+    currentChapter++;
+    renderChapter();
+    $("reader").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+});
+
+async function refreshUser() {
+  const {data, error} = await supabase.auth.getUser();
+  if (error) console.warn("Vérification du compte :", error.message);
+
+  currentUser = data?.user || null;
+
+  $("commentForm").hidden = !currentUser || !isDatabaseStory;
+  $("loginCommentNotice").hidden = Boolean(currentUser) || !isDatabaseStory;
+
+  if (!isDatabaseStory) {
+    $("commentsPanel").hidden = true;
+  } else {
+    $("commentsPanel").hidden = false;
+    $("commentsStatus").textContent = currentUser
+      ? "Connecté : tu peux commenter ce chapitre."
+      : "Connecte-toi pour écrire un commentaire. Les commentaires sont visibles par tous.";
+  }
+
+  if (currentUser && storyKey && story) {
+    await syncLibraryFromCloud();
+  } else {
+    librarySyncReady = false;
+  }
+
+  // Le total est public ; le statut du J’aime dépend du compte connecté.
+  await refreshStoryLikes();
+}
+
+function safeDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString("fr-FR");
+}
+
+async function loadComments() {
+  if (!isDatabaseStory || !chapters[currentChapter]?.id) return;
+
+  const chapterId = chapters[currentChapter].id;
+  $("commentsList").replaceChildren();
+  $("commentsStatus").textContent = "Chargement des commentaires…";
+
+  const {data, error} = await supabase
+    .from("comments")
+    .select("id,content,user_id,created_at,profiles(username,display_name)")
+    .eq("chapter_id", chapterId)
+    .order("created_at", {ascending:true});
+
+  if (error) {
+    $("commentsStatus").textContent = "Impossible de charger les commentaires : " + error.message;
+    return;
+  }
+
+  $("commentsStatus").textContent = (data || []).length
+    ? ((data.length === 1) ? "1 commentaire" : data.length + " commentaires")
+    : "Aucun commentaire pour ce chapitre.";
+
+  (data || []).forEach(comment => {
+    const item = document.createElement("article");
+    item.className = "comment";
+
+    const author = document.createElement("div");
+    author.className = "comment-author";
+    const profile = Array.isArray(comment.profiles) ? comment.profiles[0] : comment.profiles;
+    author.textContent = profile?.display_name || profile?.username || "Lecteur Novelia";
+
+    const date = document.createElement("div");
+    date.className = "comment-date";
+    date.textContent = safeDate(comment.created_at);
+
+    const body = document.createElement("p");
+    body.className = "comment-text";
+    body.textContent = comment.content;
+
+    item.append(author, date, body);
+
+    const reportCommentButton = document.createElement("button");
+    reportCommentButton.type = "button";
+    reportCommentButton.className = "button secondary report-button";
+    reportCommentButton.textContent = "Signaler ce commentaire";
+    reportCommentButton.addEventListener("click", () => {
+      openReportModal({
+        type: "comment",
+        id: comment.id,
+        title: story.title + " — commentaire de " + author.textContent,
+        excerpt: comment.content || ""
+      });
+    });
+    item.appendChild(reportCommentButton);
+    $("commentsList").appendChild(item);
+  });
+}
+
+$("commentForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!currentUser || !isDatabaseStory) return;
+
+  const input = $("commentInput");
+  const value = input.value.trim();
+
+  if (!value) {
+    $("commentsStatus").textContent = "Écris un commentaire avant de l'envoyer.";
+    return;
+  }
+
+  const chapterId = chapters[currentChapter]?.id;
+  if (!chapterId) return;
+
+  const button = $("sendComment");
+  button.disabled = true;
+  button.textContent = "Publication…";
+
+  const {error} = await supabase.from("comments").insert({
+    chapter_id: chapterId,
+    user_id: currentUser.id,
+    content: value
+  });
+
+  button.disabled = false;
+  button.textContent = "Publier le commentaire";
+
+  if (error) {
+    $("commentsStatus").textContent = "Erreur : " + error.message;
+    return;
+  }
+
+  input.value = "";
+  await loadComments();
+});
+
+async function main() {
+  try {
+    if (dbStoryId) {
+      await loadDatabaseStory();
+      isDatabaseStory = true;
+    } else if (demoId && demoStories[demoId]) {
+      const demo = demoStories[demoId];
+
+      story = {
+        title: demo.title,
+        type: demo.type,
+        genre: demo.genre,
+        cover: demo.cover,
+        description: demo.description
+      };
+
+      chapters = demo.chapters.map(chapter => ({
+        id: null,
+        title: chapter.title,
+        content: Array.isArray(chapter.content)
+          ? chapter.content.join("\n\n")
+          : chapter.content
+      }));
+
+      isDatabaseStory = false;
+    } else {
+      showError("Cette œuvre est introuvable. Retourne au catalogue Novelia.");
+      return;
+    }
+
+    showStory();
+    await refreshUser();
+
+    // Si la page a été ouverte depuis une notification, privilégier le chapitre visé
+    // plutôt que la dernière progression enregistrée dans la bibliothèque.
+    if (isDatabaseStory && requestedChapterId) {
+      const chapterIndex = chapters.findIndex(
+        chapter => String(chapter.id) === String(requestedChapterId)
+      );
+
+      if (chapterIndex >= 0) {
+        openReader(chapterIndex);
+      } else {
+        $("status").textContent = "Le chapitre demandé n'est pas disponible dans cette histoire.";
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    showError("Chargement impossible : " + error.message);
+  }
+}
+
+/*
+  Quand la connexion change pendant la lecture, actualiser le compte
+  puis synchroniser les données de cette histoire.
+*/
+supabase.auth.onAuthStateChange(() => {
+  setTimeout(() => {
+    refreshUser().catch(error => console.error("Actualisation du compte :", error));
+  }, 0);
+});
+
+await main();
+</script>
+</body>
+</html>
