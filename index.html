@@ -338,8 +338,9 @@ function addPublishedStory(story) {
 async function loadPublishedStories() {
   const { data, error } = await supabase
     .from("stories")
-    .select("id,title,description,cover_url,story_type,genre,status,created_at")
+    .select("id,title,description,cover_url,story_type,genre,status,created_at,moderation_hidden")
     .eq("status", "published")
+    .eq("moderation_hidden", false)
     .order("created_at", { ascending: false });
 
   if (error) {
