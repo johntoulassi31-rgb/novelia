@@ -46,6 +46,11 @@ h2{font-size:22px}
 .favorite{width:38px;height:38px;border-radius:50%;border:1px solid #6b4a89;background:#191324ef;color:white;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .favorite-card{position:absolute;top:9px;right:9px}
 .favorite.saved{color:#ff79b0;border-color:#ff79b0}
+.like-area{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;color:#c4a5ff;font-size:12px}
+.story-like{border:1px solid #6b4a89;background:#211630;color:#e4d6ff;border-radius:20px;padding:7px 10px;font-size:12px;font-weight:bold;cursor:pointer}
+.story-like.liked{background:#4a1949;border-color:#c084fc;color:#ffb1d6}
+.story-like:disabled{opacity:.6;cursor:wait}
+.like-count{color:#c5bdd6}
 .story[hidden]{display:none}
 #message{color:#c4a5ff;line-height:1.6;overflow-wrap:anywhere}
 .empty-cover{aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;text-align:center;padding:15px;font:bold 22px Georgia,serif;background:linear-gradient(145deg,#392456,#7f1d3d,#100d19);overflow-wrap:anywhere}
@@ -150,6 +155,9 @@ let sessionVersion = 0;
 let sessionInitialized = false;
 let notificationCountRequest = 0;
 let favoriteActions = Promise.resolve();
+let likeActions = Promise.resolve();
+let likedStoryIds = new Set();
+let storyLikeCounts = new Map();
 
 function readFavoriteCache(key) {
   try {
@@ -264,6 +272,19 @@ function addPublishedStory(story) {
   readButton.type = "button";
   readButton.dataset.dbStory = String(story.id);
   info.appendChild(readButton);
+
+  // Les œuvres de démonstration locales ne possèdent pas d'identifiant dans public.stories.
+  const likeArea = makeElement("div", "like-area");
+  const likeButton = makeElement("button", "story-like", "♡ J’aime");
+  likeButton.type = "button";
+  likeButton.dataset.likeStory = String(story.id);
+  likeButton.setAttribute("aria-pressed", "false");
+  likeButton.setAttribute("aria-label", "Aimer cette œuvre");
+  const likeCount = makeElement("span", "like-count", "Chargement…");
+  likeCount.dataset.likeCount = String(story.id);
+  likeArea.append(likeButton, likeCount);
+  info.appendChild(likeArea);
+
   card.appendChild(info);
   grid.appendChild(card);
 }
@@ -282,6 +303,90 @@ async function loadPublishedStories() {
   (data || []).forEach(addPublishedStory);
   updateFavoriteButtons();
   filterStories();
+  await refreshStoryLikes();
+}
+
+function renderStoryLike(card) {
+  const storyId = String(card.dataset.id);
+  const button = card.querySelector('[data-like-story]');
+  const count = card.querySelector('[data-like-count]');
+  if (!button || !count) return;
+
+  const liked = likedStoryIds.has(storyId);
+  button.classList.toggle("liked", liked);
+  button.setAttribute("aria-pressed", String(liked));
+  button.setAttribute("aria-label", liked ? "Retirer le J’aime" : "Aimer cette œuvre");
+  button.textContent = liked ? "♥ Aimé" : "♡ J’aime";
+
+  if (storyLikeCounts.has(storyId)) {
+    count.textContent = storyLikeCounts.get(storyId) + " J’aime";
+  }
+}
+
+async function refreshStoryLikes() {
+  const cards = [...grid.querySelectorAll('.story[data-db-story="true"]')];
+  const storyIds = cards.map(card => String(card.dataset.id));
+  if (!storyIds.length) return;
+
+  const countResults = await Promise.all(storyIds.map(async storyId => {
+    const { count, error } = await supabase
+      .from("story_likes")
+      .select("user_id", { count: "exact", head: true })
+      .eq("story_id", storyId);
+    return { storyId, count, error };
+  }));
+  countResults.forEach(result => {
+    if (!result.error) storyLikeCounts.set(result.storyId, result.count ?? 0);
+    else console.warn("Compteur J’aime indisponible pour", result.storyId, result.error.message);
+  });
+
+  if (currentUser) {
+    const { data, error } = await supabase
+      .from("story_likes")
+      .select("story_id")
+      .eq("user_id", currentUser.id)
+      .in("story_id", storyIds);
+    if (!error) likedStoryIds = new Set((data || []).map(row => String(row.story_id)));
+    else console.warn("État des J’aime indisponible :", error.message);
+  } else {
+    likedStoryIds = new Set();
+  }
+  cards.forEach(renderStoryLike);
+}
+
+async function toggleStoryLike(storyId, button) {
+  if (!currentUser) {
+    message.textContent = "Connecte-toi pour aimer une œuvre publiée sur Novelia.";
+    return;
+  }
+  const id = String(storyId);
+  button.disabled = true;
+  try {
+    const alreadyLiked = likedStoryIds.has(id);
+    const result = alreadyLiked
+      ? await supabase.from("story_likes").delete().eq("story_id", id).eq("user_id", currentUser.id)
+      : await supabase.from("story_likes").insert({ story_id: id, user_id: currentUser.id });
+    if (result.error) throw result.error;
+
+    if (alreadyLiked) {
+      likedStoryIds.delete(id);
+      storyLikeCounts.set(id, Math.max(0, (storyLikeCounts.get(id) || 0) - 1));
+      message.textContent = "Tu as retiré ton J’aime.";
+    } else {
+      likedStoryIds.add(id);
+      storyLikeCounts.set(id, (storyLikeCounts.get(id) || 0) + 1);
+      message.textContent = "Tu as aimé cette œuvre.";
+    }
+    const card = [...grid.querySelectorAll('.story[data-db-story="true"]')]
+      .find(item => String(item.dataset.id) === id);
+    if (card) renderStoryLike(card);
+  } catch (error) {
+    console.error("Erreur lors du J’aime :", error);
+    message.textContent = "Impossible d’enregistrer ton J’aime : " + (error?.message || "erreur inconnue.");
+    await refreshStoryLikes();
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function setCloudFavorite(userId, storyKey, isFavorite, rowMap) {
@@ -442,6 +547,7 @@ async function handleSession(session) {
     updateFavoriteButtons();
     filterStories();
   }
+  await refreshStoryLikes();
 }
 
 async function changeFavorite(storyKey, button) {
@@ -485,6 +591,13 @@ async function changeFavorite(storyKey, button) {
 }
 
 grid.addEventListener("click", event => {
+  const likeButton = event.target.closest("button[data-like-story]");
+  if (likeButton) {
+    const id = likeButton.dataset.likeStory;
+    likeActions = likeActions.then(() => toggleStoryLike(id, likeButton));
+    return;
+  }
+
   const favoriteButton = event.target.closest("[data-favorite]");
   if (favoriteButton) {
     const id = favoriteButton.dataset.favorite;
