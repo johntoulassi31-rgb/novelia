@@ -231,7 +231,7 @@ const params = new URLSearchParams(location.search);
 const dbStoryId = params.get("db_story");
 const demoId = params.get("story");
 // Paramètre utilisé par les notifications pour ouvrir directement un chapitre précis.
-const requestedChapterId = params.get("chapter_id") || params.get("chapter");
+const requestedChapterId = params.get("chapter_id");
 const storyKey = dbStoryId ? "db_" + dbStoryId : demoId;
 
 let story = null;
@@ -739,9 +739,10 @@ function openReader(index) {
 async function loadDatabaseStory() {
   const {data: row, error} = await supabase
     .from("stories")
-    .select("id,title,description,cover_url,story_type,genre,status,author_id")
+    .select("id,title,description,cover_url,story_type,genre,status,author_id,moderation_hidden")
     .eq("id", dbStoryId)
     .eq("status", "published")
+    .eq("moderation_hidden", false)
     .maybeSingle();
 
   if (error) throw error;
@@ -749,8 +750,9 @@ async function loadDatabaseStory() {
 
   const {data: chapterRows, error: chapterError} = await supabase
     .from("chapters")
-    .select("id,title,content,chapter_number,created_at")
+    .select("id,title,content,chapter_number,created_at,moderation_hidden")
     .eq("story_id", row.id)
+    .eq("moderation_hidden", false)
     .order("chapter_number", {ascending:true});
 
   if (chapterError) throw chapterError;
@@ -767,7 +769,6 @@ async function loadDatabaseStory() {
 
   chapters = (chapterRows || []).map(ch => ({
     id: ch.id,
-    chapterNumber: ch.chapter_number,
     title: ch.title,
     content: ch.content || ""
   }));
@@ -894,8 +895,9 @@ async function loadComments() {
 
   const {data, error} = await supabase
     .from("comments")
-    .select("id,content,user_id,created_at,profiles(username,display_name)")
+    .select("id,content,user_id,created_at,moderation_hidden,profiles(username,display_name)")
     .eq("chapter_id", chapterId)
+    .eq("moderation_hidden", false)
     .order("created_at", {ascending:true});
 
   if (error) {
@@ -1016,10 +1018,8 @@ async function main() {
     // Si la page a été ouverte depuis une notification, privilégier le chapitre visé
     // plutôt que la dernière progression enregistrée dans la bibliothèque.
     if (isDatabaseStory && requestedChapterId) {
-      const chapterIndex = chapters.findIndex(chapter =>
-        String(chapter.id) === String(requestedChapterId) ||
-        (Number.isInteger(Number(requestedChapterId)) &&
-          Number(chapter.chapterNumber) === Number(requestedChapterId))
+      const chapterIndex = chapters.findIndex(
+        chapter => String(chapter.id) === String(requestedChapterId)
       );
 
       if (chapterIndex >= 0) {
