@@ -1,1 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17131f">
+  <title>Administration | Novelia</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--bg:#100e16;--panel:#1a1722;--panel2:#211d2b;--text:#f6f1fb;--muted:#b8afc4;--line:#383044;--accent:#c49aff;--accent2:#8d5ad5;--danger:#ff8d9a;--ok:#8fe0b4;--warn:#ffd58a}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    a{color:var(--accent)}button,input,select,textarea{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--text);background:var(--panel2)}button:hover{border-color:var(--accent)}button.primary{background:var(--accent2);border-color:var(--accent2)}button.danger{color:#ffdce0;border-color:#70404a}button:disabled{opacity:.55;cursor:wait}
+    .top{padding:20px clamp(16px,4vw,44px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#15111d}.brand{font-weight:800;font-size:1.35rem;letter-spacing:.2px}.brand span{color:var(--accent)}.sub{color:var(--muted);font-size:.9rem}
+    main{max-width:1200px;margin:auto;padding:24px clamp(12px,3vw,32px) 48px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}h1{font-size:1.55rem;margin:0 0 5px}h2{font-size:1.1rem;margin:0 0 12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row.spread{justify-content:space-between}.field{display:flex;flex-direction:column;gap:5px;min-width:150px;flex:1}.field label{font-size:.85rem;color:var(--muted)}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;background:#110f17;color:var(--text)}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.stat{background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:14px}.stat strong{display:block;font-size:1.55rem}.stat span{color:var(--muted);font-size:.85rem}.message{padding:12px 14px;border-radius:10px;margin:12px 0;display:none;white-space:pre-wrap}.message.show{display:block}.message.error{background:#3a2028;color:#ffdce0}.message.info{background:#242034;color:#e9dcff}.message.success{background:#193328;color:#c9ffe0}.hidden{display:none!important}
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:.78rem;background:#342b43}.pill.pending{color:var(--warn)}.pill.reviewed{color:#c9b3ff}.pill.resolved{color:var(--ok)}.pill.rejected{color:#ffadb6}.report-card{border:1px solid var(--line);border-radius:13px;padding:14px;margin:12px 0;background:var(--panel2)}.report-card h3{font-size:1rem;margin:0 0 6px}.report-meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:.82rem;margin:7px 0}.report-details{white-space:pre-wrap;overflow-wrap:anywhere}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.empty{text-align:center;padding:30px;color:var(--muted)}footer{text-align:center;color:var(--muted);padding:22px;font-size:.82rem}
+    @media(max-width:650px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:14px}.top{align-items:flex-start}.top button{flex:1}}
+  </style>
+</head>
+<body>
+  <header class="top"><div><div class="brand">Nove<span>lia</span> <span style="color:#f6f1fb;font-weight:500">/ Admin</span></div><div class="sub">Gestion des signalements de la communauté</div></div><div class="row"><a href="index.html">Retour au site</a><button id="signOutBtn" class="hidden">Se déconnecter</button></div></header>
+  <main>
+    <section id="loginPanel" class="panel"><h1>Connexion administrateur</h1><p class="sub">Connecte-toi avec le compte Novelia autorisé dans la table <code>app_admins</code>.</p><form id="loginForm"><div class="row"><div class="field"><label for="email">Adresse e-mail</label><input id="email" type="email" autocomplete="username" required></div><div class="field"><label for="password">Mot de passe</label><input id="password" type="password" autocomplete="current-password" required></div></div><div class="row" style="margin-top:12px"><button class="primary" type="submit">Se connecter</button></div></form><div id="loginMessage" class="message"></div></section>
+    <section id="deniedPanel" class="panel hidden"><h1>Accès refusé</h1><p id="deniedText">Ce compte n’est pas autorisé à accéder au panneau d’administration.</p><p class="sub">Vérifie que l’UUID du compte est présent dans <code>public.app_admins</code>.</p><button id="deniedSignOut" class="danger">Se déconnecter</button></section>
+    <section id="dashboard" class="hidden"><div class="panel"><div class="row spread"><div><h1>Signalements</h1><div id="whoami" class="sub"></div></div><button id="refreshBtn" class="primary">Actualiser</button></div><div id="dashboardMessage" class="message"></div><div class="row" style="margin-top:12px"><div class="field"><label for="statusFilter">Statut</label><select id="statusFilter"><option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="reviewed">Examiné</option><option value="resolved">Résolu</option><option value="rejected">Rejeté</option></select></div><div class="field"><label for="typeFilter">Type de contenu</label><select id="typeFilter"><option value="all">Tous les types</option><option value="story">Roman</option><option value="chapter">Chapitre</option><option value="comment">Commentaire</option></select></div><div class="field"><label for="searchInput">Recherche</label><input id="searchInput" type="search" placeholder="Titre, motif, détails…"></div></div></div>
+    <div class="stats"><div class="stat"><strong id="countAll">0</strong><span>Total chargé</span></div><div class="stat"><strong id="countPending">0</strong><span>En attente</span></div><div class="stat"><strong id="countResolved">0</strong><span>Résolus</span></div><div class="stat"><strong id="countRejected">0</strong><span>Rejetés</span></div></div>
+    <section class="panel"><div class="row spread"><h2>Liste des signalements</h2><span id="resultCount" class="sub"></span></div><div id="reportsList"><div class="empty">Chargement…</div></div></section></section>
+  </main><footer>Novelia · Espace d’administration</footer>
+<script>
+(() => {
+  // Clé publique uniquement. Ne jamais mettre une clé secret/service_role dans le navigateur.
+  const SUPABASE_URL = 'https://czwaokqpqgrghxeeyguq.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = id => document.getElementById(id);
+  let currentUser = null, allReports = [], authCheckRunning = false;
+  const statusLabels = {pending:'En attente',reviewed:'Examiné',resolved:'Résolu',rejected:'Rejeté'};
+  const typeLabels = {story:'Roman',chapter:'Chapitre',comment:'Commentaire'};
+  const reasonLabels = {spam:'Spam ou publicité',harassment:'Harcèlement',hate:'Haine ou discrimination',sexual_content:'Contenu sexuel inapproprié',violence:'Violence',copyright:'Droits d’auteur',other:'Autre'};
+  function showMessage(id,text,kind='info'){const el=$(id);el.textContent=text;el.className=`message show ${kind}`;}
+  function hideMessage(id){$(id).className='message';$(id).textContent='';}
+  function safe(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function formatDate(value){if(!value)return'Date inconnue';const d=new Date(value);return Number.isNaN(d.getTime())?'Date inconnue':d.toLocaleString('fr-FR');}
+  function showLogin(){ $('loginPanel').classList.remove('hidden'); $('deniedPanel').classList.add('hidden'); $('dashboard').classList.add('hidden'); $('signOutBtn').classList.add('hidden'); }
+  function showDenied(text){$('loginPanel').classList.add('hidden');$('dashboard').classList.add('hidden');$('deniedPanel').classList.remove('hidden');$('signOutBtn').classList.remove('hidden');$('deniedText').textContent=text;}
+  function showDashboard(){$('loginPanel').classList.add('hidden');$('deniedPanel').classList.add('hidden');$('dashboard').classList.remove('hidden');$('signOutBtn').classList.remove('hidden');}
+  async function checkAdminAndLoad(){
+    if(authCheckRunning)return; authCheckRunning=true;
+    try{
+      const {data:sessionData,error:sessionError}=await db.auth.getSession();
+      if(sessionError)throw sessionError;
+      currentUser=sessionData.session?.user||null;
+      if(!currentUser){showLogin();return;}
+      const {data:adminRow,error:adminError}=await db.from('app_admins').select('user_id').eq('user_id',currentUser.id).maybeSingle();
+      if(adminError){showDenied('Impossible de vérifier les droits administrateur : '+adminError.message+' Vérifie la politique SELECT de app_admins.');return;}
+      if(!adminRow){showDenied('Ce compte est connecté, mais son identifiant utilisateur n’est pas autorisé dans app_admins.');return;}
+      showDashboard();$('whoami').textContent=currentUser.email||currentUser.id;await loadReports();
+    }catch(e){showLogin();showMessage('loginMessage',e.message||'Une erreur est survenue.','error');}
+    finally{authCheckRunning=false;}
+  }
+  async function login(event){event.preventDefault();hideMessage('loginMessage');const btn=$('loginForm').querySelector('button[type="submit"]');btn.disabled=true;try{const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;$('password').value='';await checkAdminAndLoad();}catch(e){showMessage('loginMessage',e.message||'Connexion impossible.','error');}finally{btn.disabled=false;}}
+  async function logout(){const {error}=await db.auth.signOut();currentUser=null;allReports=[];showLogin();if(error)showMessage('loginMessage',error.message,'error');}
+  async function loadReports(){ $('reportsList').innerHTML='<div class="empty">Chargement des signalements…</div>';hideMessage('dashboardMessage');const {data,error}=await db.from('content_reports').select('id,reporter_id,target_type,target_id,target_title,target_excerpt,reason,details,status,created_at').order('created_at',{ascending:false}).limit(500);if(error){$('reportsList').innerHTML='<div class="empty">Impossible de charger les signalements.</div>';showMessage('dashboardMessage','Erreur Supabase : '+error.message+'\nVérifie la table content_reports et sa politique SELECT pour les administrateurs.','error');return;}allReports=data||[];updateStats();renderReports();}
+  function updateStats(){$('countAll').textContent=allReports.length;$('countPending').textContent=allReports.filter(r=>r.status==='pending').length;$('countResolved').textContent=allReports.filter(r=>r.status==='resolved').length;$('countRejected').textContent=allReports.filter(r=>r.status==='rejected').length;}
+  function renderReports(){const status=$('statusFilter').value,type=$('typeFilter').value,q=$('searchInput').value.trim().toLowerCase();const rows=allReports.filter(r=>{if(status!=='all'&&r.status!==status)return false;if(type!=='all'&&r.target_type!==type)return false;return !q||[r.target_title,r.target_excerpt,r.reason,r.details,r.reporter_id,r.target_id].filter(Boolean).join(' ').toLowerCase().includes(q);});$('resultCount').textContent=`${rows.length} résultat(s)`;if(!rows.length){$('reportsList').innerHTML='<div class="empty">Aucun signalement ne correspond à ces filtres.</div>';return;}$('reportsList').innerHTML=rows.map(r=>{const st=['pending','reviewed','resolved','rejected'].includes(r.status)?r.status:'pending';const excerpt=r.target_excerpt?`<p><strong>Extrait signalé :</strong><br><span class="report-details">${safe(r.target_excerpt)}</span></p>`:'';const details=r.details?`<p><strong>Détails du lecteur :</strong><br><span class="report-details">${safe(r.details)}</span></p>`:'';return `<article class="report-card"><div class="row spread"><h3>${safe(r.target_title||'Contenu sans titre')}</h3><span class="pill ${st}">${safe(statusLabels[r.status]||r.status||'Inconnu')}</span></div><div class="report-meta"><span>Type : ${safe(typeLabels[r.target_type]||r.target_type||'Inconnu')}</span><span>Motif : ${safe(reasonLabels[r.reason]||r.reason||'Non précisé')}</span><span>Reçu le : ${safe(formatDate(r.created_at))}</span></div>${excerpt}${details}<details><summary>Identifiants techniques</summary><p class="sub">Signalement : ${safe(r.id)}<br>Contenu : ${safe(r.target_id||'Non renseigné')}<br>Lecteur : ${safe(r.reporter_id||'Inconnu')}</p></details><div class="actions"><button data-status="reviewed" data-id="${safe(r.id)}">Marquer examiné</button><button data-status="resolved" data-id="${safe(r.id)}">Résolu</button><button class="danger" data-status="rejected" data-id="${safe(r.id)}">Rejeter</button>${r.status!=='pending'?`<button data-status="pending" data-id="${safe(r.id)}">Remettre en attente</button>`:''}</div></article>`;}).join('');}
+  async function changeStatus(id,status,button){if(!['pending','reviewed','resolved','rejected'].includes(status))return;button.disabled=true;hideMessage('dashboardMessage');const {data,error}=await db.from('content_reports').update({status}).eq('id',id).select('id,status').maybeSingle();button.disabled=false;if(error){showMessage('dashboardMessage','Mise à jour refusée : '+error.message+'\nVérifie la politique UPDATE de content_reports pour les administrateurs.','error');return;}if(!data){showMessage('dashboardMessage','Aucun signalement modifié. La politique UPDATE peut bloquer cette opération.','error');return;}const item=allReports.find(r=>r.id===id);if(item)item.status=status;updateStats();renderReports();showMessage('dashboardMessage','Statut mis à jour : '+statusLabels[status]+'.','success');}
+  $('loginForm').addEventListener('submit',login);$('signOutBtn').addEventListener('click',logout);$('deniedSignOut').addEventListener('click',logout);$('refreshBtn').addEventListener('click',loadReports);$('statusFilter').addEventListener('change',renderReports);$('typeFilter').addEventListener('change',renderReports);$('searchInput').addEventListener('input',renderReports);$('reportsList').addEventListener('click',e=>{const b=e.target.closest('button[data-status][data-id]');if(b)changeStatus(b.dataset.id,b.dataset.status,b);});
+  db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){currentUser=null;allReports=[];showLogin();}else if(event==='SIGNED_IN'){setTimeout(checkAdminAndLoad,0);}});
+  checkAdminAndLoad();
+})();
+</script>
+</body>
+</html>
 
