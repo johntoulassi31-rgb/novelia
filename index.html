@@ -51,6 +51,9 @@ h2{font-size:22px}
 .empty-cover{aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;text-align:center;padding:15px;font:bold 22px Georgia,serif;background:linear-gradient(145deg,#392456,#7f1d3d,#100d19);overflow-wrap:anywhere}
 .published-label{display:inline-block;color:#cdb5ff;font-size:11px;margin-top:8px}
 footer{padding:24px 16px;text-align:center;color:#b8abc9;border-top:1px solid #352747;font-size:12px}
+.notification-link{display:inline-flex;align-items:center;gap:6px}
+.notification-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#ff5d9e;color:#190f20;font-size:11px;font-weight:bold;line-height:1}
+.notification-badge[hidden]{display:none}
 @media(min-width:700px){.hero,main{max-width:1000px;margin-left:auto;margin-right:auto}.stories{grid-template-columns:repeat(4,minmax(0,1fr))}.hero h1{font-size:48px}}
 </style>
 </head>
@@ -63,7 +66,7 @@ footer{padding:24px 16px;text-align:center;color:#b8abc9;border-top:1px solid #3
     <a href="#histoires" data-nav="Webtoon">Webtoons</a>
     <a href="publish.html">Publier</a>
     <a href="authors.html">Découvrir les auteurs</a>
-    <a href="notifications.html">Notifications</a>
+    <a href="notifications.html" class="notification-link">Notifications <span id="notificationBadge" class="notification-badge" aria-label="Notifications non lues" hidden>0</span></a>
     <a href="profile.html">Mon profil</a>
   </nav>
   <div class="account-area">
@@ -145,6 +148,7 @@ let cloudReady = false;
 let loadingUserId = null;
 let sessionVersion = 0;
 let sessionInitialized = false;
+let notificationCountRequest = 0;
 let favoriteActions = Promise.resolve();
 
 function readFavoriteCache(key) {
@@ -382,6 +386,37 @@ async function syncUserFavorites(user, runVersion) {
   filterStories();
 }
 
+async function refreshNotificationBadge(user) {
+  const badge = document.getElementById("notificationBadge");
+  const requestId = ++notificationCountRequest;
+
+  if (!user) {
+    badge.hidden = true;
+    badge.textContent = "0";
+    return;
+  }
+
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", user.id)
+    .eq("is_read", false);
+
+  // Ignore a stale response if the account has changed during the request.
+  if (requestId !== notificationCountRequest || currentUser?.id !== user.id) return;
+
+  if (error) {
+    badge.hidden = true;
+    console.error("Impossible de charger le compteur de notifications:", error);
+    return;
+  }
+
+  const total = count || 0;
+  badge.textContent = total > 99 ? "99+" : String(total);
+  badge.hidden = total === 0;
+  badge.setAttribute("aria-label", total + " notification(s) non lue(s)");
+}
+
 async function handleSession(session) {
   const nextUser = session?.user || null;
   // Ignore les événements redondants sans interrompre la première initialisation.
@@ -391,6 +426,7 @@ async function handleSession(session) {
   sessionInitialized = true;
   currentUser = nextUser;
   cloudReady = false;
+  void refreshNotificationBadge(nextUser);
 
   if (nextUser) {
     await syncUserFavorites(nextUser, runVersion);
