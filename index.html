@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -7,7 +6,6 @@
 <meta name="theme-color" content="#100d19">
 <meta name="description" content="Découvre des romans et des webtoons sur Novelia.">
 <title>Novelia — Lire sans limites</title>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#100d19;color:#f8f5ff;font-family:Arial,sans-serif}
@@ -23,6 +21,7 @@ nav a{color:#d8c9f5;text-decoration:none;font-size:14px}
 .hero p{color:#d2c4e8;line-height:1.6}
 .button{background:#8b5cf6;color:white;padding:12px 16px;border:0;border-radius:10px;font-weight:bold;cursor:pointer}
 .button:hover{background:#a078ff}
+.button:disabled,.favorite:disabled{opacity:.6;cursor:wait}
 main{padding:0 16px 30px}
 h2{font-size:22px}
 .search-box{margin:18px 0}
@@ -52,14 +51,9 @@ h2{font-size:22px}
 .empty-cover{aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;text-align:center;padding:15px;font:bold 22px Georgia,serif;background:linear-gradient(145deg,#392456,#7f1d3d,#100d19);overflow-wrap:anywhere}
 .published-label{display:inline-block;color:#cdb5ff;font-size:11px;margin-top:8px}
 footer{padding:24px 16px;text-align:center;color:#b8abc9;border-top:1px solid #352747;font-size:12px}
-@media(min-width:700px){
-.hero,main{max-width:1000px;margin-left:auto;margin-right:auto}
-.stories{grid-template-columns:repeat(4,minmax(0,1fr))}
-.hero h1{font-size:48px}
-}
+@media(min-width:700px){.hero,main{max-width:1000px;margin-left:auto;margin-right:auto}.stories{grid-template-columns:repeat(4,minmax(0,1fr))}.hero h1{font-size:48px}}
 </style>
 </head>
-
 <body>
 <header>
   <div class="logo">✦ NOVELIA</div>
@@ -76,82 +70,53 @@ footer{padding:24px 16px;text-align:center;color:#b8abc9;border-top:1px solid #3
     <button id="logoutButton" class="account-button" hidden>Déconnexion</button>
   </div>
 </header>
-
 <section class="hero" id="accueil">
   <p>TON PROCHAIN UNIVERS T'ATTEND</p>
   <h1>Là où chaque histoire prend vie.</h1>
   <p>Explore des romans captivants et des webtoons fascinants. Trouve ta prochaine histoire préférée.</p>
   <button class="button" id="explore">Explorer les histoires</button>
 </section>
-
 <main id="histoires">
   <h2>À découvrir</h2>
   <div class="search-box">
     <label for="search">Rechercher une histoire</label>
     <input id="search" type="search" placeholder="Ex. : romance, lune, mystère..." autocomplete="off">
   </div>
-
   <div class="filters">
     <button class="filter active" data-filter="Tous">Tout</button>
     <button class="filter" data-filter="Roman">Romans</button>
     <button class="filter" data-filter="Webtoon">Webtoons</button>
     <button class="filter" data-filter="Favoris">♡ Mes favoris</button>
   </div>
-
   <div class="stories" id="storiesGrid">
     <article class="story" data-id="roses" data-type="Roman">
-      <img class="cover-image" src="images/roses.png" alt="Couverture de Les Roses de minuit" loading="lazy"
-      onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+      <img class="cover-image" src="images/roses.png" alt="Couverture de Les Roses de minuit" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
       <div class="cover" hidden>Les Roses<br>de minuit</div>
-      <button class="favorite favorite-card" data-favorite="roses" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info">
-        <h3>Les Roses de minuit</h3>
-        <p>Dark romance · Roman</p>
-        <button class="button read" data-story="roses">Découvrir</button>
-      </div>
+      <button type="button" class="favorite favorite-card" data-favorite="roses" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
+      <div class="info"><h3>Les Roses de minuit</h3><p>Dark romance · Roman</p><button class="button read" data-story="roses">Découvrir</button></div>
     </article>
-
     <article class="story" data-id="lune" data-type="Webtoon">
-      <img class="cover-image" src="images/lune.png" alt="Couverture de La Lune des oubliés" loading="lazy"
-      onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+      <img class="cover-image" src="images/lune.png" alt="Couverture de La Lune des oubliés" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
       <div class="cover" hidden>La Lune<br>des oubliés</div>
-      <button class="favorite favorite-card" data-favorite="lune" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info">
-        <h3>La Lune des oubliés</h3>
-        <p>Fantasy · Webtoon</p>
-        <button class="button read" data-story="lune">Découvrir</button>
-      </div>
+      <button type="button" class="favorite favorite-card" data-favorite="lune" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
+      <div class="info"><h3>La Lune des oubliés</h3><p>Fantasy · Webtoon</p><button class="button read" data-story="lune">Découvrir</button></div>
     </article>
-
     <article class="story" data-id="automne" data-type="Roman">
-      <img class="cover-image" src="images/automne.png" alt="Couverture de Un automne pour nous" loading="lazy"
-      onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+      <img class="cover-image" src="images/automne.png" alt="Couverture de Un automne pour nous" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
       <div class="cover" hidden>Un automne<br>pour nous</div>
-      <button class="favorite favorite-card" data-favorite="automne" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info">
-        <h3>Un automne pour nous</h3>
-        <p>Romance · Roman</p>
-        <button class="button read" data-story="automne">Découvrir</button>
-      </div>
+      <button type="button" class="favorite favorite-card" data-favorite="automne" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
+      <div class="info"><h3>Un automne pour nous</h3><p>Romance · Roman</p><button class="button read" data-story="automne">Découvrir</button></div>
     </article>
-
     <article class="story" data-id="ville" data-type="Webtoon">
-      <img class="cover-image" src="images/ville.png" alt="Couverture de La Ville sans ombre" loading="lazy"
-      onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+      <img class="cover-image" src="images/ville.png" alt="Couverture de La Ville sans ombre" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
       <div class="cover" hidden>La Ville<br>sans ombre</div>
-      <button class="favorite favorite-card" data-favorite="ville" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info">
-        <h3>La Ville sans ombre</h3>
-        <p>Mystère · Webtoon</p>
-        <button class="button read" data-story="ville">Découvrir</button>
-      </div>
+      <button type="button" class="favorite favorite-card" data-favorite="ville" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
+      <div class="info"><h3>La Ville sans ombre</h3><p>Mystère · Webtoon</p><button class="button read" data-story="ville">Découvrir</button></div>
     </article>
   </div>
   <p id="message" aria-live="polite"></p>
 </main>
-
-<footer>© Novelia — Version bêta 0.6<br>Découvre des histoires et partage ton univers.</footer>
-
+<footer>© Novelia — Version bêta 0.7<br>Découvre des histoires et partage ton univers.</footer>
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
@@ -167,23 +132,31 @@ const message = document.getElementById("message");
 const accountStatus = document.getElementById("accountStatus");
 const loginLink = document.getElementById("loginLink");
 const logoutButton = document.getElementById("logoutButton");
-const FAVORITES_KEY = "novelia_favorites";
+const GUEST_FAVORITES_KEY = "novelia_favorites";
+const GUEST_MIGRATED_KEY = "novelia_guest_favorites_migrated_v1";
+const USER_CACHE_PREFIX = "novelia_favorites_user_";
 
 let activeType = "Tous";
-let favorites = loadFavorites();
+let favorites = readFavoriteCache(GUEST_FAVORITES_KEY);
+let currentUser = null;
+let cloudReady = false;
+let loadingUserId = null;
+let sessionVersion = 0;
+let sessionInitialized = false;
+let favoriteActions = Promise.resolve();
 
-function loadFavorites() {
+function readFavoriteCache(key) {
   try {
-    const value = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
-    return Array.isArray(value) ? value : [];
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? [...new Set(value.map(String))] : [];
   } catch {
     return [];
   }
 }
 
-function saveFavorites() {
+function writeFavoriteCache(key, values) {
   try {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+    localStorage.setItem(key, JSON.stringify([...new Set(values.map(String))]));
     return true;
   } catch {
     message.textContent = "Impossible de sauvegarder les favoris sur cet appareil.";
@@ -191,12 +164,17 @@ function saveFavorites() {
   }
 }
 
+function userCacheKey(userId) {
+  return USER_CACHE_PREFIX + userId;
+}
+
 function updateFavoriteButtons() {
   document.querySelectorAll("[data-favorite]").forEach(button => {
-    const saved = favorites.includes(button.dataset.favorite);
+    const saved = favorites.includes(String(button.dataset.favorite));
     button.textContent = saved ? "♥" : "♡";
     button.classList.toggle("saved", saved);
     button.setAttribute("aria-pressed", String(saved));
+    button.setAttribute("aria-label", saved ? "Retirer des favoris" : "Ajouter aux favoris");
   });
 }
 
@@ -207,28 +185,23 @@ function filterStories() {
   grid.querySelectorAll(".story").forEach(card => {
     const text = card.innerText.toLocaleLowerCase("fr");
     const type = card.dataset.type;
-    const id = card.dataset.id;
-
-    const matchesType =
-      activeType === "Tous" ||
+    const id = String(card.dataset.id);
+    const matchesType = activeType === "Tous" ||
       (activeType === "Favoris" ? favorites.includes(id) : type === activeType);
-
     const visible = matchesType && text.includes(query);
     card.hidden = !visible;
     if (visible) count++;
   });
 
-  filters.forEach(button => {
-    button.classList.toggle("active", button.dataset.filter === activeType);
-  });
+  filters.forEach(button => button.classList.toggle("active", button.dataset.filter === activeType));
 
   if (count === 0) {
     message.textContent = activeType === "Favoris" && favorites.length === 0
-      ? "Tu n’as pas encore de favoris. Appuie sur ♡ sur une histoire pour l’ajouter."
+      ? (currentUser ? "Tu n’as pas encore de favoris. Appuie sur ♡ sur une histoire pour l’ajouter." : "Tu n’as pas encore de favoris. Ajoute une histoire ; tes favoris seront gardés sur cet appareil jusqu’à ta connexion.")
       : "Aucune histoire trouvée. Essaie un autre titre ou un autre genre.";
   } else if (query) {
     message.textContent = count + (count > 1 ? " histoires trouvées." : " histoire trouvée.");
-  } else {
+  } else if (!message.textContent.startsWith("Favoris synchronisés") && !message.textContent.startsWith("Impossible") && !message.textContent.startsWith("Erreur")) {
     message.textContent = "";
   }
 }
@@ -241,12 +214,13 @@ function makeElement(tag, className, text) {
 }
 
 function addPublishedStory(story) {
-  // Évite les doublons si la liste est rechargée.
-  if (grid.querySelector(`[data-id="${CSS.escape(story.id)}"]`)) return;
+  // Compare les identifiants directement pour éviter les sélecteurs contenant un ID spécial.
+  const existing = [...grid.querySelectorAll(".story")].some(card => String(card.dataset.id) === String(story.id));
+  if (existing) return;
 
   const type = story.story_type === "webtoon" ? "Webtoon" : "Roman";
   const card = makeElement("article", "story");
-  card.dataset.id = story.id;
+  card.dataset.id = String(story.id);
   card.dataset.type = type;
   card.dataset.dbStory = "true";
 
@@ -261,7 +235,6 @@ function addPublishedStory(story) {
       if (fallback) fallback.hidden = false;
     };
     card.appendChild(img);
-
     const fallback = makeElement("div", "empty-cover", story.title);
     fallback.hidden = true;
     card.appendChild(fallback);
@@ -271,26 +244,20 @@ function addPublishedStory(story) {
 
   const favorite = makeElement("button", "favorite favorite-card", "♡");
   favorite.type = "button";
-  favorite.dataset.favorite = story.id;
+  favorite.dataset.favorite = String(story.id);
   favorite.setAttribute("aria-label", "Ajouter aux favoris");
   favorite.setAttribute("aria-pressed", "false");
   card.appendChild(favorite);
 
   const info = makeElement("div", "info");
   info.appendChild(makeElement("h3", "", story.title));
-
-  const genre = story.genre || "Autre";
-  info.appendChild(makeElement("p", "", genre + " · " + type));
-
-  if (story.status === "published") {
-    info.appendChild(makeElement("span", "published-label", "Publié sur Novelia"));
-  }
+  info.appendChild(makeElement("p", "", (story.genre || "Autre") + " · " + type));
+  if (story.status === "published") info.appendChild(makeElement("span", "published-label", "Publié sur Novelia"));
 
   const readButton = makeElement("button", "button read", "Découvrir");
   readButton.type = "button";
-  readButton.dataset.dbStory = story.id;
+  readButton.dataset.dbStory = String(story.id);
   info.appendChild(readButton);
-
   card.appendChild(info);
   grid.appendChild(card);
 }
@@ -306,104 +273,241 @@ async function loadPublishedStories() {
     message.textContent = "Impossible de charger les nouvelles histoires : " + error.message;
     return;
   }
-
   (data || []).forEach(addPublishedStory);
   updateFavoriteButtons();
   filterStories();
+}
+
+async function setCloudFavorite(userId, storyKey, isFavorite, rowMap) {
+  const key = String(storyKey);
+  const existing = rowMap.get(key);
+
+  if (existing) {
+    if (Boolean(existing.is_favorite) === Boolean(isFavorite)) return { error: null };
+    const { error } = await supabase
+      .from("user_library")
+      .update({ is_favorite: Boolean(isFavorite), updated_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("story_key", key);
+    if (!error) rowMap.set(key, { ...existing, is_favorite: Boolean(isFavorite) });
+    return { error };
+  }
+
+  // Ne crée une ligne que lorsqu'une histoire est ajoutée aux favoris.
+  if (!isFavorite) return { error: null };
+  const { error } = await supabase.from("user_library").insert({
+    user_id: userId,
+    story_key: key,
+    is_favorite: true
+  });
+  if (!error) rowMap.set(key, { story_key: key, is_favorite: true });
+  return { error };
+}
+
+async function fetchLibraryRows(userId) {
+  return await supabase
+    .from("user_library")
+    .select("story_key,is_favorite,last_chapter,updated_at")
+    .eq("user_id", userId);
+}
+
+async function syncUserFavorites(user, runVersion) {
+  if (!user || runVersion !== sessionVersion) return;
+  loadingUserId = user.id;
+  cloudReady = false;
+  accountStatus.textContent = user.email || "Lecteur connecté";
+  loginLink.hidden = true;
+  logoutButton.hidden = false;
+
+  const { data, error } = await fetchLibraryRows(user.id);
+  if (runVersion !== sessionVersion) return;
+
+  if (error) {
+    favorites = readFavoriteCache(userCacheKey(user.id));
+    updateFavoriteButtons();
+    filterStories();
+    message.textContent = "Favoris non synchronisés : " + error.message + ". Vérifie les politiques RLS de user_library.";
+    loadingUserId = null;
+    return;
+  }
+
+  const rowMap = new Map((data || []).map(row => [String(row.story_key), row]));
+  const migrationAlreadyDone = localStorage.getItem(GUEST_MIGRATED_KEY) === "true";
+  const guestFavorites = migrationAlreadyDone ? [] : readFavoriteCache(GUEST_FAVORITES_KEY);
+  let migrationSucceeded = true;
+
+  // Première connexion : ajoute les anciens favoris locaux sans effacer ceux déjà dans Supabase.
+  for (const storyKey of guestFavorites) {
+    const result = await setCloudFavorite(user.id, storyKey, true, rowMap);
+    if (runVersion !== sessionVersion) return;
+    if (result.error) {
+      migrationSucceeded = false;
+      console.error("Migration d'un favori impossible", storyKey, result.error);
+    }
+  }
+
+  if (!migrationAlreadyDone && migrationSucceeded) {
+    try {
+      localStorage.setItem(GUEST_MIGRATED_KEY, "true");
+      localStorage.removeItem(GUEST_FAVORITES_KEY);
+    } catch {
+      // La synchronisation distante reste valide même si le navigateur bloque le stockage local.
+    }
+  }
+
+  const latest = await fetchLibraryRows(user.id);
+  if (runVersion !== sessionVersion) return;
+  if (latest.error) {
+    message.textContent = "Les favoris ont été lus, mais la vérification finale a échoué : " + latest.error.message;
+    loadingUserId = null;
+    return;
+  }
+
+  favorites = (latest.data || [])
+    .filter(row => row.is_favorite === true)
+    .map(row => String(row.story_key));
+  if (!migrationSucceeded) {
+    // Garde en mémoire les favoris locaux qui n'ont pas pu être transférés.
+    favorites = [...new Set([...favorites, ...guestFavorites])];
+    message.textContent = "Certains favoris locaux n'ont pas pu être transférés. Ils restent affichés ; vérifie les autorisations Supabase.";
+  } else {
+    message.textContent = "Favoris synchronisés avec ton compte Novelia.";
+  }
+  writeFavoriteCache(userCacheKey(user.id), favorites);
+  cloudReady = true;
+  loadingUserId = null;
+  updateFavoriteButtons();
+  filterStories();
+}
+
+async function handleSession(session) {
+  const nextUser = session?.user || null;
+  // Ignore les événements redondants sans interrompre la première initialisation.
+  if (sessionInitialized && nextUser && currentUser?.id === nextUser.id && loadingUserId === nextUser.id) return;
+  if (sessionInitialized && !nextUser && !currentUser && loadingUserId === null) return;
+  const runVersion = ++sessionVersion;
+  sessionInitialized = true;
+  currentUser = nextUser;
+  cloudReady = false;
+
+  if (nextUser) {
+    await syncUserFavorites(nextUser, runVersion);
+  } else {
+    loadingUserId = null;
+    accountStatus.textContent = "Visiteur";
+    loginLink.hidden = false;
+    logoutButton.hidden = true;
+    // Après une connexion, ne montre pas les favoris d'un autre compte à un visiteur.
+    favorites = localStorage.getItem(GUEST_MIGRATED_KEY) === "true"
+      ? []
+      : readFavoriteCache(GUEST_FAVORITES_KEY);
+    updateFavoriteButtons();
+    filterStories();
+  }
+}
+
+async function changeFavorite(storyKey, button) {
+  const key = String(storyKey);
+  const wasSaved = favorites.includes(key);
+  const shouldSave = !wasSaved;
+  button.disabled = true;
+
+  try {
+    if (currentUser) {
+      if (!cloudReady) {
+        message.textContent = "Les favoris se synchronisent encore. Réessaie dans un instant.";
+        return;
+      }
+      const { data, error } = await fetchLibraryRows(currentUser.id);
+      if (error) throw error;
+      const rowMap = new Map((data || []).map(row => [String(row.story_key), row]));
+      const result = await setCloudFavorite(currentUser.id, key, shouldSave, rowMap);
+      if (result.error) throw result.error;
+      favorites = shouldSave ? [...new Set([...favorites, key])] : favorites.filter(item => item !== key);
+      writeFavoriteCache(userCacheKey(currentUser.id), favorites);
+      message.textContent = shouldSave ? "Histoire ajoutée à tes favoris." : "Histoire retirée de tes favoris.";
+    } else {
+      favorites = shouldSave ? [...new Set([...favorites, key])] : favorites.filter(item => item !== key);
+      if (!writeFavoriteCache(GUEST_FAVORITES_KEY, favorites)) {
+        favorites = wasSaved ? [...favorites, key] : favorites.filter(item => item !== key);
+        return;
+      }
+      // Toute nouvelle sélection faite en mode visiteur pourra être migrée à la prochaine connexion.
+      try { localStorage.removeItem(GUEST_MIGRATED_KEY); } catch {}
+      message.textContent = shouldSave ? "Favori enregistré sur cet appareil. Connecte-toi pour le synchroniser avec ton compte." : "Favori retiré de cet appareil.";
+    }
+    updateFavoriteButtons();
+    filterStories();
+  } catch (error) {
+    message.textContent = "Impossible de mettre à jour ce favori : " + (error?.message || "erreur inconnue");
+    console.error("Erreur de synchronisation du favori", error);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 grid.addEventListener("click", event => {
   const favoriteButton = event.target.closest("[data-favorite]");
   if (favoriteButton) {
     const id = favoriteButton.dataset.favorite;
-    favorites = favorites.includes(id)
-      ? favorites.filter(item => item !== id)
-      : [...favorites, id];
-
-    if (saveFavorites()) {
-      updateFavoriteButtons();
-      filterStories();
-    }
+    favoriteActions = favoriteActions.then(() => changeFavorite(id, favoriteButton));
     return;
   }
 
   const dbButton = event.target.closest("button[data-db-story]");
   if (dbButton) {
-    window.location.href = "reader.html?db_story=" +
-      encodeURIComponent(dbButton.dataset.dbStory);
+    window.location.href = "reader.html?db_story=" + encodeURIComponent(dbButton.dataset.dbStory);
     return;
   }
 
   const demoButton = event.target.closest("button[data-story]");
   if (demoButton) {
-    window.location.href = "reader.html?story=" +
-      encodeURIComponent(demoButton.dataset.story);
+    window.location.href = "reader.html?story=" + encodeURIComponent(demoButton.dataset.story);
   }
 });
 
-filters.forEach(button => {
-  button.addEventListener("click", () => {
-    activeType = button.dataset.filter;
-    filterStories();
-  });
-});
+filters.forEach(button => button.addEventListener("click", () => {
+  activeType = button.dataset.filter;
+  filterStories();
+}));
 
-document.querySelectorAll("[data-nav]").forEach(link => {
-  link.addEventListener("click", () => {
-    activeType = link.dataset.nav;
-    filterStories();
-  });
-});
-
+document.querySelectorAll("[data-nav]").forEach(link => link.addEventListener("click", () => {
+  activeType = link.dataset.nav;
+  filterStories();
+}));
 search.addEventListener("input", filterStories);
-
 document.getElementById("explore").addEventListener("click", () => {
   document.getElementById("histoires").scrollIntoView({ behavior: "smooth" });
   search.focus();
 });
 
-async function updateAccount(session) {
-  if (session?.user) {
-    accountStatus.textContent = session.user.email || "Lecteur connecté";
-    loginLink.hidden = true;
-    logoutButton.hidden = false;
-  } else {
-    accountStatus.textContent = "Visiteur";
-    loginLink.hidden = false;
-    logoutButton.hidden = true;
-  }
-}
-
 logoutButton.addEventListener("click", async () => {
   logoutButton.disabled = true;
   const { error } = await supabase.auth.signOut();
   logoutButton.disabled = false;
-
   if (error) {
     message.textContent = "Erreur de déconnexion : " + error.message;
     return;
   }
-
-  await updateAccount(null);
   message.textContent = "Tu es déconnecté de Novelia.";
 });
 
 const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
 if (sessionError) {
   accountStatus.textContent = "Connexion indisponible";
-  message.textContent = "Impossible de vérifier la session. Recharge la page.";
+  message.textContent = "Impossible de vérifier la session : " + sessionError.message;
 } else {
-  await updateAccount(sessionData.session);
+  await handleSession(sessionData.session);
 }
 
+// Le traitement est différé hors du callback d'authentification pour éviter de bloquer Supabase.
 supabase.auth.onAuthStateChange((_event, session) => {
-  updateAccount(session);
+  setTimeout(() => { handleSession(session); }, 0);
 });
 
 updateFavoriteButtons();
-filterStories();
 await loadPublishedStories();
+filterStories();
 </script>
 </body>
 </html>
