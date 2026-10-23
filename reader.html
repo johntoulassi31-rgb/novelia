@@ -60,7 +60,11 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 <body>
 <header>
   <a href="index.html">✦ NOVELIA</a>
-  <a href="index.html#histoires">Toutes les œuvres</a>
+  <nav style="display:flex;gap:14px;flex-wrap:wrap">
+    <a href="index.html#histoires">Toutes les œuvres</a>
+    <a href="library.html">Ma bibliothèque</a>
+    <a href="profile.html">Mon profil</a>
+  </nav>
 </header>
 
 <main class="container">
@@ -108,7 +112,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
     </div>
   </div>
 
-  <section class="comments-panel" id="commentsPanel">
+  <section class="comments-panel" id="commentsPanel" hidden>
     <h2>Commentaires du chapitre</h2>
     <p id="commentsStatus" role="status" aria-live="polite"></p>
     <form id="commentForm" hidden>
@@ -124,7 +128,6 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 <p class="notice" id="errorMessage" hidden>Cette œuvre est introuvable ou n'est pas accessible.</p>
 <p id="status" role="status" aria-live="polite"></p>
 </main>
-
 <footer>Novelia · Chaque histoire mérite d’être racontée.</footer>
 
 <script type="module">
@@ -137,7 +140,7 @@ const supabase = createClient(
 
 const demoStories = {
   roses: {
-    title:"Les Roses de minuit", type:"Roman", genre:"Dark romance",
+    title:"Les Roses de minuit",type:"Roman",genre:"Dark romance",
     cover:"images/roses.png",
     description:"Dans l'obscurité de la nuit, secrets, passions et choix dangereux bouleversent plusieurs destins.",
     chapters:[
@@ -147,7 +150,7 @@ const demoStories = {
     ]
   },
   lune: {
-    title:"La Lune des oubliés", type:"Webtoon", genre:"Fantasy",
+    title:"La Lune des oubliés",type:"Webtoon",genre:"Fantasy",
     cover:"images/lune.png",
     description:"Sous une lune mystérieuse, une ville cache des secrets oubliés.",
     chapters:[
@@ -157,7 +160,7 @@ const demoStories = {
     ]
   },
   automne: {
-    title:"Un automne pour nous", type:"Roman", genre:"Romance",
+    title:"Un automne pour nous",type:"Roman",genre:"Romance",
     cover:"images/automne.png",
     description:"Les feuilles tombent, les regards se croisent et une journée ordinaire prend une tournure inattendue.",
     chapters:[
@@ -167,7 +170,7 @@ const demoStories = {
     ]
   },
   ville: {
-    title:"La Ville sans ombre", type:"Webtoon", genre:"Mystère",
+    title:"La Ville sans ombre",type:"Webtoon",genre:"Mystère",
     cover:"images/ville.png",
     description:"Dans une ville silencieuse, chaque rue dissimule peut-être un indice.",
     chapters:[
@@ -184,11 +187,16 @@ const params = new URLSearchParams(location.search);
 const dbStoryId = params.get("db_story");
 const demoId = params.get("story");
 const storyKey = dbStoryId ? "db_" + dbStoryId : demoId;
+
 let story = null;
 let chapters = [];
 let currentChapter = 0;
 let currentUser = null;
 let isDatabaseStory = Boolean(dbStoryId);
+let cloudFavorite = null;
+let cloudChapter = null;
+let authReady = false;
+let saveSequence = 0;
 
 const $ = id => document.getElementById(id);
 const cover = $("cover");
@@ -210,31 +218,15 @@ function getProgress() {
   const value = readJSON(PROGRESS_KEY, {});
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
-function savedChapterIndex() {
+function localChapterIndex() {
   const value = getProgress()[storyKey]?.chapter;
   return Number.isInteger(value) && value >= 0 && value < chapters.length ? value : null;
 }
-function saveProgress() {
-  try {
-    const progress = getProgress();
-    progress[storyKey] = {
-      chapter: currentChapter,
-      total: chapters.length,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
-    $("savedMessage").textContent = "Progression sauvegardée sur cet appareil.";
-    $("progressMessage").textContent = "Ta progression est sauvegardée sur cet appareil.";
-    updateResumeButton();
-  } catch {
-    $("savedMessage").textContent = "La sauvegarde est indisponible sur cet appareil.";
+function savedChapterIndex() {
+  if (Number.isInteger(cloudChapter) && cloudChapter >= 0 && cloudChapter < chapters.length) {
+    return cloudChapter;
   }
-}
-function updateFavoriteButton() {
-  const saved = getFavorites().includes(storyKey);
-  $("favoriteButton").classList.toggle("is-favorite", saved);
-  $("favoriteButton").setAttribute("aria-pressed", String(saved));
-  $("favoriteButton").textContent = saved ? "♥ Retirer des favoris" : "♡ Ajouter aux favoris";
+  return localChapterIndex();
 }
 function updateResumeButton() {
   const index = savedChapterIndex();
@@ -242,6 +234,30 @@ function updateResumeButton() {
   if (index !== null) {
     $("resumeReading").textContent = "Reprendre — chapitre " + (index + 1);
   }
+}
+function updateFavoriteButton() {
+  const saved = cloudFavorite === null
+    ? getFavorites().includes(storyKey)
+    : cloudFavorite;
+  $("favoriteButton").classList.toggle("is-favorite", saved);
+  $("favoriteButton").setAttribute("aria-pressed", String(saved));
+  $("favoriteButton").textContent = saved ? "♥ Retirer des favoris" : "♡ Ajouter aux favoris";
+}
+function setFavoriteLocal(saved) {
+  const list = getFavorites();
+  const updated = saved
+    ? [...new Set([...list, storyKey])]
+    : list.filter(item => item !== storyKey);
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+}
+function setProgressLocal(index) {
+  const progress = getProgress();
+  progress[storyKey] = {
+    chapter: index,
+    total: chapters.length,
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
 }
 function showError(text) {
   $("bookCard").hidden = true;
@@ -270,7 +286,6 @@ function renderNovel(chapter) {
   const container = $("content");
   container.className = "novel-text";
   container.replaceChildren();
-
   const text = typeof chapter.content === "string"
     ? chapter.content
     : Array.isArray(chapter.content) ? chapter.content.join("\n\n") : "";
@@ -291,7 +306,6 @@ function renderWebtoon(chapter) {
   const container = $("content");
   container.className = "";
   container.replaceChildren();
-
   const text = typeof chapter.content === "string" ? chapter.content.trim() : "";
   const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
   const imageUrls = lines.filter(line => /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(line));
@@ -307,7 +321,7 @@ function renderWebtoon(chapter) {
       img.onerror = () => {
         const notice = document.createElement("p");
         notice.className = "notice";
-        notice.textContent = "Impossible de charger cette image : " + url;
+        notice.textContent = "Impossible de charger cette image.";
         img.replaceWith(notice);
       };
       panels.appendChild(img);
@@ -328,6 +342,95 @@ function renderWebtoon(chapter) {
     renderNovel(chapter);
   }
 }
+
+async function saveProgress() {
+  const sequence = ++saveSequence;
+  try {
+    setProgressLocal(currentChapter);
+    $("savedMessage").textContent = "Progression sauvegardée sur cet appareil.";
+    $("progressMessage").textContent = "Ta progression est sauvegardée sur cet appareil.";
+    updateResumeButton();
+  } catch {
+    $("savedMessage").textContent = "La sauvegarde locale est indisponible.";
+    return;
+  }
+
+  if (!currentUser || !storyKey) return;
+
+  const chapterNumber = currentChapter + 1;
+  const timestamp = new Date().toISOString();
+
+  try {
+    const { error: historyError } = await supabase
+      .from("reading_history")
+      .upsert({
+        user_id: currentUser.id,
+        story_key: storyKey,
+        last_chapter: chapterNumber,
+        last_read_at: timestamp
+      }, { onConflict: "user_id,story_key" });
+
+    if (historyError) throw historyError;
+
+    const { error: libraryError } = await supabase
+      .from("user_library")
+      .upsert({
+        user_id: currentUser.id,
+        story_key: storyKey,
+        is_favorite: cloudFavorite ?? getFavorites().includes(storyKey),
+        last_chapter: chapterNumber,
+        updated_at: timestamp
+      }, { onConflict: "user_id,story_key" });
+
+    if (libraryError) throw libraryError;
+
+    if (sequence === saveSequence) {
+      $("savedMessage").textContent = "Progression synchronisée avec ton compte Novelia.";
+    }
+  } catch (error) {
+    console.error("Erreur de synchronisation de la progression :", error);
+    if (sequence === saveSequence) {
+      $("savedMessage").textContent =
+        "Progression locale enregistrée. Synchronisation en attente ou indisponible.";
+    }
+  }
+}
+
+async function syncFavorite(saved) {
+  cloudFavorite = saved;
+  setFavoriteLocal(saved);
+  updateFavoriteButton();
+
+  if (!currentUser) {
+    $("favoriteMessage").textContent = saved
+      ? "Ajoutée aux favoris sur cet appareil."
+      : "Retirée des favoris sur cet appareil.";
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from("user_library")
+      .upsert({
+        user_id: currentUser.id,
+        story_key: storyKey,
+        is_favorite: saved,
+        last_chapter: (savedChapterIndex() ?? -1) + 1,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "user_id,story_key" });
+
+    if (error) throw error;
+
+    $("favoriteMessage").textContent = saved
+      ? "Favori synchronisé avec ton compte Novelia."
+      : "Favori retiré de ton compte Novelia.";
+  } catch (error) {
+    console.error("Erreur de synchronisation du favori :", error);
+    $("favoriteMessage").textContent =
+      "Favori conservé sur cet appareil, mais synchronisation impossible.";
+  }
+}
+
 function renderChapter() {
   const chapter = chapters[currentChapter];
   if (!chapter) return;
@@ -348,11 +451,13 @@ function renderChapter() {
   loadComments();
 }
 function openReader(index) {
+  if (!chapters.length) return;
   currentChapter = Math.max(0, Math.min(index, chapters.length - 1));
   $("reader").hidden = false;
   renderChapter();
   $("reader").scrollIntoView({behavior:"smooth",block:"start"});
 }
+
 async function loadDatabaseStory() {
   const {data: row, error} = await supabase
     .from("stories")
@@ -388,6 +493,7 @@ async function loadDatabaseStory() {
   }));
   if (!chapters.length) throw new Error("Cette histoire ne possède pas encore de chapitre.");
 }
+
 function showStory() {
   document.title = story.title + " — Novelia";
   $("title").textContent = story.title;
@@ -395,32 +501,31 @@ function showStory() {
   $("genre").textContent = story.genre;
   $("format").textContent = story.type === "Roman" ? "Lecture textuelle" : "Lecture illustrée";
   $("description").textContent = story.description;
-  $("chapterCount").textContent = chapters.length + (story.type === "Roman" ? " chapitre(s)" : " épisode(s)");
+  $("chapterCount").textContent = chapters.length +
+    (story.type === "Roman" ? " chapitre(s)" : " épisode(s)");
   setCover(story.cover, story.title);
   updateFavoriteButton();
   updateResumeButton();
 
   const saved = savedChapterIndex();
   if (saved !== null) {
-    $("progressMessage").textContent = "Ta dernière lecture était au chapitre " + (saved + 1) + ".";
+    $("progressMessage").textContent =
+      "Ta dernière lecture était au chapitre " + (saved + 1) + ".";
   }
   $("startReading").disabled = chapters.length === 0;
   $("resumeReading").disabled = chapters.length === 0;
 }
-$("favoriteButton").addEventListener("click", () => {
-  const list = getFavorites();
-  const wasSaved = list.includes(storyKey);
-  const updated = wasSaved ? list.filter(item => item !== storyKey) : [...list, storyKey];
-  try {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-    updateFavoriteButton();
-    $("favoriteMessage").textContent = wasSaved ? "Retirée des favoris." : "Ajoutée aux favoris.";
-  } catch {
-    $("favoriteMessage").textContent = "Impossible d'enregistrer ce changement.";
-  }
+
+$("favoriteButton").addEventListener("click", async () => {
+  const current = cloudFavorite === null
+    ? getFavorites().includes(storyKey)
+    : cloudFavorite;
+  await syncFavorite(!current);
 });
+
 $("startReading").addEventListener("click", () => openReader(0));
 $("resumeReading").addEventListener("click", () => openReader(savedChapterIndex() ?? 0));
+
 $("previousChapter").addEventListener("click", () => {
   if (currentChapter > 0) {
     currentChapter--;
@@ -437,24 +542,86 @@ $("nextChapter").addEventListener("click", () => {
 });
 
 async function refreshUser() {
-  const {data} = await supabase.auth.getUser();
-  currentUser = data.user || null;
+  const {data, error} = await supabase.auth.getUser();
+  if (error) console.warn("Vérification de connexion :", error.message);
+  currentUser = data?.user || null;
+  authReady = true;
+
   $("commentForm").hidden = !currentUser || !isDatabaseStory;
   $("loginCommentNotice").hidden = Boolean(currentUser) || !isDatabaseStory;
+  $("commentsPanel").hidden = !isDatabaseStory;
 
-  if (!isDatabaseStory) {
-    $("commentsPanel").hidden = true;
-  } else {
-    $("commentsPanel").hidden = false;
+  if (isDatabaseStory) {
     $("commentsStatus").textContent = currentUser
       ? "Connecté : tu peux commenter ce chapitre."
       : "Connecte-toi pour écrire un commentaire. Les commentaires sont visibles par tous.";
   }
+
+  if (!currentUser || !storyKey) return;
+
+  try {
+    const [libResult, historyResult] = await Promise.all([
+      supabase.from("user_library")
+        .select("is_favorite,last_chapter")
+        .eq("user_id", currentUser.id)
+        .eq("story_key", storyKey)
+        .maybeSingle(),
+      supabase.from("reading_history")
+        .select("last_chapter,last_read_at")
+        .eq("user_id", currentUser.id)
+        .eq("story_key", storyKey)
+        .maybeSingle()
+    ]);
+
+    if (libResult.error) throw libResult.error;
+    if (historyResult.error) throw historyResult.error;
+
+    if (libResult.data) {
+      cloudFavorite = libResult.data.is_favorite;
+      if (Number.isInteger(libResult.data.last_chapter) &&
+          libResult.data.last_chapter > 0) {
+        cloudChapter = libResult.data.last_chapter - 1;
+      }
+      setFavoriteLocal(cloudFavorite);
+    }
+
+    if (historyResult.data &&
+        Number.isInteger(historyResult.data.last_chapter) &&
+        historyResult.data.last_chapter > 0) {
+      const historyIndex = historyResult.data.last_chapter - 1;
+      if (cloudChapter === null) cloudChapter = historyIndex;
+      const local = getProgress()[storyKey];
+      if (!local || historyIndex >= 0) {
+        try {
+          const progress = getProgress();
+          progress[storyKey] = {
+            chapter: historyIndex,
+            total: chapters.length,
+            updatedAt: historyResult.data.last_read_at
+          };
+          localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+        } catch {}
+      }
+    }
+
+    updateFavoriteButton();
+    updateResumeButton();
+
+    const saved = savedChapterIndex();
+    if (saved !== null) {
+      $("progressMessage").textContent =
+        "Ta dernière lecture était au chapitre " + (saved + 1) + ".";
+    }
+  } catch (error) {
+    console.error("Récupération de la bibliothèque impossible :", error);
+  }
 }
+
 function safeDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleString("fr-FR");
 }
+
 async function loadComments() {
   if (!isDatabaseStory || !chapters[currentChapter]?.id) return;
 
@@ -469,21 +636,22 @@ async function loadComments() {
     .order("created_at", {ascending:true});
 
   if (error) {
-    $("commentsStatus").textContent = "Impossible de charger les commentaires : " + error.message;
+    $("commentsStatus").textContent =
+      "Impossible de charger les commentaires : " + error.message;
     return;
   }
 
   $("commentsStatus").textContent = (data || []).length
-    ? (data.length === 1 ? "1 commentaire" : data.length + " commentaires")
+    ? ((data.length === 1) ? "1 commentaire" : data.length + " commentaires")
     : "Aucun commentaire pour ce chapitre.";
 
   (data || []).forEach(comment => {
     const item = document.createElement("article");
     item.className = "comment";
-
     const author = document.createElement("div");
     author.className = "comment-author";
-    const profile = Array.isArray(comment.profiles) ? comment.profiles[0] : comment.profiles;
+    const profile = Array.isArray(comment.profiles)
+      ? comment.profiles[0] : comment.profiles;
     author.textContent = profile?.display_name || profile?.username || "Lecteur Novelia";
 
     const date = document.createElement("div");
@@ -498,6 +666,7 @@ async function loadComments() {
     $("commentsList").appendChild(item);
   });
 }
+
 $("commentForm").addEventListener("submit", async event => {
   event.preventDefault();
   if (!currentUser || !isDatabaseStory) return;
@@ -516,22 +685,21 @@ $("commentForm").addEventListener("submit", async event => {
   button.disabled = true;
   button.textContent = "Publication…";
 
-  const {error} = await supabase.from("comments").insert({
-    chapter_id: chapterId,
-    user_id: currentUser.id,
-    content: value
-  });
-
-  button.disabled = false;
-  button.textContent = "Publier le commentaire";
-
-  if (error) {
+  try {
+    const {error} = await supabase.from("comments").insert({
+      chapter_id: chapterId,
+      user_id: currentUser.id,
+      content: value
+    });
+    if (error) throw error;
+    input.value = "";
+    await loadComments();
+  } catch (error) {
     $("commentsStatus").textContent = "Erreur : " + error.message;
-    return;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Publier le commentaire";
   }
-
-  input.value = "";
-  await loadComments();
 });
 
 async function main() {
@@ -548,10 +716,11 @@ async function main() {
         cover:demo.cover,
         description:demo.description
       };
-      chapters = demo.chapters.map((chapter, index) => ({
+      chapters = demo.chapters.map(chapter => ({
         id:null,
         title:chapter.title,
-        content:Array.isArray(chapter.content) ? chapter.content.join("\n\n") : chapter.content
+        content:Array.isArray(chapter.content)
+          ? chapter.content.join("\n\n") : chapter.content
       }));
       isDatabaseStory = false;
     } else {
@@ -567,9 +736,13 @@ async function main() {
   }
 }
 
+/* Le callback d'authentification ne lance pas directement de requêtes longues. */
 supabase.auth.onAuthStateChange(() => {
-  refreshUser();
+  Promise.resolve().then(async () => {
+    await refreshUser();
+  });
 });
+
 await main();
 </script>
 </body>
