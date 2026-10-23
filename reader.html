@@ -60,11 +60,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 <body>
 <header>
   <a href="index.html">✦ NOVELIA</a>
-  <nav style="display:flex;gap:14px;flex-wrap:wrap">
-    <a href="index.html#histoires">Toutes les œuvres</a>
-    <a href="library.html">Ma bibliothèque</a>
-    <a href="profile.html">Mon profil</a>
-  </nav>
+  <a href="index.html#histoires">Toutes les œuvres</a>
 </header>
 
 <main class="container">
@@ -112,7 +108,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
     </div>
   </div>
 
-  <section class="comments-panel" id="commentsPanel" hidden>
+  <section class="comments-panel" id="commentsPanel">
     <h2>Commentaires du chapitre</h2>
     <p id="commentsStatus" role="status" aria-live="polite"></p>
     <form id="commentForm" hidden>
@@ -128,6 +124,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 <p class="notice" id="errorMessage" hidden>Cette œuvre est introuvable ou n'est pas accessible.</p>
 <p id="status" role="status" aria-live="polite"></p>
 </main>
+
 <footer>Novelia · Chaque histoire mérite d’être racontée.</footer>
 
 <script type="module">
@@ -140,7 +137,7 @@ const supabase = createClient(
 
 const demoStories = {
   roses: {
-    title:"Les Roses de minuit",type:"Roman",genre:"Dark romance",
+    title:"Les Roses de minuit", type:"Roman", genre:"Dark romance",
     cover:"images/roses.png",
     description:"Dans l'obscurité de la nuit, secrets, passions et choix dangereux bouleversent plusieurs destins.",
     chapters:[
@@ -150,7 +147,7 @@ const demoStories = {
     ]
   },
   lune: {
-    title:"La Lune des oubliés",type:"Webtoon",genre:"Fantasy",
+    title:"La Lune des oubliés", type:"Webtoon", genre:"Fantasy",
     cover:"images/lune.png",
     description:"Sous une lune mystérieuse, une ville cache des secrets oubliés.",
     chapters:[
@@ -160,7 +157,7 @@ const demoStories = {
     ]
   },
   automne: {
-    title:"Un automne pour nous",type:"Roman",genre:"Romance",
+    title:"Un automne pour nous", type:"Roman", genre:"Romance",
     cover:"images/automne.png",
     description:"Les feuilles tombent, les regards se croisent et une journée ordinaire prend une tournure inattendue.",
     chapters:[
@@ -170,7 +167,7 @@ const demoStories = {
     ]
   },
   ville: {
-    title:"La Ville sans ombre",type:"Webtoon",genre:"Mystère",
+    title:"La Ville sans ombre", type:"Webtoon", genre:"Mystère",
     cover:"images/ville.png",
     description:"Dans une ville silencieuse, chaque rue dissimule peut-être un indice.",
     chapters:[
@@ -193,10 +190,8 @@ let chapters = [];
 let currentChapter = 0;
 let currentUser = null;
 let isDatabaseStory = Boolean(dbStoryId);
-let cloudFavorite = null;
-let cloudChapter = null;
-let authReady = false;
-let saveSequence = 0;
+let librarySyncReady = false;
+let librarySyncQueue = Promise.resolve();
 
 const $ = id => document.getElementById(id);
 const cover = $("cover");
@@ -210,24 +205,167 @@ function readJSON(key, fallback) {
     return fallback;
   }
 }
+
 function getFavorites() {
   const value = readJSON(FAVORITES_KEY, []);
   return Array.isArray(value) ? value : [];
 }
+
 function getProgress() {
   const value = readJSON(PROGRESS_KEY, {});
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
-function localChapterIndex() {
+
+function isFavorite() {
+  return getFavorites().includes(storyKey);
+}
+
+function savedChapterIndex() {
   const value = getProgress()[storyKey]?.chapter;
   return Number.isInteger(value) && value >= 0 && value < chapters.length ? value : null;
 }
-function savedChapterIndex() {
-  if (Number.isInteger(cloudChapter) && cloudChapter >= 0 && cloudChapter < chapters.length) {
-    return cloudChapter;
-  }
-  return localChapterIndex();
+
+/*
+  Synchronisation Supabase :
+  user_library.story_key contient l'identifiant de l'histoire.
+  La progression cloud utilise last_chapter à partir de 1.
+  La progression locale utilise chapter à partir de 0.
+*/
+async function saveLibraryToCloud() {
+  if (!currentUser || !storyKey || !librarySyncReady) return;
+
+  const progress = getProgress();
+  const localChapter = progress[storyKey]?.chapter;
+  const lastChapter = Number.isInteger(localChapter) && localChapter >= 0
+    ? localChapter + 1
+    : 0;
+
+  const payload = {
+    user_id: currentUser.id,
+    story_key: storyKey,
+    is_favorite: isFavorite(),
+    last_chapter: lastChapter,
+    updated_at: new Date().toISOString()
+  };
+
+  // Mise en file des écritures pour éviter qu'elles se remplacent dans le désordre.
+  librarySyncQueue = librarySyncQueue
+    .then(async () => {
+      const { error } = await supabase
+        .from("user_library")
+        .upsert(payload, { onConflict: "user_id,story_key" });
+
+      if (error) {
+        console.error("Synchronisation de la bibliothèque impossible :", error.message);
+        $("savedMessage").textContent =
+          "Progression enregistrée sur cet appareil. Synchronisation cloud indisponible.";
+      }
+    })
+    .catch(error => console.error("Erreur de synchronisation :", error));
+
+  await librarySyncQueue;
 }
+
+async function syncLibraryFromCloud() {
+  if (!currentUser || !storyKey) return;
+
+  librarySyncReady = false;
+  $("status").textContent = "Synchronisation de ta bibliothèque…";
+
+  const { data, error } = await supabase
+    .from("user_library")
+    .select("story_key,is_favorite,last_chapter,updated_at")
+    .eq("user_id", currentUser.id)
+    .eq("story_key", storyKey)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Lecture de la bibliothèque cloud impossible :", error.message);
+    $("status").textContent = "La synchronisation est indisponible. Les données locales restent utilisables.";
+    librarySyncReady = true;
+    return;
+  }
+
+  if (data) {
+    // Le compte connecté devient la référence pour cette histoire.
+    let favorites = getFavorites();
+    favorites = favorites.filter(key => key !== storyKey);
+    if (data.is_favorite) favorites.push(storyKey);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+
+    const progress = getProgress();
+    if (Number.isInteger(data.last_chapter) && data.last_chapter > 0 && chapters.length) {
+      const index = Math.min(data.last_chapter - 1, chapters.length - 1);
+      progress[storyKey] = {
+        chapter: index,
+        total: chapters.length,
+        updatedAt: data.updated_at || new Date().toISOString()
+      };
+    } else {
+      delete progress[storyKey];
+    }
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } else {
+    // Première connexion sur cet appareil : importer les données locales si elles existent.
+    const hasLocalData = isFavorite() || savedChapterIndex() !== null;
+    if (hasLocalData) {
+      librarySyncReady = true;
+      await saveLibraryToCloud();
+    }
+  }
+
+  librarySyncReady = true;
+  updateFavoriteButton();
+  updateResumeButton();
+
+  const saved = savedChapterIndex();
+  $("progressMessage").textContent = saved !== null
+    ? "Dernière lecture : chapitre " + (saved + 1) + "."
+    : "Aucune progression de lecture enregistrée.";
+
+  $("favoriteMessage").textContent = isFavorite()
+    ? "Cette œuvre est dans tes favoris."
+    : "";
+
+  $("status").textContent = "Bibliothèque synchronisée.";
+}
+
+function saveProgress() {
+  try {
+    const progress = getProgress();
+    progress[storyKey] = {
+      chapter: currentChapter,
+      total: chapters.length,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+
+    $("savedMessage").textContent = currentUser
+      ? "Progression enregistrée. Synchronisation avec ton compte…"
+      : "Progression sauvegardée sur cet appareil.";
+
+    $("progressMessage").textContent =
+      "Ta dernière lecture était au chapitre " + (currentChapter + 1) + ".";
+
+    updateResumeButton();
+
+    if (currentUser && librarySyncReady) {
+      saveLibraryToCloud();
+    }
+  } catch {
+    $("savedMessage").textContent = "La sauvegarde est indisponible sur cet appareil.";
+  }
+}
+
+function updateFavoriteButton() {
+  const saved = isFavorite();
+  $("favoriteButton").classList.toggle("is-favorite", saved);
+  $("favoriteButton").setAttribute("aria-pressed", String(saved));
+  $("favoriteButton").textContent = saved
+    ? "♥ Retirer des favoris"
+    : "♡ Ajouter aux favoris";
+}
+
 function updateResumeButton() {
   const index = savedChapterIndex();
   $("resumeReading").hidden = index === null;
@@ -235,30 +373,7 @@ function updateResumeButton() {
     $("resumeReading").textContent = "Reprendre — chapitre " + (index + 1);
   }
 }
-function updateFavoriteButton() {
-  const saved = cloudFavorite === null
-    ? getFavorites().includes(storyKey)
-    : cloudFavorite;
-  $("favoriteButton").classList.toggle("is-favorite", saved);
-  $("favoriteButton").setAttribute("aria-pressed", String(saved));
-  $("favoriteButton").textContent = saved ? "♥ Retirer des favoris" : "♡ Ajouter aux favoris";
-}
-function setFavoriteLocal(saved) {
-  const list = getFavorites();
-  const updated = saved
-    ? [...new Set([...list, storyKey])]
-    : list.filter(item => item !== storyKey);
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-}
-function setProgressLocal(index) {
-  const progress = getProgress();
-  progress[storyKey] = {
-    chapter: index,
-    total: chapters.length,
-    updatedAt: new Date().toISOString()
-  };
-  localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
-}
+
 function showError(text) {
   $("bookCard").hidden = true;
   $("reader").hidden = true;
@@ -266,11 +381,13 @@ function showError(text) {
   $("errorMessage").textContent = text || "Cette œuvre est introuvable ou n'est pas accessible.";
   document.title = "Œuvre introuvable — Novelia";
 }
+
 function setCover(url, title) {
   cover.hidden = true;
   coverFallback.hidden = false;
   coverFallback.textContent = title;
   if (!url) return;
+
   cover.onload = () => {
     cover.hidden = false;
     coverFallback.hidden = true;
@@ -282,10 +399,12 @@ function setCover(url, title) {
   cover.src = url;
   cover.alt = "Couverture de " + title;
 }
+
 function renderNovel(chapter) {
   const container = $("content");
   container.className = "novel-text";
   container.replaceChildren();
+
   const text = typeof chapter.content === "string"
     ? chapter.content
     : Array.isArray(chapter.content) ? chapter.content.join("\n\n") : "";
@@ -302,17 +421,22 @@ function renderNovel(chapter) {
     container.appendChild(paragraph);
   }
 }
+
 function renderWebtoon(chapter) {
   const container = $("content");
   container.className = "";
   container.replaceChildren();
+
   const text = typeof chapter.content === "string" ? chapter.content.trim() : "";
   const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
-  const imageUrls = lines.filter(line => /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(line));
+  const imageUrls = lines.filter(line =>
+    /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(line)
+  );
 
   if (imageUrls.length) {
     const panels = document.createElement("div");
     panels.className = "webtoon-content";
+
     imageUrls.forEach((url, index) => {
       const img = document.createElement("img");
       img.src = url;
@@ -321,13 +445,15 @@ function renderWebtoon(chapter) {
       img.onerror = () => {
         const notice = document.createElement("p");
         notice.className = "notice";
-        notice.textContent = "Impossible de charger cette image.";
+        notice.textContent = "Impossible de charger cette image : " + url;
         img.replaceWith(notice);
       };
       panels.appendChild(img);
     });
+
     container.appendChild(panels);
     const remaining = lines.filter(line => !imageUrls.includes(line));
+
     if (remaining.length) {
       const caption = document.createElement("div");
       caption.className = "novel-text";
@@ -343,100 +469,13 @@ function renderWebtoon(chapter) {
   }
 }
 
-async function saveProgress() {
-  const sequence = ++saveSequence;
-  try {
-    setProgressLocal(currentChapter);
-    $("savedMessage").textContent = "Progression sauvegardée sur cet appareil.";
-    $("progressMessage").textContent = "Ta progression est sauvegardée sur cet appareil.";
-    updateResumeButton();
-  } catch {
-    $("savedMessage").textContent = "La sauvegarde locale est indisponible.";
-    return;
-  }
-
-  if (!currentUser || !storyKey) return;
-
-  const chapterNumber = currentChapter + 1;
-  const timestamp = new Date().toISOString();
-
-  try {
-    const { error: historyError } = await supabase
-      .from("reading_history")
-      .upsert({
-        user_id: currentUser.id,
-        story_key: storyKey,
-        last_chapter: chapterNumber,
-        last_read_at: timestamp
-      }, { onConflict: "user_id,story_key" });
-
-    if (historyError) throw historyError;
-
-    const { error: libraryError } = await supabase
-      .from("user_library")
-      .upsert({
-        user_id: currentUser.id,
-        story_key: storyKey,
-        is_favorite: cloudFavorite ?? getFavorites().includes(storyKey),
-        last_chapter: chapterNumber,
-        updated_at: timestamp
-      }, { onConflict: "user_id,story_key" });
-
-    if (libraryError) throw libraryError;
-
-    if (sequence === saveSequence) {
-      $("savedMessage").textContent = "Progression synchronisée avec ton compte Novelia.";
-    }
-  } catch (error) {
-    console.error("Erreur de synchronisation de la progression :", error);
-    if (sequence === saveSequence) {
-      $("savedMessage").textContent =
-        "Progression locale enregistrée. Synchronisation en attente ou indisponible.";
-    }
-  }
-}
-
-async function syncFavorite(saved) {
-  cloudFavorite = saved;
-  setFavoriteLocal(saved);
-  updateFavoriteButton();
-
-  if (!currentUser) {
-    $("favoriteMessage").textContent = saved
-      ? "Ajoutée aux favoris sur cet appareil."
-      : "Retirée des favoris sur cet appareil.";
-    return;
-  }
-
-  try {
-    const { error } = await supabase
-      .from("user_library")
-      .upsert({
-        user_id: currentUser.id,
-        story_key: storyKey,
-        is_favorite: saved,
-        last_chapter: (savedChapterIndex() ?? -1) + 1,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "user_id,story_key" });
-
-    if (error) throw error;
-
-    $("favoriteMessage").textContent = saved
-      ? "Favori synchronisé avec ton compte Novelia."
-      : "Favori retiré de ton compte Novelia.";
-  } catch (error) {
-    console.error("Erreur de synchronisation du favori :", error);
-    $("favoriteMessage").textContent =
-      "Favori conservé sur cet appareil, mais synchronisation impossible.";
-  }
-}
-
 function renderChapter() {
   const chapter = chapters[currentChapter];
   if (!chapter) return;
 
   $("chapterTitle").textContent = chapter.title || "Chapitre " + (currentChapter + 1);
   $("readingType").textContent = story.type;
+
   if (story.type === "Webtoon") renderWebtoon(chapter);
   else renderNovel(chapter);
 
@@ -450,6 +489,7 @@ function renderChapter() {
   saveProgress();
   loadComments();
 }
+
 function openReader(index) {
   if (!chapters.length) return;
   currentChapter = Math.max(0, Math.min(index, chapters.length - 1));
@@ -486,11 +526,13 @@ async function loadDatabaseStory() {
     genre: row.genre || "Autre",
     type: row.story_type === "webtoon" ? "Webtoon" : "Roman"
   };
+
   chapters = (chapterRows || []).map(ch => ({
     id: ch.id,
     title: ch.title,
     content: ch.content || ""
   }));
+
   if (!chapters.length) throw new Error("Cette histoire ne possède pas encore de chapitre.");
 }
 
@@ -501,26 +543,48 @@ function showStory() {
   $("genre").textContent = story.genre;
   $("format").textContent = story.type === "Roman" ? "Lecture textuelle" : "Lecture illustrée";
   $("description").textContent = story.description;
-  $("chapterCount").textContent = chapters.length +
-    (story.type === "Roman" ? " chapitre(s)" : " épisode(s)");
+  $("chapterCount").textContent = chapters.length + (story.type === "Roman" ? " chapitre(s)" : " épisode(s)");
+
   setCover(story.cover, story.title);
   updateFavoriteButton();
   updateResumeButton();
 
   const saved = savedChapterIndex();
   if (saved !== null) {
-    $("progressMessage").textContent =
-      "Ta dernière lecture était au chapitre " + (saved + 1) + ".";
+    $("progressMessage").textContent = "Ta dernière lecture était au chapitre " + (saved + 1) + ".";
   }
+
   $("startReading").disabled = chapters.length === 0;
   $("resumeReading").disabled = chapters.length === 0;
 }
 
 $("favoriteButton").addEventListener("click", async () => {
-  const current = cloudFavorite === null
-    ? getFavorites().includes(storyKey)
-    : cloudFavorite;
-  await syncFavorite(!current);
+  const list = getFavorites();
+  const wasSaved = list.includes(storyKey);
+  const updated = wasSaved
+    ? list.filter(item => item !== storyKey)
+    : [...list, storyKey];
+
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+    updateFavoriteButton();
+
+    $("favoriteMessage").textContent = wasSaved
+      ? "Retirée des favoris."
+      : "Ajoutée aux favoris.";
+
+    if (currentUser && librarySyncReady) {
+      $("favoriteMessage").textContent += " Synchronisation avec ton compte…";
+      await saveLibraryToCloud();
+      $("favoriteMessage").textContent = wasSaved
+        ? "Retirée des favoris et synchronisée."
+        : "Ajoutée aux favoris et synchronisée.";
+    } else if (!currentUser) {
+      $("favoriteMessage").textContent += " Connecte-toi pour synchroniser tes favoris entre appareils.";
+    }
+  } catch {
+    $("favoriteMessage").textContent = "Impossible d'enregistrer ce changement.";
+  }
 });
 
 $("startReading").addEventListener("click", () => openReader(0));
@@ -533,6 +597,7 @@ $("previousChapter").addEventListener("click", () => {
     $("reader").scrollIntoView({behavior:"smooth",block:"start"});
   }
 });
+
 $("nextChapter").addEventListener("click", () => {
   if (currentChapter < chapters.length - 1) {
     currentChapter++;
@@ -543,77 +608,26 @@ $("nextChapter").addEventListener("click", () => {
 
 async function refreshUser() {
   const {data, error} = await supabase.auth.getUser();
-  if (error) console.warn("Vérification de connexion :", error.message);
+  if (error) console.warn("Vérification du compte :", error.message);
+
   currentUser = data?.user || null;
-  authReady = true;
 
   $("commentForm").hidden = !currentUser || !isDatabaseStory;
   $("loginCommentNotice").hidden = Boolean(currentUser) || !isDatabaseStory;
-  $("commentsPanel").hidden = !isDatabaseStory;
 
-  if (isDatabaseStory) {
+  if (!isDatabaseStory) {
+    $("commentsPanel").hidden = true;
+  } else {
+    $("commentsPanel").hidden = false;
     $("commentsStatus").textContent = currentUser
       ? "Connecté : tu peux commenter ce chapitre."
       : "Connecte-toi pour écrire un commentaire. Les commentaires sont visibles par tous.";
   }
 
-  if (!currentUser || !storyKey) return;
-
-  try {
-    const [libResult, historyResult] = await Promise.all([
-      supabase.from("user_library")
-        .select("is_favorite,last_chapter")
-        .eq("user_id", currentUser.id)
-        .eq("story_key", storyKey)
-        .maybeSingle(),
-      supabase.from("reading_history")
-        .select("last_chapter,last_read_at")
-        .eq("user_id", currentUser.id)
-        .eq("story_key", storyKey)
-        .maybeSingle()
-    ]);
-
-    if (libResult.error) throw libResult.error;
-    if (historyResult.error) throw historyResult.error;
-
-    if (libResult.data) {
-      cloudFavorite = libResult.data.is_favorite;
-      if (Number.isInteger(libResult.data.last_chapter) &&
-          libResult.data.last_chapter > 0) {
-        cloudChapter = libResult.data.last_chapter - 1;
-      }
-      setFavoriteLocal(cloudFavorite);
-    }
-
-    if (historyResult.data &&
-        Number.isInteger(historyResult.data.last_chapter) &&
-        historyResult.data.last_chapter > 0) {
-      const historyIndex = historyResult.data.last_chapter - 1;
-      if (cloudChapter === null) cloudChapter = historyIndex;
-      const local = getProgress()[storyKey];
-      if (!local || historyIndex >= 0) {
-        try {
-          const progress = getProgress();
-          progress[storyKey] = {
-            chapter: historyIndex,
-            total: chapters.length,
-            updatedAt: historyResult.data.last_read_at
-          };
-          localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
-        } catch {}
-      }
-    }
-
-    updateFavoriteButton();
-    updateResumeButton();
-
-    const saved = savedChapterIndex();
-    if (saved !== null) {
-      $("progressMessage").textContent =
-        "Ta dernière lecture était au chapitre " + (saved + 1) + ".";
-    }
-  } catch (error) {
-    console.error("Récupération de la bibliothèque impossible :", error);
+  if (currentUser && storyKey && story) {
+    await syncLibraryFromCloud();
+  } else {
+    librarySyncReady = false;
   }
 }
 
@@ -636,8 +650,7 @@ async function loadComments() {
     .order("created_at", {ascending:true});
 
   if (error) {
-    $("commentsStatus").textContent =
-      "Impossible de charger les commentaires : " + error.message;
+    $("commentsStatus").textContent = "Impossible de charger les commentaires : " + error.message;
     return;
   }
 
@@ -648,10 +661,10 @@ async function loadComments() {
   (data || []).forEach(comment => {
     const item = document.createElement("article");
     item.className = "comment";
+
     const author = document.createElement("div");
     author.className = "comment-author";
-    const profile = Array.isArray(comment.profiles)
-      ? comment.profiles[0] : comment.profiles;
+    const profile = Array.isArray(comment.profiles) ? comment.profiles[0] : comment.profiles;
     author.textContent = profile?.display_name || profile?.username || "Lecteur Novelia";
 
     const date = document.createElement("div");
@@ -673,6 +686,7 @@ $("commentForm").addEventListener("submit", async event => {
 
   const input = $("commentInput");
   const value = input.value.trim();
+
   if (!value) {
     $("commentsStatus").textContent = "Écris un commentaire avant de l'envoyer.";
     return;
@@ -685,21 +699,22 @@ $("commentForm").addEventListener("submit", async event => {
   button.disabled = true;
   button.textContent = "Publication…";
 
-  try {
-    const {error} = await supabase.from("comments").insert({
-      chapter_id: chapterId,
-      user_id: currentUser.id,
-      content: value
-    });
-    if (error) throw error;
-    input.value = "";
-    await loadComments();
-  } catch (error) {
+  const {error} = await supabase.from("comments").insert({
+    chapter_id: chapterId,
+    user_id: currentUser.id,
+    content: value
+  });
+
+  button.disabled = false;
+  button.textContent = "Publier le commentaire";
+
+  if (error) {
     $("commentsStatus").textContent = "Erreur : " + error.message;
-  } finally {
-    button.disabled = false;
-    button.textContent = "Publier le commentaire";
+    return;
   }
+
+  input.value = "";
+  await loadComments();
 });
 
 async function main() {
@@ -709,19 +724,23 @@ async function main() {
       isDatabaseStory = true;
     } else if (demoId && demoStories[demoId]) {
       const demo = demoStories[demoId];
+
       story = {
-        title:demo.title,
-        type:demo.type,
-        genre:demo.genre,
-        cover:demo.cover,
-        description:demo.description
+        title: demo.title,
+        type: demo.type,
+        genre: demo.genre,
+        cover: demo.cover,
+        description: demo.description
       };
+
       chapters = demo.chapters.map(chapter => ({
-        id:null,
-        title:chapter.title,
-        content:Array.isArray(chapter.content)
-          ? chapter.content.join("\n\n") : chapter.content
+        id: null,
+        title: chapter.title,
+        content: Array.isArray(chapter.content)
+          ? chapter.content.join("\n\n")
+          : chapter.content
       }));
+
       isDatabaseStory = false;
     } else {
       showError("Cette œuvre est introuvable. Retourne au catalogue Novelia.");
@@ -736,11 +755,14 @@ async function main() {
   }
 }
 
-/* Le callback d'authentification ne lance pas directement de requêtes longues. */
+/*
+  Quand la connexion change pendant la lecture, actualiser le compte
+  puis synchroniser les données de cette histoire.
+*/
 supabase.auth.onAuthStateChange(() => {
-  Promise.resolve().then(async () => {
-    await refreshUser();
-  });
+  setTimeout(() => {
+    refreshUser().catch(error => console.error("Actualisation du compte :", error));
+  }, 0);
 });
 
 await main();
