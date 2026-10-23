@@ -4,30 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#100d19">
+  <meta name="description" content="Consulte tes notifications Novelia.">
   <title>Mes notifications — Novelia</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 20px 15px;
-      background: #100d19; color: #f5f1ff;
-      font-family: Arial, sans-serif;
-    }
+    body { margin: 0; padding: 20px 15px; background: #100d19; color: #f5f1ff; font-family: Arial, sans-serif; }
     main { width: 100%; max-width: 760px; margin: 20px auto; }
-    .panel, .notification {
-      background: #1c1729; border: 1px solid #382b50;
-      border-radius: 15px; padding: 18px; margin-bottom: 14px;
-    }
+    .panel, .notification { background: #1c1729; border: 1px solid #382b50; border-radius: 15px; padding: 18px; margin-bottom: 14px; }
     h1, h2 { color: #c5a3ff; }
     h1 { margin-top: 0; }
     p { line-height: 1.5; }
     .muted { color: #c5bdd6; }
-    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
-    button, .link {
-      display: inline-block; padding: 11px 15px; border: 0;
-      border-radius: 9px; background: #9b6bff; color: white;
-      font-weight: bold; text-decoration: none; cursor: pointer;
-      font-size: 14px;
-    }
+    .actions, .card-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
+    button, .link { display: inline-block; padding: 11px 15px; border: 0; border-radius: 9px; background: #9b6bff; color: white; font-weight: bold; text-decoration: none; cursor: pointer; font-size: 14px; }
     .secondary { background: #382b50; }
     button:disabled { opacity: .55; cursor: wait; }
     .notification { border-left: 4px solid #59466f; }
@@ -41,6 +30,7 @@
     .error { color: #ffaaaa; }
     .success { color: #a9efbd; }
     .empty { padding: 22px 5px; text-align: center; color: #c5bdd6; }
+    .hint { font-size: 13px; }
     @media (min-width: 600px) { body { padding: 28px 20px; } .panel, .notification { padding: 22px; } }
   </style>
 </head>
@@ -57,6 +47,7 @@
       <button type="button" id="markAllButton" class="secondary">Tout marquer comme lu</button>
     </div>
     <p id="status" role="status" aria-live="polite"></p>
+    <p class="muted hint">Les nouvelles notifications s’actualisent automatiquement. Si le temps réel n’est pas disponible, la page vérifie les nouveautés périodiquement.</p>
   </section>
 
   <section>
@@ -75,7 +66,11 @@
   const $ = id => document.getElementById(id);
   let currentUser = null;
   let notifications = [];
+  let profilesById = new Map();
   let busy = false;
+  let loadInProgress = false;
+  let refreshTimer = null;
+  let realtimeChannel = null;
 
   function setStatus(text, kind = "") {
     $("status").textContent = text;
@@ -86,9 +81,7 @@
     if (!value) return "Date inconnue";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "Date inconnue";
-    return new Intl.DateTimeFormat("fr-FR", {
-      dateStyle: "medium", timeStyle: "short"
-    }).format(date);
+    return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(date);
   }
 
   function makeElement(tag, className, text) {
@@ -98,12 +91,46 @@
     return element;
   }
 
+  async function loadActorProfiles(items) {
+    const ids = [...new Set(items.filter(item => item.type === "new_follower" && item.actor_id).map(item => item.actor_id))];
+    const missing = ids.filter(id => !profilesById.has(id));
+    if (!missing.length) return;
+    const { data, error } = await supabase.from("profiles")
+      .select("id, username, display_name")
+      .in("id", missing);
+    if (error) {
+      console.warn("Impossible de charger les profils des abonnés :", error.message);
+      return;
+    }
+    (data || []).forEach(profile => profilesById.set(profile.id, profile));
+  }
+
+  function buildTargetLink(item) {
+    if (item.type === "new_follower" && item.actor_id) {
+      const actor = profilesById.get(item.actor_id);
+      if (actor?.username) {
+        return {
+          label: "Voir le profil",
+          href: "public-profile.html?username=" + encodeURIComponent(actor.username),
+          kind: "profile"
+        };
+      }
+    }
+    if (item.type === "new_chapter" && item.story_id) {
+      const url = "reader.html?db_story=" + encodeURIComponent(item.story_id) +
+        (item.chapter_id ? "&chapter_id=" + encodeURIComponent(item.chapter_id) : "");
+      return { label: "Lire le chapitre", href: url, kind: "chapter" };
+    }
+    return null;
+  }
+
   function renderNotifications() {
     const container = $("notificationList");
     container.replaceChildren();
     const unread = notifications.filter(item => !item.is_read).length;
     $("unreadCount").textContent = `(${unread} non lue${unread > 1 ? "s" : ""})`;
     $("markAllButton").disabled = busy || unread === 0;
+    $("refreshButton").disabled = busy;
 
     if (!notifications.length) {
       container.appendChild(makeElement("p", "empty", "Tu n’as pas encore de notification."));
@@ -117,27 +144,43 @@
         item.type === "new_chapter" ? "Nouveau chapitre" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
       top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
+
       const message = makeElement("p", "notification-message", item.message || "Tu as une nouvelle notification.");
       const date = makeElement("p", "notification-date", niceDate(item.created_at));
       card.append(top, message, date);
+
+      const cardActions = makeElement("div", "card-actions");
+      const target = buildTargetLink(item);
+      if (target) {
+        const open = makeElement("a", "link", target.label);
+        open.href = target.href;
+        open.addEventListener("click", async event => {
+          if (!item.is_read) {
+            event.preventDefault();
+            const ok = await markOneRead(item.id, true);
+            if (ok) location.href = target.href;
+          }
+        });
+        cardActions.appendChild(open);
+      }
 
       if (!item.is_read) {
         const button = makeElement("button", "secondary", "Marquer comme lue");
         button.type = "button";
         button.disabled = busy;
         button.addEventListener("click", () => markOneRead(item.id));
-        card.appendChild(button);
+        cardActions.appendChild(button);
       }
+      if (cardActions.childElementCount) card.appendChild(cardActions);
       container.appendChild(card);
     });
   }
 
-  async function loadNotifications() {
-    if (!currentUser) return;
-    busy = true;
-    $("refreshButton").disabled = true;
-    $("markAllButton").disabled = true;
-    setStatus("Chargement des notifications…");
+  async function loadNotifications(options = {}) {
+    const silent = options.silent === true;
+    if (!currentUser || loadInProgress) return;
+    loadInProgress = true;
+    if (!silent) setStatus("Chargement des notifications…");
     try {
       const { data, error } = await supabase
         .from("notifications")
@@ -146,26 +189,28 @@
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
-      notifications = data || [];
-      setStatus(notifications.length ? "Notifications chargées." : "Aucune notification pour le moment.", "success");
-    } catch (error) {
-      notifications = [];
-      setStatus("Impossible de charger les notifications : " + (error.message || "erreur inconnue."), "error");
-    } finally {
-      busy = false;
-      $("refreshButton").disabled = false;
+      const next = data || [];
+      await loadActorProfiles(next);
+      notifications = next;
+      if (!silent) setStatus(notifications.length ? "Notifications chargées." : "Aucune notification pour le moment.", "success");
       renderNotifications();
+    } catch (error) {
+      if (!silent) setStatus("Impossible de charger les notifications : " + (error.message || "erreur inconnue."), "error");
+      console.error("Chargement des notifications :", error);
+    } finally {
+      loadInProgress = false;
     }
   }
 
-  async function markOneRead(id) {
-    if (busy || !currentUser) return;
+  async function markOneRead(id, quiet = false) {
+    if (busy || !currentUser) return false;
+    const item = notifications.find(entry => entry.id === id);
+    if (!item || item.is_read) return true;
     busy = true;
     renderNotifications();
-    setStatus("Mise à jour…");
+    if (!quiet) setStatus("Mise à jour…");
     try {
-      const { data, error } = await supabase
-        .from("notifications")
+      const { data, error } = await supabase.from("notifications")
         .update({ is_read: true })
         .eq("id", id)
         .eq("recipient_id", currentUser.id)
@@ -173,10 +218,12 @@
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Aucune notification n’a été mise à jour. Vérifie les politiques RLS.");
-      notifications = notifications.map(item => item.id === id ? { ...item, is_read: true } : item);
-      setStatus("Notification marquée comme lue.", "success");
+      notifications = notifications.map(entry => entry.id === id ? { ...entry, is_read: true } : entry);
+      if (!quiet) setStatus("Notification marquée comme lue.", "success");
+      return true;
     } catch (error) {
-      setStatus("Impossible de mettre à jour la notification : " + (error.message || "erreur inconnue."), "error");
+      if (!quiet) setStatus("Impossible de mettre à jour la notification : " + (error.message || "erreur inconnue."), "error");
+      return false;
     } finally {
       busy = false;
       renderNotifications();
@@ -185,20 +232,19 @@
 
   $("markAllButton").addEventListener("click", async () => {
     if (busy || !currentUser) return;
-    const unreadIds = notifications.filter(item => !item.is_read).map(item => item.id);
-    if (!unreadIds.length) return;
+    const unread = notifications.filter(item => !item.is_read);
+    if (!unread.length) return;
     busy = true;
     renderNotifications();
     setStatus("Mise à jour des notifications…");
     try {
-      const { error } = await supabase
-        .from("notifications")
+      const { error } = await supabase.from("notifications")
         .update({ is_read: true })
         .eq("recipient_id", currentUser.id)
         .eq("is_read", false);
       if (error) throw error;
       notifications = notifications.map(item => ({ ...item, is_read: true }));
-      setStatus("Toutes les notifications affichées sont marquées comme lues.", "success");
+      setStatus("Toutes les notifications sont marquées comme lues.", "success");
     } catch (error) {
       setStatus("Impossible de mettre à jour les notifications : " + (error.message || "erreur inconnue."), "error");
     } finally {
@@ -207,7 +253,26 @@
     }
   });
 
-  $("refreshButton").addEventListener("click", loadNotifications);
+  $("refreshButton").addEventListener("click", () => loadNotifications());
+
+  function startRealtime() {
+    if (!currentUser) return;
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    realtimeChannel = supabase.channel("novelia-notifications-" + currentUser.id)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "notifications",
+        filter: "recipient_id=eq." + currentUser.id
+      }, () => loadNotifications({ silent: true }))
+      .subscribe(status => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.warn("Le temps réel Supabase est momentanément indisponible ; la vérification périodique reste active.");
+        }
+      });
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => loadNotifications({ silent: true }), 30000);
+  }
 
   async function start() {
     const { data, error } = await supabase.auth.getUser();
@@ -220,6 +285,7 @@
     currentUser = data.user;
     $("accountStatus").textContent = "Connecté : " + (currentUser.email || "compte utilisateur");
     await loadNotifications();
+    startRealtime();
   }
 
   start();
