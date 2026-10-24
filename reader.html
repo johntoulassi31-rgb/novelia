@@ -45,3 +45,70 @@ h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .chapter-nav{display:flex;justify-content:space-between;gap:12px;margin-top:20px}
 button:disabled{opacity:.4;cursor:not-allowed}
 .comments-panel{margin-top:24px;padding:20px}
+.comments-panel h2{font-size:21px}
+.comments-panel textarea{width:100%;min-height:110px;padding:12px;background:#100b18;color:white;border:1px solid #49345f;border-radius:9px;font:inherit}
+.comment{padding:14px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.comment:last-child{border-bottom:0}
+.comment-author{font-weight:bold;color:#d8b4fe}
+.comment-date{font-size:12px;color:var(--muted)}
+.comment-text{white-space:pre-wrap;overflow-wrap:anywhere}
+.comment-replies{margin:8px 0 0 12px;padding-left:12px;border-left:2px solid #49345f}
+.comment-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.reply-target{padding:8px 10px;border:1px solid #49345f;border-radius:8px;background:#241832;color:#e9d5ff;margin:8px 0}
+.reply-target button{margin-left:8px}
+#status,#commentsStatus{color:#c4a5ff;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+.report-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
+.report-overlay{position:fixed;inset:0;z-index:1000;background:#08050dcc;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.report-overlay[hidden]{display:none}
+.report-dialog{width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:1px solid #654b7d;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+.report-dialog h2{margin-top:0;color:#d8b4fe}
+.report-dialog label{display:block;margin:14px 0 6px;color:#e7dcf8;font-weight:bold;font-size:14px}
+.report-dialog select,.report-dialog textarea{width:100%;padding:12px;border:1px solid #49365f;border-radius:9px;background:#100b18;color:#fff;font:inherit}
+.report-dialog textarea{min-height:100px;resize:vertical}
+.report-dialog-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+.report-status{overflow-wrap:anywhere;color:var(--muted);font-size:13px}
+.report-status.error{color:#ffaaaa}.report-status.success{color:#a9efbd}
+@media(max-width:520px){.book-top{grid-template-columns:100px minmax(0,1fr);gap:14px;padding:14px}.book-top h1{font-size:24px}.summary{font-size:13px}.chapter{padding:16px}.details{padding:0 14px 16px}.novel-text{font-size:17px}.button{padding:10px}.comments-panel{padding:15px}}
+@media(max-width:360px){.book-top{grid-template-columns:1fr}.cover,.cover-fallback{width:65%}}
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">✦ NOVELIA</a>
+  <a href="index.html#histoires">Toutes les œuvres</a>
+</header>
+
+<main class="container">
+<a class="back-link" href="index.html#histoires">← Retour aux histoires</a>
+
+<section class="book-card" id="bookCard">
+  <div class="book-top">
+    <div>
+      <img id="cover" class="cover" alt="" hidden>
+      <div id="coverFallback" class="cover-fallback"></div>
+    </div>
+    <div>
+      <div class="eyebrow" id="type">Œuvre Novelia</div>
+      <h1 id="title">Chargement…</h1>
+      <div class="meta">
+        <span class="tag" id="genre"></span>
+        <span class="tag" id="format"></span>
+      </div>
+      <p class="summary" id="description"></p>
+      <div class="actions">
+        <button class="button primary" id="startReading">Commencer la lecture</button>
+        <button class="button primary" id="resumeReading" hidden>Reprendre la lecture</button>
+        <button class="button favorite-button" id="favoriteButton">♡ Ajouter aux favoris</button>
+        <button class="button story-like-button" id="storyLikeButton" hidden aria-pressed="false">♡ J’aime cette œuvre</button>
+        <button class="button secondary report-button" id="reportStoryButton" hidden type="button">Signaler cette œuvre</button>
+      </div>
+      <p class="like-counter" id="storyLikeCount" role="status" hidden>Chargement des J’aime…</p>
+      <p class="summary" id="storyLikeMessage" role="status" aria-live="polite"></p>
+      <p class="summary" id="favoriteMessage" role="status"></p>
+      <p class="summary" id="progressMessage" role="status"></p>
+    </div>
+  </div>
+  <div class="details"><span id="chapterCount"></span></div>
+</section>
