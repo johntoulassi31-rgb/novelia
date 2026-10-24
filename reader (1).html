@@ -1,0 +1,509 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#100b18">
+  <meta name="description" content="Découvre des romans et webtoons sur Novelia.">
+  <title>Œuvre — Novelia</title>
+
+  <style>
+    :root {
+      --bg: #100b18;
+      --panel: #1b1326;
+      --purple: #a855f7;
+      --text: #f7f1ff;
+      --muted: #b8a9c9;
+      --border: #39234e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      line-height: 1.7;
+    }
+
+    header {
+      padding: 18px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header a {
+      color: #c4a5ff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .container {
+      width: min(850px, 100%);
+      margin: auto;
+      padding: 24px 16px 60px;
+    }
+
+    .back-link {
+      display: inline-block;
+      color: #d8b4fe;
+      text-decoration: none;
+      margin-bottom: 20px;
+    }
+
+    .book-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .book-top {
+      display: grid;
+      grid-template-columns: minmax(110px, 220px) minmax(0, 1fr);
+      gap: 20px;
+      padding: 20px;
+      align-items: start;
+    }
+
+    .cover {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 10px;
+      background: linear-gradient(145deg, #392456, #7f1d3d, #100b18);
+    }
+
+    .cover-fallback {
+      aspect-ratio: 2 / 3;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: end;
+      background: linear-gradient(145deg, #392456, #7f1d3d, #100b18);
+      font: bold 21px Georgia, serif;
+    }
+
+    .eyebrow {
+      color: #c4a5ff;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    h1 {
+      font-size: clamp(25px, 6vw, 38px);
+      line-height: 1.2;
+      margin: 8px 0 12px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .tag {
+      background: #30203f;
+      border: 1px solid #49345f;
+      color: #e9d5ff;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+
+    .summary {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .button {
+      border: 0;
+      border-radius: 9px;
+      padding: 12px 15px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .primary {
+      background: var(--purple);
+      color: white;
+    }
+
+    .secondary {
+      background: #30203f;
+      color: #e9d5ff;
+      border: 1px solid #49345f;
+    }
+
+    .button:hover { filter: brightness(1.15); }
+
+    .details {
+      padding: 0 20px 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .reader {
+      margin-top: 28px;
+      scroll-margin-top: 15px;
+    }
+
+    .chapter {
+      padding: 22px;
+      background: var(--panel);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .chapter h2 {
+      color: #d8b4fe;
+      font-size: 21px;
+      line-height: 1.4;
+    }
+
+    .novel-text {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      line-height: 2;
+      overflow-wrap: anywhere;
+    }
+
+    .novel-text p { margin: 0 0 22px; }
+
+    .webtoon-content {
+      margin: 0 -22px;
+      background: #09070e;
+    }
+
+    .webtoon-panel {
+      background: #171020;
+      border-bottom: 3px solid #09070e;
+    }
+
+    .webtoon-panel img {
+      display: block;
+      width: 100%;
+      height: auto;
+      min-height: 180px;
+      object-fit: contain;
+      background: #171020;
+    }
+
+    .panel-fallback {
+      min-height: 220px;
+      padding: 24px;
+      text-align: center;
+      background: linear-gradient(160deg, #291b39, #100b18);
+      color: var(--muted);
+    }
+
+    .panel-fallback strong {
+      display: block;
+      color: #d8b4fe;
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    .notice {
+      margin-top: 20px;
+      padding: 14px;
+      border-left: 3px solid var(--purple);
+      color: var(--muted);
+      background: #1b1326;
+      font-size: 14px;
+    }
+
+    .chapter-nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .chapter-nav button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    [hidden] { display: none !important; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 520px) {
+      .book-top {
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 14px;
+        padding: 14px;
+      }
+
+      .book-top h1 { font-size: 24px; }
+      .summary { font-size: 13px; }
+      .chapter { padding: 16px; }
+      .webtoon-content { margin: 0 -16px; }
+      .novel-text { font-size: 17px; }
+      .details { padding: 0 14px 16px; }
+      .button { padding: 11px 12px; }
+    }
+
+    @media (max-width: 360px) {
+      .book-top { grid-template-columns: 1fr; }
+      .cover, .cover-fallback { width: 65%; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <a href="index.html">✦ NOVELIA</a>
+    <a href="index.html#histoires">Toutes les œuvres</a>
+  </header>
+
+  <main class="container">
+    <a class="back-link" href="index.html#histoires">← Retour aux histoires</a>
+
+    <section class="book-card" id="bookCard">
+      <div class="book-top">
+        <div>
+          <img id="cover" class="cover" alt="" hidden>
+          <div id="coverFallback" class="cover-fallback"></div>
+        </div>
+
+        <div>
+          <div class="eyebrow" id="type">Œuvre Novelia</div>
+          <h1 id="title">Chargement...</h1>
+          <div class="meta">
+            <span class="tag" id="genre"></span>
+            <span class="tag" id="format"></span>
+          </div>
+          <p class="summary" id="description"></p>
+          <div class="actions">
+            <button class="button primary" id="startReading">
+              Commencer la lecture
+            </button>
+            <a class="button secondary" href="index.html#histoires">
+              Retour aux histoires
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="details">
+        <span id="chapterCount"></span>
+        <span> · Présentation de démonstration</span>
+      </div>
+    </section>
+
+    <section class="reader" id="reader" hidden>
+      <div class="chapter">
+        <div class="eyebrow" id="readingType">Lecture</div>
+        <h2 id="chapterTitle"></h2>
+        <div id="content"></div>
+
+        <div class="chapter-nav">
+          <button class="button secondary" id="previousChapter" disabled>
+            ← Précédent
+          </button>
+          <button class="button secondary" id="nextChapter" disabled>
+            Suivant →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <p class="notice" id="errorMessage" hidden>
+      Cette œuvre n’existe pas. Retourne à l’accueil pour en choisir une.
+    </p>
+  </main>
+
+  <footer>Novelia · Chaque histoire mérite d’être racontée.</footer>
+
+  <script>
+    const stories = {
+      roses: {
+        title: "Les Roses de minuit",
+        type: "Roman",
+        genre: "Dark romance",
+        cover: "images/roses.png",
+        description: "Dans l'obscurité de la nuit, les secrets, les passions et les choix dangereux peuvent bouleverser plusieurs destins. Découvre le début de cette histoire.",
+        chapter: "Chapitre 1 — La première page",
+        content: [
+          "La nuit enveloppait la ville lorsque tout commença.",
+          "Derrière les fenêtres éclairées, des secrets attendaient leur heure. Personne ne savait encore que cette rencontre allait bouleverser plusieurs destins.",
+          "Fin de cet extrait de démonstration."
+        ]
+      },
+
+      lune: {
+        title: "La Lune des oubliés",
+        type: "Webtoon",
+        genre: "Fantasy",
+        cover: "images/lune.png",
+        description: "Sous une lune mystérieuse, une ville semble cacher des secrets oubliés. Une silhouette surgit dans la nuit et tout pourrait bientôt changer.",
+        chapter: "Épisode 1 — Le commencement",
+        panels: [
+          { image: "images/lune-1.png", text: "La ville sous la lune." },
+          { image: "images/lune-2.png", text: "Une silhouette apparaît au loin." },
+          { image: "images/lune-3.png", text: "Une rencontre inattendue." }
+        ]
+      },
+
+      automne: {
+        title: "Un automne pour nous",
+        type: "Roman",
+        genre: "Romance",
+        cover: "images/automne.png",
+        description: "Les feuilles tombent, les regards se croisent et une journée ordinaire prend une tournure inattendue. Le début d'une romance à découvrir.",
+        chapter: "Chapitre 1 — Un jour d’automne",
+        content: [
+          "Les feuilles dansaient dans le vent lorsqu’ils se croisèrent pour la première fois.",
+          "Un simple regard suffit à rendre cette journée différente des autres.",
+          "Fin de cet extrait de démonstration."
+        ]
+      },
+
+      ville: {
+        title: "La Ville sans ombre",
+        type: "Webtoon",
+        genre: "Mystère",
+        cover: "images/ville.png",
+        description: "Dans une ville silencieuse où quelque chose semble anormal, chaque rue dissimule peut-être un indice. Une porte mystérieuse pourrait révéler la vérité.",
+        chapter: "Épisode 1 — Une ville étrange",
+        panels: [
+          { image: "images/ville-1.png", text: "Une ville silencieuse au petit matin." },
+          { image: "images/ville-2.png", text: "Une rue où personne ne s’arrête." },
+          { image: "images/ville-3.png", text: "Une porte s’ouvre dans l’obscurité." }
+        ]
+      }
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("story");
+    const story = stories[id];
+
+    const cover = document.getElementById("cover");
+    const coverFallback = document.getElementById("coverFallback");
+    const reader = document.getElementById("reader");
+    const content = document.getElementById("content");
+
+    if (!story) {
+      document.title = "Œuvre introuvable — Novelia";
+      document.getElementById("bookCard").hidden = true;
+      document.getElementById("errorMessage").hidden = false;
+    } else {
+      document.title = story.title + " — Novelia";
+
+      document.getElementById("title").textContent = story.title;
+      document.getElementById("type").textContent = story.type;
+      document.getElementById("genre").textContent = story.genre;
+      document.getElementById("format").textContent =
+        story.type === "Roman" ? "Lecture textuelle" : "Lecture illustrée";
+      document.getElementById("description").textContent = story.description;
+      document.getElementById("chapterCount").textContent =
+        story.type === "Roman" ? "1 chapitre de démonstration" : "1 épisode de démonstration";
+      document.getElementById("chapterTitle").textContent = story.chapter;
+      document.getElementById("readingType").textContent = story.type;
+
+      cover.alt = "Couverture de " + story.title;
+      cover.src = story.cover;
+
+      cover.addEventListener("load", function() {
+        cover.hidden = false;
+        coverFallback.hidden = true;
+      });
+
+      cover.addEventListener("error", function() {
+        cover.hidden = true;
+        coverFallback.hidden = false;
+      });
+
+      coverFallback.textContent = story.title;
+
+      document.getElementById("startReading").addEventListener("click", function() {
+        reader.hidden = false;
+        reader.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      if (story.panels) {
+        const webtoon = document.createElement("div");
+        webtoon.className = "webtoon-content";
+
+        story.panels.forEach(function(panelData, index) {
+          const panel = document.createElement("section");
+          panel.className = "webtoon-panel";
+
+          const image = document.createElement("img");
+          image.src = panelData.image;
+          image.alt = story.title + " — case " + (index + 1);
+          image.loading = "lazy";
+          image.hidden = true;
+
+          const fallback = document.createElement("div");
+          fallback.className = "panel-fallback";
+          fallback.innerHTML = "<strong>Case " + (index + 1) + "</strong>";
+
+          const text = document.createElement("p");
+          text.textContent = panelData.text;
+          fallback.appendChild(text);
+
+          image.addEventListener("load", function() {
+            image.hidden = false;
+            fallback.hidden = true;
+          });
+
+          image.addEventListener("error", function() {
+            image.hidden = true;
+            fallback.hidden = false;
+          });
+
+          panel.appendChild(image);
+          panel.appendChild(fallback);
+          webtoon.appendChild(panel);
+        });
+
+        content.appendChild(webtoon);
+
+        const notice = document.createElement("p");
+        notice.className = "notice";
+        notice.textContent =
+          "Les illustrations définitives pourront être ajoutées ultérieurement.";
+        content.appendChild(notice);
+      } else {
+        content.className = "novel-text";
+
+        story.content.forEach(function(paragraphText) {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = paragraphText;
+          content.appendChild(paragraph);
+        });
+      }
+    }
+  </script>
+</body>
+</html>
