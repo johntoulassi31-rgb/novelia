@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#100d19">
+<meta name="description" content="Découvre les tendances et des histoires adaptées à tes goûts sur Novelia.">
+<title>Découverte — Novelia</title>
+<style>
+:root{color-scheme:dark;--bg:#100d19;--panel:#1c1729;--border:#382b50;--text:#f5f1ff;--muted:#c5bdd6;--accent:#c5a3ff;--button:#8b5cf6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;line-height:1.5}
+header{background:#191324;border-bottom:1px solid var(--border);padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.logo{color:var(--accent);font-size:23px;font-weight:800;text-decoration:none}nav{display:flex;gap:12px;flex-wrap:wrap}a{color:var(--accent)}nav a{text-decoration:none}
+main{max-width:1100px;margin:0 auto;padding:22px 16px 45px}.intro{padding:20px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(130deg,#29203b,#171322);margin-bottom:20px}
+h1,h2{line-height:1.2}h1{margin:0 0 8px;font-size:clamp(26px,5vw,38px)}h2{font-size:22px;margin:28px 0 12px}.muted{color:var(--muted)}#status{margin:12px 0;overflow-wrap:anywhere}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px}
+.card{overflow:hidden;min-width:0;background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column}
+.cover{width:100%;aspect-ratio:3/4;object-fit:cover;background:#30243f}.no-cover{width:100%;aspect-ratio:3/4;background:#30243f;display:grid;place-items:center;padding:12px;color:#d5c6ff;text-align:center;font-weight:bold}
+.info{padding:12px;display:flex;flex-direction:column;gap:8px;flex:1}.info h3{font-size:16px;margin:0;overflow-wrap:anywhere}.info p{font-size:13px;margin:0;color:var(--muted);overflow-wrap:anywhere}
+.read{display:block;border:0;border-radius:9px;padding:10px 12px;background:var(--button);color:white;font-weight:bold;text-align:center;text-decoration:none}.read:hover{filter:brightness(1.12)}
+.pill{display:inline-block;width:max-content;border:1px solid var(--border);border-radius:99px;padding:2px 8px;font-size:12px;color:var(--muted)}
+.empty{border:1px dashed var(--border);border-radius:12px;padding:16px;color:var(--muted)}footer{text-align:center;padding:22px;color:var(--muted);border-top:1px solid var(--border)}
+@media(max-width:480px){header{padding:12px}nav{gap:9px;font-size:14px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:14px 12px 35px}}
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">✦ NOVELIA</a>
+  <nav aria-label="Navigation principale">
+    <a href="index.html">Accueil</a>
+    <a href="community.html">Communauté</a>
+    <a href="publish.html">Publier</a>
+    <a href="notifications.html">Notifications</a>
+    <a href="profile.html">Mon profil</a>
+  </nav>
+</header>
+<main>
+  <section class="intro">
+    <h1>Découvre ton prochain univers</h1>
+    <p class="muted">Des nouveautés, les œuvres les plus aimées et des suggestions qui évoluent selon tes goûts.</p>
+    <p id="status" role="status" aria-live="polite">Chargement des histoires…</p>
+  </section>
+  <section>
+    <div class="section-head"><h2>Pour toi</h2><span class="muted" id="personalNote">Suggestions personnalisées</span></div>
+    <div class="grid" id="recommended"><p class="empty">Chargement…</p></div>
+  </section>
+  <section>
+    <div class="section-head"><h2>Les tendances</h2><span class="muted">Classées selon les J’aime et la fraîcheur des publications</span></div>
+    <div class="grid" id="trending"><p class="empty">Chargement…</p></div>
+  </section>
+  <section>
+    <div class="section-head"><h2>Nouveautés</h2><span class="muted">Les dernières histoires publiées</span></div>
+    <div class="grid" id="latest"><p class="empty">Chargement…</p></div>
+  </section>
+</main>
+<footer>© Novelia — Découverte</footer>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const supabase = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
+const $ = id => document.getElementById(id);
+let currentUser = null;
+const dateNow = Date.now();
+function safeText(value, fallback = "") { return typeof value === "string" && value.trim() ? value.trim() : fallback; }
+function readLink(story) { return "reader.html?db_story=" + encodeURIComponent(String(story.id)); }
+function renderCards(targetId, stories, emptyText) {
+  const container = $(targetId); container.replaceChildren();
+  if (!stories || stories.length === 0) { const note = document.createElement("p"); note.className = "empty"; note.textContent = emptyText; container.append(note); return; }
+  stories.forEach(story => {
+    const card = document.createElement("article"); card.className = "card";
+    if (story.cover_url) {
+      const img = document.createElement("img"); img.className = "cover"; img.src = story.cover_url;
+      img.alt = "Couverture de " + safeText(story.title, "cette histoire"); img.loading = "lazy";
+      img.onerror = () => { const fallback = document.createElement("div"); fallback.className = "no-cover"; fallback.textContent = safeText(story.title, "Novelia"); img.replaceWith(fallback); };
+      card.append(img);
+    } else { const cover = document.createElement("div"); cover.className = "no-cover"; cover.textContent = safeText(story.title, "Novelia"); card.append(cover); }
+    const info = document.createElement("div"); info.className = "info";
+    const title = document.createElement("h3"); title.textContent = safeText(story.title, "Histoire sans titre");
+    const details = document.createElement("p"); details.textContent = (story.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + safeText(story.genre, "Autre");
+    const like = document.createElement("span"); like.className = "pill"; like.textContent = "♥ " + (story.likesCount || 0) + " J’aime";
+    const read = document.createElement("a"); read.className = "read"; read.href = readLink(story); read.textContent = "Lire l’histoire";
+    info.append(title, details, like, read); card.append(info); container.append(card);
+  });
+}
+function recentScore(story) {
+  const created = Date.parse(story.created_at || "") || 0;
+  const ageDays = created ? Math.max(0, (dateNow - created) / 86400000) : 365;
+  return (story.likesCount || 0) * 5 + Math.max(0, 30 - Math.min(ageDays, 30));
+}
+async function loadDiscovery() {
+  try {
+    const { data: session, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    currentUser = session.session?.user || null;
+    const { data: stories, error } = await supabase.from("stories")
+      .select("id,title,description,cover_url,story_type,genre,status,created_at,author_id,moderation_hidden")
+      .eq("status", "published").eq("moderation_hidden", false)
+      .order("created_at", { ascending: false }).limit(100);
+    if (error) throw error;
+    const items = stories || [];
+    if (!items.length) {
+      ["recommended","trending","latest"].forEach(id => renderCards(id, [], "Aucune histoire publiée n’est disponible pour le moment."));
+      $("status").textContent = "Aucune histoire publiée pour le moment."; return;
+    }
+    const ids = items.map(s => s.id);
+    const { data: likesRows, error: likesError } = await supabase.from("story_likes").select("story_id").in("story_id", ids).limit(10000);
+    const likesCount = new Map();
+    if (!likesError) (likesRows || []).forEach(row => likesCount.set(String(row.story_id), (likesCount.get(String(row.story_id)) || 0) + 1));
+    items.forEach(s => s.likesCount = likesCount.get(String(s.id)) || 0);
+    let likedIds = [], savedIds = [], followedAuthors = [];
+    if (currentUser) {
+      const [likedResult, savedResult, followsResult] = await Promise.all([
+        supabase.from("story_likes").select("story_id").eq("user_id", currentUser.id).limit(1000),
+        supabase.from("user_library").select("story_id").eq("user_id", currentUser.id).limit(1000),
+        supabase.from("follows").select("followed_id").eq("follower_id", currentUser.id).limit(1000)
+      ]);
+      if (!likedResult.error) likedIds = (likedResult.data || []).map(row => String(row.story_id));
+      if (!savedResult.error) savedIds = (savedResult.data || []).map(row => String(row.story_id));
+      if (!followsResult.error) followedAuthors = (followsResult.data || []).map(row => String(row.followed_id));
+    }
+    const likedOrSaved = new Set([...likedIds, ...savedIds]);
+    const tasteGenres = new Map();
+    items.forEach(story => { if (likedOrSaved.has(String(story.id)) && story.genre) tasteGenres.set(story.genre, (tasteGenres.get(story.genre) || 0) + 1); });
+    const maxGenre = [...tasteGenres.entries()].sort((a,b) => b[1]-a[1])[0]?.[0] || null;
+    const followedSet = new Set(followedAuthors);
+    const personal = items.filter(s => !likedOrSaved.has(String(s.id))).map(s => {
+      let score = recentScore(s);
+      if (maxGenre && s.genre === maxGenre) score += 25;
+      if (currentUser && s.author_id && followedSet.has(String(s.author_id))) score += 50;
+      return {...s, recommendationScore: score};
+    }).sort((a,b) => b.recommendationScore-a.recommendationScore).slice(0,12);
+    if (!currentUser) {
+      $("personalNote").textContent = "Connecte-toi pour personnaliser les suggestions";
+      $("status").textContent = "Voici les nouveautés et les œuvres aimées par la communauté.";
+    } else if (maxGenre) {
+      $("personalNote").textContent = "Suggestions inspirées du genre « " + maxGenre + " »";
+      $("status").textContent = "Suggestions calculées à partir de tes J’aime, de ta bibliothèque et des auteurs suivis.";
+    } else {
+      $("personalNote").textContent = "Aime ou enregistre des œuvres pour affiner les suggestions";
+      $("status").textContent = "Ton compte est connecté. Les tendances et nouveautés sont disponibles dès maintenant.";
+    }
+    renderCards("recommended", personal, "Pas encore assez d’informations pour personnaliser les suggestions. Découvre les tendances ci-dessous.");
+    renderCards("trending", [...items].sort((a,b) => recentScore(b)-recentScore(a)).slice(0,12), "Aucune tendance pour le moment.");
+    renderCards("latest", [...items].sort((a,b) => (Date.parse(b.created_at||"")||0)-(Date.parse(a.created_at||"")||0)).slice(0,12), "Aucune nouveauté pour le moment.");
+  } catch (err) {
+    console.error("Novelia découverte:", err);
+    $("status").textContent = "Impossible de charger la découverte : " + (err?.message || "erreur inconnue");
+    ["recommended","trending","latest"].forEach(id => renderCards(id, [], "Erreur de chargement. Vérifie ta connexion puis recharge la page."));
+  }
+}
+loadDiscovery();
+</script>
+</body>
+</html>
