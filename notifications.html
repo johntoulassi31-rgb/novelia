@@ -40,7 +40,7 @@
 
   <section class="panel" style="margin-top:16px">
     <h1>Mes notifications</h1>
-    <p class="muted">Retrouve ici les nouveaux abonnés et les chapitres publiés par les auteurs que tu suis.</p>
+    <p class="muted">Retrouve les nouveaux abonnés, les nouveaux chapitres, les réponses à tes commentaires et les messages de modération.</p>
     <p id="accountStatus" class="muted" role="status">Vérification de la connexion…</p>
     <div class="actions">
       <button type="button" id="refreshButton">Actualiser</button>
@@ -116,10 +116,12 @@
         };
       }
     }
-    if (item.type === "new_chapter" && item.story_id) {
+    if ((item.type === "new_chapter" || item.type === "comment_reply") && item.story_id) {
       const url = "reader.html?db_story=" + encodeURIComponent(item.story_id) +
         (item.chapter_id ? "&chapter_id=" + encodeURIComponent(item.chapter_id) : "");
-      return { label: "Lire le chapitre", href: url, kind: "chapter" };
+      return item.type === "comment_reply"
+        ? { label: "Voir la réponse", href: url, kind: "comment" }
+        : { label: "Lire le chapitre", href: url, kind: "chapter" };
     }
     return null;
   }
@@ -141,7 +143,9 @@
       const card = makeElement("article", "notification" + (item.is_read ? "" : " unread"));
       const top = makeElement("div", "notification-top");
       const typeLabel = item.type === "new_follower" ? "Nouvel abonné" :
-        item.type === "new_chapter" ? "Nouveau chapitre" : "Notification";
+        item.type === "new_chapter" ? "Nouveau chapitre" :
+        item.type === "comment_reply" ? "Réponse à ton commentaire" :
+        item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
       top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
 
