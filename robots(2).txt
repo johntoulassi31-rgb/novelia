@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://johntoulassi31-rgb.github.io/novelia/sitemap.xml
