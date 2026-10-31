@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#100d19">
+<meta name="description" content="Les nouveautés des auteurs suivis sur Novelia."><title>Communauté — Novelia</title>
+<style>
+:root{color-scheme:dark;--bg:#100d19;--panel:#1c1729;--border:#382b50;--text:#f5f1ff;--muted:#c5bdd6;--accent:#b99aff;--button:#8b5cf6;--soft:#302143}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;line-height:1.5}header{background:#191324;border-bottom:1px solid var(--border);padding:15px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header strong{color:var(--accent);font-size:20px}nav{display:flex;gap:12px;flex-wrap:wrap}nav a,.back{color:#e7dcf8;text-decoration:none}main{width:min(850px,calc(100% - 26px));margin:22px auto 50px}.panel,.activity{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:15px}h1,h2,h3{color:var(--accent);line-height:1.25}h1{margin:8px 0}h2{font-size:20px}h3{font-size:18px;margin:0 0 5px}.muted{color:var(--muted)}.small{font-size:12px}.controls,.actions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}button,.button{border:0;border-radius:9px;background:var(--button);color:white;padding:10px 13px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block;font-size:13px}button.secondary,.button.secondary{background:var(--soft);border:1px solid #61497b}button:disabled{opacity:.55;cursor:wait}.activity-top{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}.type{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#d4c0ff;border:1px solid #5d4779;border-radius:99px;padding:4px 8px}.date{font-size:12px;color:#b5a8c8}.description{white-space:pre-wrap;overflow-wrap:anywhere}.excerpt{padding:12px;border-left:3px solid var(--accent);background:#15101f;border-radius:0 9px 9px 0;color:#e8dff6;font-family:Georgia,serif}.error{color:#ffaaaa}.success{color:#a9efbd}.empty{text-align:center;padding:24px 8px;color:var(--muted)}#status{overflow-wrap:anywhere;min-height:20px}@media(min-width:650px){main{margin-top:30px}.panel,.activity{padding:22px}}
+</style></head>
+<body>
+<header><strong>✦ NOVELIA</strong><nav><a href="index.html">Accueil</a><a href="authors.html">Auteurs</a><a href="publish.html">Publier</a><a href="notifications.html">Notifications</a><a href="library.html">Bibliothèque</a></nav></header>
+<main>
+<section class="panel"><a class="back" href="index.html">← Retour à Novelia</a><h1>La communauté Novelia</h1><p class="muted">Découvre les histoires et chapitres des auteurs que tu suis. Réagis aux œuvres et partage un extrait.</p><p id="accountStatus" class="muted" role="status">Vérification de la connexion…</p><div class="controls"><button id="refreshButton" type="button">Actualiser le fil</button><button id="allButton" class="secondary" type="button">Découvrir les dernières publications</button><a class="button secondary" href="authors.html">Trouver des auteurs</a></div><p id="status" role="status" aria-live="polite"></p></section>
+<section><h2 id="feedHeading">Activité récente</h2><div id="feed"><p class="empty">Chargement du fil communautaire…</p></div></section>
+</main>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const supabase = createClient("https://czwaokqpqgrghxeeyguq.supabase.co", "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
+const $ = id => document.getElementById(id);
+let currentUser = null, busy = false, mode = "following", events = [], profiles = new Map(), likeCounts = new Map(), myLikedStories = new Set();
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+function setStatus(text, kind = "") { $("status").textContent = text; $("status").className = kind; }
+function niceDate(value) { if (!value) return "Date inconnue"; const d = new Date(value); return Number.isNaN(d.getTime()) ? "Date inconnue" : new Intl.DateTimeFormat("fr-FR", {dateStyle:"medium", timeStyle:"short"}).format(d); }
+function excerpt(text, max = 240) { const s = String(text || "").replace(/\s+/g, " ").trim(); return s.length > max ? s.slice(0, max).trim() + "…" : s; }
+async function fetchProfiles(ids) { const missing = [...new Set(ids.filter(Boolean))].filter(id => !profiles.has(id)); if (!missing.length) return; const {data,error} = await supabase.from("profiles").select("id,username,display_name").in("id", missing); if (error) throw error; (data || []).forEach(p => profiles.set(p.id, p)); }
+async function followedAuthorIds() { if (!currentUser) return []; const {data,error} = await supabase.from("follows").select("followed_id").eq("follower_id", currentUser.id).limit(500); if (error) throw error; return (data || []).map(x => x.followed_id).filter(Boolean); }
+async function fetchStories(authorIds) { let q = supabase.from("stories").select("id,title,description,cover_url,story_type,genre,status,author_id,created_at,moderation_hidden").eq("status", "published").eq("moderation_hidden", false).order("created_at", {ascending:false}).limit(35); if (authorIds !== null) { if (!authorIds.length) return []; q = q.in("author_id", authorIds); } const {data,error} = await q; if (error) throw error; return data || []; }
+async function fetchChapters(stories) { if (!stories.length) return []; const {data,error} = await supabase.from("chapters").select("id,story_id,title,content,chapter_number,created_at,moderation_hidden").in("story_id", stories.map(s => s.id)).eq("moderation_hidden", false).order("created_at", {ascending:false}).limit(80); if (error) throw error; return data || []; }
+async function fetchLikes(stories) { likeCounts = new Map(); myLikedStories = new Set(); await Promise.all(stories.map(async s => { const {count,error} = await supabase.from("story_likes").select("user_id", {count:"exact", head:true}).eq("story_id", s.id); if (!error) likeCounts.set(s.id, count || 0); })); if (currentUser && stories.length) { const {data,error} = await supabase.from("story_likes").select("story_id").eq("user_id", currentUser.id).in("story_id", stories.map(s => s.id)); if (!error) (data || []).forEach(x => myLikedStories.add(x.story_id)); } }
+async function loadFeed() {
+ if (busy) return; busy = true; $("refreshButton").disabled = true; $("allButton").disabled = true; $("feed").replaceChildren(el("p", "empty", "Chargement du fil…")); setStatus("Recherche des dernières activités…");
+ try {
+  let ids = null;
+  if (mode === "following" && currentUser) ids = await followedAuthorIds();
+  const useFollowing = mode === "following" && currentUser && ids && ids.length > 0;
+  const stories = await fetchStories(useFollowing ? ids : null);
+  const chapters = await fetchChapters(stories);
+  await fetchProfiles(stories.map(s => s.author_id));
+  await fetchLikes(stories);
+  const storyMap = new Map(stories.map(s => [s.id, s]));
+  events = [];
+  stories.forEach(s => events.push({kind:"story", id:"s-" + s.id, story:s, at:s.created_at || ""}));
+  chapters.forEach(c => { const s = storyMap.get(c.story_id); if (s) events.push({kind:"chapter", id:"c-" + c.id, chapter:c, story:s, at:c.created_at || s.created_at || ""}); });
+  events.sort((a,b) => new Date(b.at || 0) - new Date(a.at || 0)); events = events.slice(0, 45); renderFeed();
+  const personalized = Boolean(useFollowing); $("feedHeading").textContent = personalized ? "Activité des auteurs suivis" : "Dernières publications";
+  setStatus(!events.length ? "Aucune publication visible pour le moment." : personalized ? "Fil actualisé selon les auteurs que tu suis." : currentUser ? "Tu vois les dernières publications. Suis des auteurs pour personnaliser ton fil." : "Mode visiteur. Connecte-toi et suis des auteurs pour personnaliser ton fil.", "success");
+ } catch (error) { console.error(error); $("feed").replaceChildren(el("p", "empty error", "Impossible de charger le fil : " + (error.message || "erreur inconnue"))); setStatus("Vérifie les autorisations Supabase des tables follows, stories, chapters, profiles et story_likes.", "error"); }
+ finally { busy = false; $("refreshButton").disabled = false; $("allButton").disabled = false; }
+}
+function renderFeed() {
+ const container = $("feed"); container.replaceChildren();
+ if (!events.length) { container.append(el("p", "empty", "Pas encore d’activité à afficher.")); return; }
+ events.forEach(item => {
+  const s = item.story, author = profiles.get(s.author_id), card = el("article", "activity"), top = el("div", "activity-top"), meta = el("div");
+  meta.append(el("h3", "", s.title || "Histoire sans titre"), el("div", "muted", "par " + (author ? (author.display_name || author.username || "Auteur Novelia") : "Auteur Novelia") + " · " + (s.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + (s.genre || "Autre")));
+  top.append(meta, el("span", "type", item.kind === "chapter" ? "Nouveau chapitre" : "Nouvelle histoire")); card.append(top, el("p", "date", niceDate(item.at)));
+  if (s.description && item.kind === "story") card.append(el("p", "description", excerpt(s.description, 280)));
+  if (item.kind === "chapter") { card.append(el("p", "muted", "Chapitre " + (item.chapter.chapter_number || "") + " — " + (item.chapter.title || "Sans titre")), el("p", "excerpt", excerpt(item.chapter.content))); }
+  const actions = el("div", "actions"), read = el("a", "button", "Lire l’œuvre"); read.href = "reader.html?db_story=" + encodeURIComponent(s.id) + (item.kind === "chapter" ? "&chapter_id=" + encodeURIComponent(item.chapter.id) : ""); actions.append(read);
+  const like = el("button", "secondary", (myLikedStories.has(s.id) ? "♥ Aimée" : "♡ J’aime") + " · " + (likeCounts.has(s.id) ? likeCounts.get(s.id) : "—")); like.type = "button"; like.disabled = !currentUser; like.title = currentUser ? "Réagir à cette histoire" : "Connecte-toi pour aimer une histoire"; like.addEventListener("click", () => toggleLike(s.id)); actions.append(like);
+  const share = el("button", "secondary", item.kind === "chapter" ? "Partager l’extrait" : "Partager l’histoire"); share.type = "button"; share.addEventListener("click", () => shareItem(item)); actions.append(share);
+  if (author && author.username) { const profile = el("a", "button secondary", "Profil auteur"); profile.href = "public-profile.html?username=" + encodeURIComponent(author.username); actions.append(profile); }
+  card.append(actions); container.append(card);
+ });
+}
+async function toggleLike(storyId) {
+ if (!currentUser) return setStatus("Connecte-toi pour réagir à une histoire.");
+ try {
+  if (myLikedStories.has(storyId)) { const {error} = await supabase.from("story_likes").delete().eq("story_id", storyId).eq("user_id", currentUser.id); if (error) throw error; myLikedStories.delete(storyId); likeCounts.set(storyId, Math.max(0, (likeCounts.get(storyId) || 0) - 1)); }
+  else { const {error} = await supabase.from("story_likes").insert({story_id:storyId, user_id:currentUser.id}); if (error) throw error; myLikedStories.add(storyId); likeCounts.set(storyId, (likeCounts.get(storyId) || 0) + 1); }
+  renderFeed(); setStatus("Réaction enregistrée.", "success");
+ } catch (error) { setStatus("Réaction impossible : " + (error.message || "vérifie la table story_likes et ses règles RLS."), "error"); }
+}
+async function shareItem(item) {
+ const s = item.story, a = profiles.get(s.author_id), link = new URL("reader.html?db_story=" + encodeURIComponent(s.id) + (item.kind === "chapter" ? "&chapter_id=" + encodeURIComponent(item.chapter.id) : ""), location.href).href;
+ let text = "« " + (s.title || "Histoire Novelia") + " »" + (a ? " — par " + (a.display_name || a.username) : ""); if (item.kind === "chapter") text += "\n\n“" + excerpt(item.chapter.content, 350) + "”"; text += "\n\nÀ découvrir sur Novelia : " + link;
+ try { if (navigator.share) await navigator.share({title:s.title || "Novelia", text, url:link}); else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); setStatus("Texte et lien copiés. Tu peux les coller où tu veux.", "success"); return; } else { window.prompt("Copie ce texte pour le partager :", text); return; } setStatus("Partage lancé.", "success"); }
+ catch (error) { if (error.name !== "AbortError") setStatus("Le partage n’a pas abouti. Copie ce lien : " + link, "error"); }
+}
+$("refreshButton").addEventListener("click", () => { mode = "following"; loadFeed(); }); $("allButton").addEventListener("click", () => { mode = "all"; loadFeed(); });
+async function start() { try { const {data,error} = await supabase.auth.getUser(); if (error) console.warn(error.message); currentUser = data?.user || null; $("accountStatus").textContent = currentUser ? "Connecté · ton fil peut suivre tes auteurs favoris." : "Mode visiteur · connecte-toi pour suivre des auteurs et réagir."; await loadFeed(); } catch (error) { setStatus("Impossible d’initialiser la communauté : " + error.message, "error"); } }
+start();
+</script></body></html>
