@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#100d19">
+  <meta name="description" content="Actualités, notifications et nouvelles activités sur Novelia.">
+  <title>Actualités — Novelia</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 20px 15px; background: #100d19; color: #f5f1ff; font-family: Arial, sans-serif; }
+    main { width: 100%; max-width: 760px; margin: 20px auto; }
+    .panel, .notification { background: #1c1729; border: 1px solid #382b50; border-radius: 15px; padding: 18px; margin-bottom: 14px; }
+    h1, h2 { color: #c5a3ff; }
+    h1 { margin-top: 0; }
+    p { line-height: 1.5; }
+    .muted { color: #c5bdd6; }
+    .actions, .card-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
+    button, .link { display: inline-block; padding: 11px 15px; border: 0; border-radius: 9px; background: #9b6bff; color: white; font-weight: bold; text-decoration: none; cursor: pointer; font-size: 14px; }
+    .secondary { background: #382b50; }
+    button:disabled { opacity: .55; cursor: wait; }
+    .notification { border-left: 4px solid #59466f; }
+    .notification.unread { border-left-color: #b58aff; background: #241b36; }
+    .notification-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge { font-size: 12px; border-radius: 99px; padding: 5px 9px; background: #382b50; color: #eee2ff; }
+    .unread .badge { background: #6e42a8; }
+    .notification-message { overflow-wrap: anywhere; }
+    .notification-date { font-size: 12px; color: #b5a8c8; }
+    #status { overflow-wrap: anywhere; }
+    .error { color: #ffaaaa; }
+    .success { color: #a9efbd; }
+    .empty { padding: 22px 5px; text-align: center; color: #c5bdd6; }
+    .hint { font-size: 13px; }
+    @media (min-width: 600px) { body { padding: 28px 20px; } .panel, .notification { padding: 22px; } }
+
+    body{padding:0 0 78px}
+    .site-header{position:sticky;top:0;z-index:20;background:#191324f5;border-bottom:1px solid #382b50;padding:13px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;backdrop-filter:blur(12px)}
+    .site-logo{font-weight:bold;font-size:21px;color:#c5a3ff;text-decoration:none}.site-nav{display:flex;gap:12px;flex-wrap:wrap}.site-nav a{color:#e0d5f6;text-decoration:none;font-size:13px}
+    .feed-tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid #382b50;margin:14px 0 18px;scrollbar-width:none}.feed-tabs button{flex:1;min-width:max-content;border-radius:0;border:0;border-bottom:3px solid transparent;background:transparent;color:#c5bdd6;padding:13px 10px}.feed-tabs button.active{border-bottom-color:#ff8bba;color:#fff}
+    .activity{display:flex;gap:12px;align-items:flex-start;padding:15px;background:#1c1729;border:1px solid #382b50;border-radius:13px;margin:10px 0}.avatar{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;background:#30233e;border-radius:50%;color:#d8c9f5;font-weight:bold}.activity-copy{flex:1;min-width:0}.activity-copy p{margin:0 0 5px;overflow-wrap:anywhere}.activity-cover{width:65px;height:88px;object-fit:cover;border-radius:5px;background:#30233e;flex:0 0 65px}.bottom-nav{display:none}
+    @media(max-width:699px){.site-header{padding:11px 12px}.site-nav{display:none}main{padding:0 12px 20px}body{padding-bottom:70px}.panel,.notification{padding:15px}.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:8px 4px max(8px,env(safe-area-inset-bottom));background:#110d19f5;border-top:1px solid #382b50}.bottom-nav a{color:#c5bdd6;text-decoration:none;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0}.bottom-nav a span:first-child{font-size:22px}.bottom-nav a[aria-current=page]{color:#ff8bba}}
+  </style>
+</head>
+<body>
+<header class="site-header"><a href="index.html" class="site-logo">✦ NOVELIA</a><nav class="site-nav"><a href="index.html">Accueil</a><a href="discovery.html">Découverte</a><a href="library.html">Bibliothèque</a><a href="community.html">Communauté</a><a href="author-dashboard.html">Écrire</a></nav></header>
+<main>
+  <a class="link secondary" href="index.html">← Retour à Novelia</a>
+
+  <section class="panel" style="margin-top:16px">
+    <h1>Actualités</h1>
+    <p class="muted">Suis les publications des auteurs que tu aimes et retrouve tes notifications Novelia.</p>
+    <p id="accountStatus" class="muted" role="status">Vérification de la connexion…</p>
+    <div class="feed-tabs" role="tablist" aria-label="Actualités">
+      <button type="button" class="active" data-feed-tab="activity" role="tab" aria-selected="true">Fil d’actualités</button>
+      <button type="button" data-feed-tab="notifications" role="tab" aria-selected="false">Notifications</button>
+      <button type="button" data-feed-tab="messages" role="tab" aria-selected="false">Messages</button>
+    </div>
+    <div id="activitySection"><p id="activityStatus" class="muted">Chargement du fil d’actualités…</p><div id="activityList"></div></div>
+    <div id="messagesSection" hidden><p class="empty">La messagerie privée n’est pas encore disponible sur Novelia. Pour protéger les comptes, elle sera ajoutée après la mise en place de contrôles anti-spam et de signalement.</p></div>
+    <div class="actions" id="notificationActions" hidden>
+      <button type="button" id="refreshButton">Actualiser</button>
+      <button type="button" id="markAllButton" class="secondary">Tout marquer comme lu</button>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <p class="muted hint">Les nouvelles notifications s’actualisent automatiquement. Si le temps réel n’est pas disponible, la page vérifie les nouveautés périodiquement.</p>
+  </section>
+
+  <section id="notificationsSection" hidden>
+    <h2>Récemment reçues <span id="unreadCount" class="muted"></span></h2>
+    <div id="notificationList"><p class="empty">Chargement des notifications…</p></div>
+  </section>
+</main>
+
+<nav class="bottom-nav" aria-label="Navigation rapide"><a href="index.html"><span>⌂</span><span>Accueil</span></a><a href="discovery.html"><span>⌕</span><span>Découvrir</span></a><a href="library.html"><span>▤</span><span>Bibliothèque</span></a><a href="publish.html"><span>✎</span><span>Écrire</span></a><a href="notifications.html" aria-current="page"><span>♧</span><span>Alertes</span></a></nav>
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  const supabase = createClient(
+    "https://czwaokqpqgrghxeeyguq.supabase.co",
+    "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+  );
+  const $ = id => document.getElementById(id);
+  let currentUser = null;
+  let notifications = [];
+  let profilesById = new Map();
+  let busy = false;
+  let loadInProgress = false;
+  let refreshTimer = null;
+  let realtimeChannel = null;
+
+  function setStatus(text, kind = "") {
+    $("status").textContent = text;
+    $("status").className = kind;
+  }
+
+  function setFeedTab(tab) {
+    document.getElementById("activitySection").hidden = tab !== "activity";
+    document.getElementById("notificationsSection").hidden = tab !== "notifications";
+    document.getElementById("notificationActions").hidden = tab !== "notifications";
+    document.getElementById("messagesSection").hidden = tab !== "messages";
+    document.querySelectorAll("[data-feed-tab]").forEach(button => {
+      const active = button.dataset.feedTab === tab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    if (tab === "activity" && currentUser) loadActivity();
+  }
+  document.querySelectorAll("[data-feed-tab]").forEach(button => button.addEventListener("click", () => setFeedTab(button.dataset.feedTab)));
+
+  async function loadActivity() {
+    if (!currentUser) {
+      document.getElementById("activityStatus").textContent = "Connecte-toi pour voir les actualités des auteurs suivis.";
+      document.getElementById("activityList").replaceChildren();
+      return;
+    }
+    const status = document.getElementById("activityStatus");
+    const container = document.getElementById("activityList");
+    status.textContent = "Chargement des publications des auteurs suivis…";
+    try {
+      const { data: followRows, error: followError } = await supabase.from("follows")
+        .select("followed_id").eq("follower_id", currentUser.id).limit(500);
+      if (followError) throw followError;
+      const authorIds = [...new Set((followRows || []).map(row => row.followed_id).filter(Boolean))];
+      if (!authorIds.length) {
+        status.textContent = "Tu ne suis encore aucun auteur. Explore Novelia et abonne-toi à tes auteurs préférés pour voir leurs nouveautés ici.";
+        container.replaceChildren();
+        return;
+      }
+      const { data: stories, error: storyError } = await supabase.from("stories")
+        .select("id,title,cover_url,author_id,story_type,genre,created_at,status,moderation_hidden")
+        .in("author_id", authorIds).eq("status", "published").eq("moderation_hidden", false)
+        .order("created_at", { ascending: false }).limit(40);
+      if (storyError) throw storyError;
+      const items = stories || [];
+      const profileIds = [...new Set(items.map(s => s.author_id).filter(Boolean))];
+      let profileMap = new Map();
+      if (profileIds.length) {
+        const { data: profiles, error: profileError } = await supabase.from("profiles")
+          .select("id,username,display_name").in("id", profileIds);
+        if (!profileError) profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      }
+      container.replaceChildren();
+      if (!items.length) {
+        status.textContent = "Les auteurs que tu suis n’ont pas encore de nouvelle histoire publiée.";
+        return;
+      }
+      items.forEach(story => {
+        const profile = profileMap.get(story.author_id);
+        const name = profile?.display_name || (profile?.username ? "@" + profile.username : "Un auteur suivi");
+        const card = makeElement("article", "activity");
+        const avatar = makeElement("div", "avatar", name.replace(/^@/, "").slice(0,1).toLocaleUpperCase("fr"));
+        const copy = makeElement("div", "activity-copy");
+        const line = makeElement("p");
+        const strong = makeElement("strong", "", name);
+        const verb = document.createTextNode(" a publié une nouvelle histoire : ");
+        const title = makeElement("strong", "", story.title || "Sans titre");
+        line.append(strong, verb, title);
+        copy.append(line, makeElement("p", "notification-date", niceDate(story.created_at)));
+        const meta = makeElement("p", "notification-message", (story.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + (story.genre || "Autre"));
+        copy.append(meta);
+        const open = makeElement("a", "link", "Découvrir");
+        open.href = "reader.html?db_story=" + encodeURIComponent(story.id);
+        copy.append(open);
+        card.append(avatar, copy);
+        if (story.cover_url) {
+          const img = makeElement("img", "activity-cover");
+          img.src = story.cover_url; img.alt = "Couverture de " + (story.title || "histoire"); img.loading = "lazy";
+          card.append(img);
+        }
+        container.append(card);
+      });
+      status.textContent = items.length + " publication(s) des auteurs suivis.";
+    } catch (error) {
+      status.textContent = "Impossible de charger le fil : " + (error.message || "erreur inconnue");
+      console.error("Fil Novelia", error);
+    }
+  }
+
+  function niceDate(value) {
+    if (!value) return "Date inconnue";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Date inconnue";
+    return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  }
+
+  function makeElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+
+  async function loadActorProfiles(items) {
+    const ids = [...new Set(items.filter(item => item.type === "new_follower" && item.actor_id).map(item => item.actor_id))];
+    const missing = ids.filter(id => !profilesById.has(id));
+    if (!missing.length) return;
+    const { data, error } = await supabase.from("profiles")
+      .select("id, username, display_name")
+      .in("id", missing);
+    if (error) {
+      console.warn("Impossible de charger les profils des abonnés :", error.message);
+      return;
+    }
+    (data || []).forEach(profile => profilesById.set(profile.id, profile));
+  }
+
+  function buildTargetLink(item) {
+    if (item.type === "new_follower" && item.actor_id) {
+      const actor = profilesById.get(item.actor_id);
+      if (actor?.username) {
+        return {
+          label: "Voir le profil",
+          href: "public-profile.html?username=" + encodeURIComponent(actor.username),
+          kind: "profile"
+        };
+      }
+    }
+    if ((item.type === "new_chapter" || item.type === "comment_reply") && item.story_id) {
+      const url = "reader.html?db_story=" + encodeURIComponent(item.story_id) +
+        (item.chapter_id ? "&chapter_id=" + encodeURIComponent(item.chapter_id) : "");
+      return item.type === "comment_reply"
+        ? { label: "Voir la réponse", href: url, kind: "comment" }
+        : { label: "Lire le chapitre", href: url, kind: "chapter" };
+    }
+    return null;
+  }
+
+  function renderNotifications() {
+    const container = $("notificationList");
+    container.replaceChildren();
+    const unread = notifications.filter(item => !item.is_read).length;
+    $("unreadCount").textContent = `(${unread} non lue${unread > 1 ? "s" : ""})`;
+    $("markAllButton").disabled = busy || unread === 0;
+    $("refreshButton").disabled = busy;
+
+    if (!notifications.length) {
+      container.appendChild(makeElement("p", "empty", "Tu n’as pas encore de notification."));
+      return;
+    }
+
+    notifications.forEach(item => {
+      const card = makeElement("article", "notification" + (item.is_read ? "" : " unread"));
+      const top = makeElement("div", "notification-top");
+      const typeLabel = item.type === "new_follower" ? "Nouvel abonné" :
+        item.type === "new_chapter" ? "Nouveau chapitre" :
+        item.type === "comment_reply" ? "Réponse à ton commentaire" :
+        item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
+      top.appendChild(makeElement("strong", "", typeLabel));
+      top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
+
+      const message = makeElement("p", "notification-message", item.message || "Tu as une nouvelle notification.");
+      const date = makeElement("p", "notification-date", niceDate(item.created_at));
+      card.append(top, message, date);
+
+      const cardActions = makeElement("div", "card-actions");
+      const target = buildTargetLink(item);
+      if (target) {
+        const open = makeElement("a", "link", target.label);
+        open.href = target.href;
+        open.addEventListener("click", async event => {
+          if (!item.is_read) {
+            event.preventDefault();
+            const ok = await markOneRead(item.id, true);
+            if (ok) location.href = target.href;
+          }
+        });
+        cardActions.appendChild(open);
+      }
+
+      if (!item.is_read) {
+        const button = makeElement("button", "secondary", "Marquer comme lue");
+        button.type = "button";
+        button.disabled = busy;
+        button.addEventListener("click", () => markOneRead(item.id));
+        cardActions.appendChild(button);
+      }
+      if (cardActions.childElementCount) card.appendChild(cardActions);
+      container.appendChild(card);
+    });
+  }
+
+  async function loadNotifications(options = {}) {
+    const silent = options.silent === true;
+    if (!currentUser || loadInProgress) return;
+    loadInProgress = true;
+    if (!silent) setStatus("Chargement des notifications…");
+    try {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("id, recipient_id, actor_id, type, story_id, chapter_id, message, is_read, created_at")
+        .eq("recipient_id", currentUser.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const next = data || [];
+      await loadActorProfiles(next);
+      notifications = next;
+      if (!silent) setStatus(notifications.length ? "Notifications chargées." : "Aucune notification pour le moment.", "success");
+      renderNotifications();
+    } catch (error) {
+      if (!silent) setStatus("Impossible de charger les notifications : " + (error.message || "erreur inconnue."), "error");
+      console.error("Chargement des notifications :", error);
+    } finally {
+      loadInProgress = false;
+    }
+  }
+
+  async function markOneRead(id, quiet = false) {
+    if (busy || !currentUser) return false;
+    const item = notifications.find(entry => entry.id === id);
+    if (!item || item.is_read) return true;
+    busy = true;
+    renderNotifications();
+    if (!quiet) setStatus("Mise à jour…");
+    try {
+      const { data, error } = await supabase.from("notifications")
+        .update({ is_read: true })
+        .eq("id", id)
+        .eq("recipient_id", currentUser.id)
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Aucune notification n’a été mise à jour. Vérifie les politiques RLS.");
+      notifications = notifications.map(entry => entry.id === id ? { ...entry, is_read: true } : entry);
+      if (!quiet) setStatus("Notification marquée comme lue.", "success");
+      return true;
+    } catch (error) {
+      if (!quiet) setStatus("Impossible de mettre à jour la notification : " + (error.message || "erreur inconnue."), "error");
+      return false;
+    } finally {
+      busy = false;
+      renderNotifications();
+    }
+  }
+
+  $("markAllButton").addEventListener("click", async () => {
+    if (busy || !currentUser) return;
+    const unread = notifications.filter(item => !item.is_read);
+    if (!unread.length) return;
+    busy = true;
+    renderNotifications();
+    setStatus("Mise à jour des notifications…");
+    try {
+      const { error } = await supabase.from("notifications")
+        .update({ is_read: true })
+        .eq("recipient_id", currentUser.id)
+        .eq("is_read", false);
+      if (error) throw error;
+      notifications = notifications.map(item => ({ ...item, is_read: true }));
+      setStatus("Toutes les notifications sont marquées comme lues.", "success");
+    } catch (error) {
+      setStatus("Impossible de mettre à jour les notifications : " + (error.message || "erreur inconnue."), "error");
+    } finally {
+      busy = false;
+      renderNotifications();
+    }
+  });
+
+  $("refreshButton").addEventListener("click", () => loadNotifications());
+
+  function startRealtime() {
+    if (!currentUser) return;
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    realtimeChannel = supabase.channel("novelia-notifications-" + currentUser.id)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "notifications",
+        filter: "recipient_id=eq." + currentUser.id
+      }, () => loadNotifications({ silent: true }))
+      .subscribe(status => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.warn("Le temps réel Supabase est momentanément indisponible ; la vérification périodique reste active.");
+        }
+      });
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => loadNotifications({ silent: true }), 30000);
+  }
+
+  async function start() {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      $("accountStatus").textContent = "Connecte-toi pour consulter tes notifications.";
+      $("notificationList").replaceChildren(makeElement("p", "empty", "Redirection vers la connexion…"));
+      setTimeout(() => { location.href = "login.html"; }, 800);
+      return;
+    }
+    currentUser = data.user;
+    $("accountStatus").textContent = "Connecté : " + (currentUser.email || "compte utilisateur");
+    await loadNotifications();
+    await loadActivity();
+    startRealtime();
+  }
+
+  start();
+</script>
+</body>
+</html>
