@@ -25,7 +25,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#302440;border:1px 
 .hidden{display:none!important}.muted{color:var(--muted)}.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.form-actions button{flex:1}.section-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 #message{margin-top:16px;padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}#message:empty{display:none}.success{background:#173c2c;color:#b9f6d0}.error{background:#38202d;color:#ffd5df}.info-message{background:#28203c;color:#e5d7ff}
 .story-list{display:grid;gap:12px}.story-item{border:1px solid #46365c;border-radius:12px;padding:14px;background:#171221}.story-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.story-top h3{margin:0 0 6px;overflow-wrap:anywhere}.story-meta{font-size:13px;color:var(--muted);line-height:1.5}.status{display:inline-block;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:bold;background:#332448;color:#decaff;white-space:nowrap}.status.published{background:#173c2c;color:#b9f6d0}.story-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.story-actions button{flex:0 0 auto}
-.chapter-item{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #382d50;padding:12px 0}.chapter-item:last-child{border-bottom:0}.chapter-name{min-width:0;overflow-wrap:anywhere}.chapter-name strong{display:block;margin-bottom:5px}.empty{padding:16px;background:#171221;border:1px dashed #514365;border-radius:10px;color:var(--muted);line-height:1.5}
+.chapter-item{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #382d50;padding:12px 0}.chapter-item:last-child{border-bottom:0}.chapter-name{min-width:0;overflow-wrap:anywhere}.chapter-name strong{display:block;margin-bottom:5px}.empty{padding:16px;background:#171221;border:1px dashed #514365;border-radius:10px;color:var(--muted);line-height:1.5}.cover-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px;background:#171221;border:1px solid var(--line);border-radius:10px}.cover-preview img{width:76px;height:108px;object-fit:cover;border-radius:6px}.cover-preview .note{overflow-wrap:anywhere}
 hr{border:0;border-top:1px solid var(--line);margin:24px 0}
 @media(max-width:540px){body{padding:12px}.panel{padding:15px}h1{font-size:24px}.field-row{grid-template-columns:1fr}.story-top{display:block}.story-top .status{margin-top:8px}.chapter-item{align-items:flex-start}.chapter-item button{flex-shrink:0}}
 </style>
@@ -74,9 +74,13 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
         </div>
       </div>
 
-      <label for="cover">URL de la couverture (facultatif)</label>
+      <label for="coverFile">Choisir une couverture depuis ton appareil</label>
+      <input id="coverFile" type="file" accept="image/jpeg,image/png,image/webp">
+      <p class="note">JPG, PNG ou WebP — 5 Mo maximum. L’image sera envoyée dans Supabase Storage.</p>
+      <div id="coverPreviewWrap" class="cover-preview hidden"><img id="coverPreview" alt="Aperçu de la couverture"><span id="coverPreviewName" class="note"></span></div>
+      <label for="cover">Ou coller une URL de couverture (facultatif)</label>
       <input id="cover" type="url" maxlength="2000" placeholder="https://exemple.com/couverture.jpg">
-      <p class="note">Utilise une image dont tu as le droit de te servir.</p>
+      <p class="note">Utilise une image dont tu as le droit de te servir. Si tu sélectionnes un fichier, il sera prioritaire sur l’URL.</p>
       <hr>
       <h3>Premier chapitre</h3>
       <label for="chapterTitle">Titre du chapitre *</label>
@@ -108,6 +112,9 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
           <div><label for="editType">Format *</label><select id="editType" required><option value="roman">Roman</option><option value="webtoon">Webtoon</option></select></div>
           <div><label for="editGenre">Genre</label><select id="editGenre"><option>Romance</option><option>Dark romance</option><option>Fantasy</option><option>Mystère</option><option>Thriller</option><option>Science-fiction</option><option>Drame</option><option>Autre</option></select></div>
         </div>
+        <label for="editCoverFile">Remplacer la couverture depuis ton appareil</label><input id="editCoverFile" type="file" accept="image/jpeg,image/png,image/webp">
+        <p class="note">JPG, PNG ou WebP — 5 Mo maximum. Laisse vide pour conserver la couverture actuelle ou utilise le champ URL ci-dessous.</p>
+        <div id="editCoverPreviewWrap" class="cover-preview hidden"><img id="editCoverPreview" alt="Aperçu de la nouvelle couverture"><span id="editCoverPreviewName" class="note"></span></div>
         <label for="editCover">URL de la couverture</label><input id="editCover" type="url" maxlength="2000" placeholder="https://exemple.com/couverture.jpg">
         <label for="editStatus">Visibilité</label><select id="editStatus"><option value="draft">Brouillon</option><option value="published">Publié</option></select>
         <div class="form-actions"><button id="saveStoryButton" type="submit">Enregistrer les modifications</button><button type="button" id="cancelEditStory" class="secondary">Fermer</button></div>
@@ -160,6 +167,67 @@ let ownedStories = [];
 let selectedStory = null;
 let chaptersForSelectedStory = [];
 let chapterMode = "add";
+let createCoverPreviewUrl = null;
+let editCoverPreviewUrl = null;
+const COVER_BUCKET = "covers";
+const MAX_COVER_SIZE = 5 * 1024 * 1024;
+const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function showCoverPreview(file, prefix) {
+  const ids = prefix === "edit"
+    ? { wrap: "editCoverPreviewWrap", img: "editCoverPreview", name: "editCoverPreviewName" }
+    : { wrap: "coverPreviewWrap", img: "coverPreview", name: "coverPreviewName" };
+  const wrap = $(ids.wrap);
+  const img = $(ids.img);
+  const name = $(ids.name);
+  const oldUrl = prefix === "" ? createCoverPreviewUrl : editCoverPreviewUrl;
+  if (oldUrl) URL.revokeObjectURL(oldUrl);
+  if (!file) {
+    wrap.classList.add("hidden");
+    if (prefix === "") createCoverPreviewUrl = null;
+    else editCoverPreviewUrl = null;
+    img.removeAttribute("src");
+    name.textContent = "";
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  if (prefix === "") createCoverPreviewUrl = url;
+  else editCoverPreviewUrl = url;
+  img.src = url;
+  name.textContent = file.name;
+  wrap.classList.remove("hidden");
+}
+
+async function uploadCover(file) {
+  if (!currentUser) throw new Error("Connecte-toi avant d’envoyer une couverture.");
+  if (!ALLOWED_COVER_TYPES.includes(file.type)) throw new Error("Format non accepté. Choisis une image JPG, PNG ou WebP.");
+  if (file.size > MAX_COVER_SIZE) throw new Error("L’image dépasse 5 Mo. Choisis un fichier plus léger.");
+  const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[file.type];
+  const uniqueName = Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "." + extension;
+  const path = currentUser.id + "/" + uniqueName;
+  const { error } = await supabase.storage.from(COVER_BUCKET).upload(path, file, {
+    cacheControl: "31536000", contentType: file.type, upsert: false
+  });
+  if (error) {
+    if (/bucket/i.test(error.message) || error.message?.includes("not found")) {
+      throw new Error("Le stockage « covers » n’est pas encore configuré dans Supabase. Exécute le fichier SUPABASE-STORAGE-COVERS.sql dans SQL Editor, puis réessaie.");
+    }
+    throw new Error("Échec de l’envoi de la couverture : " + error.message);
+  }
+  const { data } = supabase.storage.from(COVER_BUCKET).getPublicUrl(path);
+  if (!data?.publicUrl) throw new Error("Supabase n’a pas fourni l’adresse publique de l’image.");
+  return data.publicUrl;
+}
+
+$("coverFile").addEventListener("change", () => {
+  const file = $("coverFile").files?.[0] || null;
+  showCoverPreview(file, "");
+  if (file) $("cover").value = "";
+});
+$("editCoverFile").addEventListener("change", () => {
+  const file = $("editCoverFile").files?.[0] || null;
+  showCoverPreview(file, "edit");
+});
 
 function showMessage(text, kind = "info-message") {
   message.textContent = text || "";
@@ -274,7 +342,8 @@ createForm.addEventListener("submit", async event => {
   const description = $("description").value.trim();
   const storyType = $("type").value;
   const genre = $("genre").value;
-  const coverUrl = $("cover").value.trim();
+  let coverUrl = $("cover").value.trim();
+  const coverFile = $("coverFile").files?.[0] || null;
   const chapterTitle = $("chapterTitle").value.trim();
   const content = $("content").value.trim();
   const status = $("status").value;
@@ -284,6 +353,10 @@ createForm.addEventListener("submit", async event => {
   showMessage("Enregistrement de ton histoire en cours…");
   let createdStoryId = null;
   try {
+    if (coverFile) {
+      showMessage("Envoi de la couverture dans le stockage…");
+      coverUrl = await uploadCover(coverFile);
+    }
     const { data: profile, error: profileError } = await supabase
       .from("profiles").select("id").eq("id", currentUser.id).maybeSingle();
     if (profileError) throw profileError;
@@ -309,6 +382,7 @@ createForm.addEventListener("submit", async event => {
       ? "Histoire publiée et premier chapitre enregistré. Tu peux la gérer dans « Mes histoires »."
       : "Brouillon enregistré avec son premier chapitre. Tu pourras modifier son contenu ou la publier depuis « Mes histoires ».", "success");
     createForm.reset();
+    showCoverPreview(null, "");
     await loadOwnStories();
     switchTab("manage");
     if (createdStoryId) await openStoryEditor(createdStoryId);
@@ -334,6 +408,8 @@ async function openStoryEditor(storyId) {
   $("editType").value = story.story_type || "roman";
   setSelectValue($("editGenre"), story.genre || "Autre");
   $("editCover").value = story.cover_url || "";
+  $("editCoverFile").value = "";
+  showCoverPreview(null, "edit");
   $("editStatus").value = story.status || "draft";
   $("editStoryPanel").classList.remove("hidden");
   chapterForm.classList.add("hidden");
@@ -367,12 +443,18 @@ editStoryForm.addEventListener("submit", async event => {
   if (!title || !description) return showMessage("Le titre et le résumé sont obligatoires.", "error");
   setBusy(saveStoryButton, true, "Enregistrement…", "Enregistrer les modifications");
   try {
+    let coverUrl = $("editCover").value.trim();
+    const coverFile = $("editCoverFile").files?.[0] || null;
+    if (coverFile) {
+      showMessage("Envoi de la nouvelle couverture dans le stockage…");
+      coverUrl = await uploadCover(coverFile);
+    }
     const updates = {
       title,
       description,
       story_type: $("editType").value,
       genre: $("editGenre").value,
-      cover_url: $("editCover").value.trim() || null,
+      cover_url: coverUrl || null,
       status: $("editStatus").value
     };
     const { data, error } = await supabase.from("stories")
@@ -384,6 +466,9 @@ editStoryForm.addEventListener("submit", async event => {
     if (error) throw error;
     if (!data) throw new Error("Aucune histoire n’a été modifiée. Vérifie que tu es connecté au compte auteur et que les autorisations Supabase permettent la modification.");
     selectedStory = data;
+    $("editCover").value = data.cover_url || "";
+    $("editCoverFile").value = "";
+    showCoverPreview(null, "edit");
     ownedStories = ownedStories.map(item => item.id === data.id ? data : item);
     $("editingStoryLabel").textContent = "Modification de : " + data.title;
     renderOwnStories();
