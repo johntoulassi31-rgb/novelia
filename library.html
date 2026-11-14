@@ -26,7 +26,7 @@ input,select{width:100%;background:#100d19;color:var(--text);border:1px solid va
 </main>
 <nav class="bottom-nav" aria-label="Navigation rapide"><a href="index.html"><span>⌂</span><span>Accueil</span></a><a href="discovery.html"><span>⌕</span><span>Découvrir</span></a><a href="library.html" aria-current="page"><span>▤</span><span>Bibliothèque</span></a><a href="publish.html"><span>✎</span><span>Écrire</span></a><a href="notifications.html"><span>♧</span><span>Alertes</span></a></nav>
 <script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
 const supabase=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
 const $=id=>document.getElementById(id);let user=null,library=[],historyRows=[],lists=[],listItems=[],storyMap=new Map(),chapterCounts=new Map(),activeTab="active";
 const demoNames={roses:"Les Roses de minuit",lune:"La Lune des oubliés",automne:"Un automne pour nous",ville:"La Ville sans ombre"};

@@ -1,12 +1,14 @@
 
-const CACHE_NAME = "novelia-shell-v4";
+const CACHE_NAME = "novelia-shell-v5";
 const CACHE_PREFIX = "novelia-shell-";
+const CDN_CACHE = "novelia-cdn-v1";
+const CDN_ORIGIN = "https://cdn.jsdelivr.net";
 
 const APP_FILES = [
   "./",
   "./index.html",
-  "./index-novelia-pwa.html",
   "./reader.html",
+  "./offline.html",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -46,7 +48,22 @@ self.addEventListener("fetch", event => {
 
   const url = new URL(request.url);
 
-  // Ne pas intercepter Supabase ou les domaines externes
+  // Bibliothèque Supabase (versions fixées) : cache d'abord, pour fonctionner hors ligne
+  if (url.origin === CDN_ORIGIN && url.pathname.startsWith("/npm/")) {
+    event.respondWith((async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      const response = await fetch(request);
+      if (response.ok) {
+        const cache = await caches.open(CDN_CACHE);
+        await cache.put(request, response.clone());
+      }
+      return response;
+    })());
+    return;
+  }
+
+  // Ne pas intercepter Supabase ni les autres domaines externes
   if (url.origin !== self.location.origin) return;
 
   // Gestion des pages HTML
@@ -64,7 +81,7 @@ self.addEventListener("fetch", event => {
       } catch (error) {
         return (
           await caches.match(request) ||
-          await caches.match("./index.html")
+          await caches.match("./offline.html")
         );
       }
     })());

@@ -17,7 +17,7 @@
 <section class="panel"><h2>Rappels de publication</h2><p class="muted small">Les rappels restent dans le navigateur de cet appareil et ne publient pas automatiquement.</p><form id="scheduleForm"><label for="item">Chapitre ou tâche</label><input id="item" maxlength="120" required placeholder="Ex. : Réviser le chapitre 8"><label for="date">Date souhaitée</label><input id="date" type="datetime-local" required><button>Enregistrer un rappel</button></form><p id="scheduleStatus" class="muted"></p><div id="scheduleList"></div></section></main>
 <nav class="bottom" aria-label="Navigation rapide"><a href="index.html"><span>⌂</span>Accueil</a><a href="discovery.html"><span>⌕</span>Découvrir</a><a href="library.html"><span>▤</span>Bibliothèque</a><a href="author-dashboard.html" aria-current="page"><span>✎</span>Écrire</a><a href="notifications.html"><span>♧</span>Alertes</a></nav>
 <script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
 const supabase=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
 const $=id=>document.getElementById(id);let user=null,stories=[];
 function el(tag,text,cls=""){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}

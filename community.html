@@ -14,7 +14,7 @@
 <section><h2 id="feedHeading">Activité récente</h2><div id="feed"><p class="empty">Chargement du fil communautaire…</p></div></section>
 </main>
 <script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
 const supabase = createClient("https://czwaokqpqgrghxeeyguq.supabase.co", "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
 const $ = id => document.getElementById(id);
 let currentUser = null, busy = false, mode = "following", events = [], profiles = new Map(), likeCounts = new Map(), myLikedStories = new Set();
