@@ -113,6 +113,11 @@
         required
       >
 
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:14px;line-height:1.4">
+        <input id="ageConsent" type="checkbox" style="width:auto;margin-top:3px">
+        <span>Pour créer un compte : j'ai au moins 16 ans et j'accepte la <a href="confidentialite.html">politique de confidentialité</a>.</span>
+      </label>
+
       <button type="submit" id="loginBtn">
         Se connecter
       </button>
@@ -201,6 +206,11 @@
       if (password.length < 6) {
         showMessage("Le mot de passe doit contenir au moins 6 caractères.");
         passwordInput.focus();
+        return;
+      }
+
+      if (!document.getElementById("ageConsent").checked) {
+        showMessage("Coche la case pour confirmer que tu as au moins 16 ans et accepter la politique de confidentialité.");
         return;
       }
 

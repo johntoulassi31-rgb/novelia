@@ -99,6 +99,10 @@
     <button class="secondary" id="logoutButton" type="button">
       Se déconnecter
     </button>
+    <button class="secondary" id="deleteAccountButton" type="button" style="background:#5a2335">
+      Demander la suppression de mon compte
+    </button>
+    <p><a href="suppression-compte.html">En savoir plus sur la suppression du compte</a></p>
   </main>
 
   <script type="module">
@@ -206,6 +210,19 @@
         }
 
         window.location.href = "login.html";
+      });
+
+    document.getElementById("deleteAccountButton")
+      .addEventListener("click", () => {
+        if (!currentUser) return;
+        if (!confirm("Demander la suppression de ton compte et de tes données ? Un e-mail pré-rempli va s'ouvrir : envoie-le pour confirmer ta demande.")) return;
+        const sujet = encodeURIComponent("Suppression de mon compte Novelia");
+        const corps = encodeURIComponent(
+          "Bonjour,\n\nJe demande la suppression de mon compte Novelia et de mes données personnelles.\n\n" +
+          "E-mail du compte : " + (currentUser.email || "") + "\n" +
+          "Identifiant : " + currentUser.id + "\n"
+        );
+        window.location.href = "mailto:Johntoulassi31@gmail.com?subject=" + sujet + "&body=" + corps;
       });
 
     loadProfile();
