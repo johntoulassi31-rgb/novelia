@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "novelia-shell-v3";
+const CACHE_NAME = "novelia-shell-v4";
 const CACHE_PREFIX = "novelia-shell-";
 
 const APP_FILES = [
@@ -9,7 +9,8 @@ const APP_FILES = [
   "./reader.html",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/icon-maskable-512.png"
 ];
 
 // Installation du Service Worker
