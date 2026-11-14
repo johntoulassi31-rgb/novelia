@@ -6,6 +6,12 @@
 <link rel="canonical" href="https://johntoulassi31-rgb.github.io/novelia/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#100d19">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Novelia">
+
 <meta name="description" content="Découvre des romans et des webtoons sur Novelia."> 
   <meta name="google-site-verification" content="kdk7xJTzIZxBtYgnThHjWyXoD_VuF2nBZiD4iVikC5g" />
 <title>Novelia — Lire sans limites</title>
@@ -1004,6 +1010,15 @@ supabase.auth.onAuthStateChange((_event, session) => {
 updateFavoriteButtons();
 await loadPublishedStories();
 filterStories();
+</script>
+<p style="text-align:center;padding:24px 16px;font-size:13px"><a href="confidentialite.html" style="color:#bca9d6">Politique de confidentialité</a></p>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js")
+        .catch(error => console.warn("Service worker non enregistré :", error));
+    });
+  }
 </script>
 </body>
 </html>
