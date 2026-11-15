@@ -101,6 +101,7 @@ img{width:220px;max-width:100%;border-radius:12px;object-fit:cover;aspect-ratio:
 .info{flex:1;min-width:240px}
 h1{margin:0 0 8px}
 .meta{color:#7d6835;font-size:14px;margin-bottom:16px}
+.btn.alt{background:#f1e6cd;color:#2a2011;border:0;cursor:pointer;font-size:16px;margin-left:8px}
 .btn{display:inline-block;margin-top:12px;background:#b8a36c;color:#1f1b14;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold}
 p{white-space:pre-line}
 </style>
@@ -113,8 +114,19 @@ ${cover ? `<img src="${esc(cover)}" alt="Couverture de ${esc(s.title)}" loading=
 <div class="meta">${esc(type)} · par ${esc(author)}${s.genre ? " · " + esc(s.genre) : ""}</div>
 <p>${esc(s.description || "")}</p>
 <a class="btn" href="${esc(read)}">Lire sur Novelia</a>
+<button class="btn alt" id="share" type="button" data-title="${esc(s.title)}" data-url="${esc(url)}">Partager</button>
+<p class="muted" id="shareMsg" role="status"></p>
 </div>
 </main>
+<script>
+(function(){var b=document.getElementById("share");if(!b)return;
+b.addEventListener("click",function(){
+var d={title:b.dataset.title,text:"Lis « "+b.dataset.title+" » sur Novelia",url:b.dataset.url};
+if(navigator.share){navigator.share(d).catch(function(){});return;}
+var m=document.getElementById("shareMsg");
+if(navigator.clipboard){navigator.clipboard.writeText(d.url).then(function(){m.textContent="Lien copié.";},function(){m.textContent=d.url;});}else{m.textContent=d.url;}
+});})();
+</script>
 </body>
 </html>
 `;
