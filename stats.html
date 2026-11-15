@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#100d19">
+<title>Tableau de bord — Novelia</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#100d19;color:#f5f1ff;font-family:Arial,sans-serif}
+main{max-width:760px;margin:0 auto}
+a{color:#c5a3ff}
+h1{margin:12px 0 4px;font-size:24px}
+h2{margin:26px 0 10px;font-size:17px;color:#c5a3ff}
+.muted{color:#c5bdd6;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{background:#1c1729;border:1px solid #382b50;border-radius:14px;padding:14px}
+.card .n{font-size:26px;font-weight:bold}
+.card .l{font-size:12px;color:#c5bdd6;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.card .s{font-size:12px;color:#a9efbd;margin-top:6px}
+.chart{display:flex;align-items:flex-end;gap:4px;height:130px;padding:12px 8px 0;background:#1c1729;border:1px solid #382b50;border-radius:14px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.bar i{display:block;width:100%;background:#8b5cf6;border-radius:4px 4px 0 0;min-height:2px}
+.bar b{font-size:10px;color:#c5bdd6;margin-top:4px;font-weight:normal}
+ol{padding-left:22px;margin:0}
+li{padding:6px 0;border-bottom:1px solid #2b2140;overflow-wrap:anywhere}
+button{background:#8b5cf6;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-weight:bold;font-size:14px;cursor:pointer}
+button.secondary{background:#392750}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+#status{margin:14px 0;overflow-wrap:anywhere}
+.error{color:#ffaaaa}.ok{color:#a9efbd}
+</style>
+</head>
+<body>
+<main>
+  <a href="admin.html">← Administration</a>
+  <h1>Tableau de bord</h1>
+  <p class="muted" id="updated">Chargement…</p>
+  <p id="status" role="status" aria-live="polite"></p>
+
+  <div id="content" hidden>
+    <h2>Utilisateurs</h2>
+    <div class="grid" id="kpiUsers"></div>
+
+    <h2>Contenu</h2>
+    <div class="grid" id="kpiContent"></div>
+
+    <h2>Communauté</h2>
+    <div class="grid" id="kpiCommunity"></div>
+
+    <h2>Inscriptions des 14 derniers jours</h2>
+    <div class="chart" id="chart" role="img" aria-label="Inscriptions par jour"></div>
+
+    <h2>Histoires les plus aimées</h2>
+    <ol id="top"></ol>
+
+    <div class="actions">
+      <button type="button" id="copyBtn">Copier le résumé</button>
+      <button type="button" class="secondary" id="refreshBtn">Actualiser</button>
+    </div>
+    <p class="muted" id="copyNote"></p>
+  </div>
+</main>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+
+const db = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
+const $ = id => document.getElementById(id);
+let stats = null;
+
+const fmt = n => Number(n ?? 0).toLocaleString("fr-FR");
+
+function status(text, cls = "") { $("status").textContent = text; $("status").className = cls; }
+
+function card(parent, value, label, sub) {
+  const c = document.createElement("div"); c.className = "card";
+  const n = document.createElement("div"); n.className = "n"; n.textContent = fmt(value);
+  const l = document.createElement("div"); l.className = "l"; l.textContent = label;
+  c.append(n, l);
+  if (sub) { const s = document.createElement("div"); s.className = "s"; s.textContent = sub; c.append(s); }
+  parent.append(c);
+}
+
+function render(s) {
+  ["kpiUsers", "kpiContent", "kpiCommunity", "chart", "top"].forEach(id => $(id).replaceChildren());
+
+  card($("kpiUsers"), s.users_total, "Inscrits", "+" + fmt(s.users_7d) + " sur 7 jours");
+  card($("kpiUsers"), s.users_30d, "Nouveaux (30 j)");
+  card($("kpiUsers"), s.readers_7d, "Lecteurs actifs (7 j)");
+  card($("kpiUsers"), s.readers_30d, "Lecteurs actifs (30 j)");
+  card($("kpiUsers"), s.authors_total, "Auteurs");
+
+  card($("kpiContent"), s.stories_total, "Histoires", "+" + fmt(s.stories_30d) + " sur 30 jours");
+  card($("kpiContent"), s.novels, "Romans");
+  card($("kpiContent"), s.webtoons, "Webtoons");
+  card($("kpiContent"), s.chapters_total, "Chapitres", "+" + fmt(s.chapters_30d) + " sur 30 jours");
+
+  card($("kpiCommunity"), s.likes_total, "Likes");
+  card($("kpiCommunity"), s.comments_total, "Commentaires");
+  card($("kpiCommunity"), s.follows_total, "Abonnements");
+  card($("kpiCommunity"), s.reports_pending, "Signalements en attente");
+
+  const days = s.signups_daily || [];
+  const max = Math.max(1, ...days.map(d => Number(d.count) || 0));
+  days.forEach(d => {
+    const bar = document.createElement("div"); bar.className = "bar";
+    const i = document.createElement("i");
+    i.style.height = Math.round((Number(d.count) || 0) / max * 85) + "%";
+    i.title = d.day + " : " + d.count;
+    const b = document.createElement("b");
+    b.textContent = String(d.day).slice(8, 10);
+    bar.append(i, b);
+    $("chart").append(bar);
+  });
+
+  if (!s.top_stories || s.top_stories.length === 0) {
+    const li = document.createElement("li"); li.textContent = "Aucun like pour le moment."; $("top").append(li);
+  } else {
+    s.top_stories.forEach(t => {
+      const li = document.createElement("li");
+      li.textContent = (t.title || "Sans titre") + " — " + fmt(t.likes) + " like(s)";
+      $("top").append(li);
+    });
+  }
+
+  $("updated").textContent = "Mis à jour le " + new Date(s.generated_at).toLocaleString("fr-FR");
+}
+
+function summary(s) {
+  const date = new Date(s.generated_at).toLocaleDateString("fr-FR");
+  return [
+    "Novelia — chiffres au " + date,
+    "- " + fmt(s.users_total) + " inscrits (+" + fmt(s.users_30d) + " sur 30 jours)",
+    "- " + fmt(s.readers_30d) + " lecteurs actifs sur 30 jours (" + fmt(s.readers_7d) + " sur 7 jours)",
+    "- " + fmt(s.authors_total) + " auteurs, " + fmt(s.stories_total) + " histoires (" + fmt(s.novels) + " romans, " + fmt(s.webtoons) + " webtoons)",
+    "- " + fmt(s.chapters_total) + " chapitres publiés (+" + fmt(s.chapters_30d) + " sur 30 jours)",
+    "- " + fmt(s.likes_total) + " likes, " + fmt(s.comments_total) + " commentaires, " + fmt(s.follows_total) + " abonnements"
+  ].join("\n");
+}
+
+async function load() {
+  status("Chargement des statistiques…");
+  $("content").hidden = true;
+  try {
+    const { data: auth, error: authError } = await db.auth.getUser();
+    if (authError) throw authError;
+    if (!auth.user) {
+      $("updated").textContent = "";
+      status("Connecte-toi avec ton compte administrateur pour voir ce tableau.", "error");
+      return;
+    }
+    const { data, error } = await db.rpc("novelia_admin_stats");
+    if (error) throw error;
+    stats = data;
+    render(stats);
+    $("content").hidden = false;
+    status("");
+  } catch (e) {
+    console.error(e);
+    $("updated").textContent = "";
+    status("Impossible de charger les statistiques : " + (e.message || "erreur inconnue"), "error");
+  }
+}
+
+$("refreshBtn").addEventListener("click", load);
+$("copyBtn").addEventListener("click", async () => {
+  if (!stats) return;
+  const text = summary(stats);
+  try {
+    await navigator.clipboard.writeText(text);
+    $("copyNote").textContent = "Résumé copié.";
+  } catch {
+    $("copyNote").textContent = text;
+  }
+});
+
+load();
+</script>
+</body>
+</html>
