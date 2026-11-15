@@ -4,76 +4,77 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#100b18">
+<meta name="theme-color" content="#fbf9f3">
 <meta name="description" content="Lis des romans et webtoons sur Novelia.">
 <title>Lecture — Novelia</title>
 <style>
-:root{--bg:#100b18;--panel:#1b1326;--purple:#a855f7;--text:#f7f1ff;--muted:#b8a9c9;--border:#39234e}
+:root{--bg:#fbf9f3;--panel:#f9f4e9;--purple:#c8981d;--text:#392b08;--muted:#7c6c43;--border:#f2e8d1}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;line-height:1.7}
 header{padding:18px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-header a,.back-link{color:#c4a5ff;text-decoration:none;font-weight:bold}
+header a,.back-link{color:#7b5d12;text-decoration:none;font-weight:bold}
 .container{width:min(850px,100%);margin:auto;padding:24px 16px 60px}
 .back-link{display:inline-block;margin-bottom:20px}
 .book-card,.chapter,.comments-panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden}
 .book-top{display:grid;grid-template-columns:minmax(110px,200px) minmax(0,1fr);gap:20px;padding:20px}
-.cover,.cover-fallback{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:10px;background:linear-gradient(145deg,#392456,#7f1d3d,#100b18)}
+.cover,.cover-fallback{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:10px;background:linear-gradient(145deg,#f1e6cd,#efe0b9,#fbf9f3)}
 .cover-fallback{padding:12px;display:flex;align-items:end;font:bold 21px Georgia,serif}
-.eyebrow{color:#c4a5ff;text-transform:uppercase;letter-spacing:2px;font-size:11px;font-weight:bold}
+.eyebrow{color:#7b5d12;text-transform:uppercase;letter-spacing:2px;font-size:11px;font-weight:bold}
 h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .meta{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
-.tag{background:#30203f;border:1px solid #49345f;color:#e9d5ff;border-radius:20px;padding:4px 10px;font-size:12px}
+.tag{background:#f4ecd9;border:1px solid #ede0c2;color:#513e0c;border-radius:20px;padding:4px 10px;font-size:12px}
 .summary,.reading-info{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 .button{border:0;border-radius:9px;padding:11px 14px;font-size:14px;font-weight:bold;cursor:pointer;text-decoration:none;text-align:center;font-family:inherit}
-.primary{background:var(--purple);color:white}
-.secondary,.favorite-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
-.favorite-button.is-favorite{background:#4a1949;border-color:#c084fc}
-.story-like-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
-.story-like-button.is-liked{background:#4a1949;border-color:#c084fc;color:#ffb1d6}
+.primary{background:var(--purple);color:#2a2011}
+.secondary,.favorite-button{background:#f4ecd9;color:#513e0c;border:1px solid #ede0c2}
+.favorite-button.is-favorite{background:#f3ebd7;border-color:#9b7516}
+.story-like-button{background:#f4ecd9;color:#513e0c;border:1px solid #ede0c2}
+.story-like-button.is-liked{background:#f3ebd7;border-color:#9b7516;color:#715510}
 .like-counter{color:var(--muted);font-size:13px;margin:8px 0 0;overflow-wrap:anywhere}
 .details{padding:0 20px 20px;color:var(--muted);font-size:13px}
 .reader{margin-top:28px;scroll-margin-top:15px}
 .chapter{padding:22px}
-.chapter h2{color:#d8b4fe;font-size:21px;line-height:1.4}
-.progress-track{width:100%;height:7px;border-radius:20px;background:#30203f;overflow:hidden;margin:12px 0 22px}
+.chapter h2{color:#6f5410;font-size:21px;line-height:1.4}
+.progress-track{width:100%;height:7px;border-radius:20px;background:#f4ecd9;overflow:hidden;margin:12px 0 22px}
 .progress-fill{height:100%;width:0;background:var(--purple);transition:width .2s}
 .novel-text{font-family:Georgia,"Times New Roman",serif;font-size:18px;line-height:2;overflow-wrap:anywhere}
 .novel-text p{margin:0 0 22px;white-space:pre-wrap}
-.webtoon-content{margin:0 -16px;background:#09070e}
+.webtoon-content{margin:0 -16px;background:#fdfcf9}
 .webtoon-content img{display:block;width:100%;height:auto;object-fit:contain}
-.notice{margin-top:20px;padding:14px;border-left:3px solid var(--purple);color:var(--muted);background:#1b1326;font-size:14px}
+.notice{margin-top:20px;padding:14px;border-left:3px solid var(--purple);color:var(--muted);background:#f9f4e9;font-size:14px}
 .chapter-nav{display:flex;justify-content:space-between;gap:12px;margin-top:20px}
 button:disabled{opacity:.4;cursor:not-allowed}
 .comments-panel{margin-top:24px;padding:20px}
 .comments-panel h2{font-size:21px}
-.comments-panel textarea{width:100%;min-height:110px;padding:12px;background:#100b18;color:white;border:1px solid #49345f;border-radius:9px;font:inherit}
+.comments-panel textarea{width:100%;min-height:110px;padding:12px;background:#fbf9f3;color:#2a2011;border:1px solid #ede0c2;border-radius:9px;font:inherit}
 .comment{padding:14px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
 .comment:last-child{border-bottom:0}
-.comment-author{font-weight:bold;color:#d8b4fe}
+.comment-author{font-weight:bold;color:#6f5410}
 .comment-date{font-size:12px;color:var(--muted)}
 .comment-text{white-space:pre-wrap;overflow-wrap:anywhere}
-.comment-replies{margin:8px 0 0 12px;padding-left:12px;border-left:2px solid #49345f}
+.comment-replies{margin:8px 0 0 12px;padding-left:12px;border-left:2px solid #ede0c2}
 .comment-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.reply-target{padding:8px 10px;border:1px solid #49345f;border-radius:8px;background:#241832;color:#e9d5ff;margin:8px 0}
+.reply-target{padding:8px 10px;border:1px solid #ede0c2;border-radius:8px;background:#f7f0e2;color:#513e0c;margin:8px 0}
 .reply-target button{margin-left:8px}
-#status,#commentsStatus{color:#c4a5ff;overflow-wrap:anywhere}
+#status,#commentsStatus{color:#7b5d12;overflow-wrap:anywhere}
 [hidden]{display:none!important}
 footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
-.report-button{background:#30203f;color:#e9d5ff;border:1px solid #49345f}
-.report-overlay{position:fixed;inset:0;z-index:1000;background:#08050dcc;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.report-button{background:#f4ecd9;color:#513e0c;border:1px solid #ede0c2}
+.report-overlay{position:fixed;inset:0;z-index:1000;background:#fdfcfacc;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
 .report-overlay[hidden]{display:none}
-.report-dialog{width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:1px solid #654b7d;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
-.report-dialog h2{margin-top:0;color:#d8b4fe}
-.report-dialog label{display:block;margin:14px 0 6px;color:#e7dcf8;font-weight:bold;font-size:14px}
-.report-dialog select,.report-dialog textarea{width:100%;padding:12px;border:1px solid #49365f;border-radius:9px;background:#100b18;color:#fff;font:inherit}
+.report-dialog{width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:1px solid #ccbe9d;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+.report-dialog h2{margin-top:0;color:#6f5410}
+.report-dialog label{display:block;margin:14px 0 6px;color:#4e3c0f;font-weight:bold;font-size:14px}
+.report-dialog select,.report-dialog textarea{width:100%;padding:12px;border:1px solid #ede0c1;border-radius:9px;background:#fbf9f3;color:#1f1b14;font:inherit}
 .report-dialog textarea{min-height:100px;resize:vertical}
 .report-dialog-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
 .report-status{overflow-wrap:anywhere;color:var(--muted);font-size:13px}
-.report-status.error{color:#ffaaaa}.report-status.success{color:#a9efbd}
+.report-status.error{color:#7e0a0a}.report-status.success{color:#188136}
 @media(max-width:520px){.book-top{grid-template-columns:100px minmax(0,1fr);gap:14px;padding:14px}.book-top h1{font-size:24px}.summary{font-size:13px}.chapter{padding:16px}.details{padding:0 14px 16px}.novel-text{font-size:17px}.button{padding:10px}.comments-panel{padding:15px}}
 @media(max-width:360px){.book-top{grid-template-columns:1fr}.cover,.cover-fallback{width:65%}}
 </style>
+<link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
 <header>

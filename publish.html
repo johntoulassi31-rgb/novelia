@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#100d19">
+<meta name="theme-color" content="#fbf8f1">
 <meta name="description" content="Publie, modifie et organise tes histoires sur Novelia.">
 <title>Publier et gérer mes histoires — Novelia</title>
 <style>
-:root{color-scheme:dark;--bg:#100d19;--panel:#1c1729;--purple:#a78bfa;--text:#f5f3ff;--muted:#b7aecb;--line:#382d50;--input:#100d19}
+:root{color-scheme:dark;--bg:#fbf8f1;--panel:#f8f3e6;--purple:#977216;--text:#372a08;--muted:#766742;--line:#f0e5cc;--input:#fbf8f1}
 *{box-sizing:border-box}
 body{margin:0;padding:18px;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
 main{max-width:850px;margin:auto}
@@ -18,18 +18,19 @@ h1{font-size:28px;margin:10px 0 8px}h2{font-size:21px;margin-top:0}h3{font-size:
 p{line-height:1.5}.note{color:var(--muted);font-size:14px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}
 label{display:block;margin:17px 0 8px;font-weight:bold;font-size:14px}
-input,textarea,select{width:100%;padding:13px;border-radius:9px;border:1px solid #514365;background:var(--input);color:white;font:inherit;min-width:0}
+input,textarea,select{width:100%;padding:13px;border-radius:9px;border:1px solid #dad2bd;background:var(--input);color:#2a2011;font:inherit;min-width:0}
 textarea{min-height:130px;resize:vertical;line-height:1.55}
-button,.button-link{border:0;border-radius:9px;background:var(--purple);color:#170f29;font-size:15px;font-weight:bold;padding:12px 15px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
-button:disabled{opacity:.6;cursor:wait}.secondary{background:#302440;border:1px solid #624a80;color:#f5f3ff}.small{font-size:13px;padding:9px 11px}.danger{background:#522737;color:#ffe3eb;border:1px solid #8c435e}
-.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab{flex:1;min-width:135px;background:#211630;color:#e4d6ff;border:1px solid #49345f}.tab.active{background:var(--purple);color:#170f29}
+button,.button-link{border:0;border-radius:9px;background:var(--purple);color:#f9f4ea;font-size:15px;font-weight:bold;padding:12px 15px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button:disabled{opacity:.6;cursor:wait}.secondary{background:#f3ebd7;border:1px solid #ccbd9a;color:#372a08}.small{font-size:13px;padding:9px 11px}.danger{background:#f1e6ce;color:#45340a;border:1px solid #cfbd8f}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab{flex:1;min-width:135px;background:#f7f1e4;color:#503d0c;border:1px solid #ede0c2}.tab.active{background:var(--purple);color:#f9f4ea}
 .hidden{display:none!important}.muted{color:var(--muted)}.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.form-actions button{flex:1}.section-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-#message{margin-top:16px;padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}#message:empty{display:none}.success{background:#173c2c;color:#b9f6d0}.error{background:#38202d;color:#ffd5df}.info-message{background:#28203c;color:#e5d7ff}
-.story-list{display:grid;gap:12px}.story-item{border:1px solid #46365c;border-radius:12px;padding:14px;background:#171221}.story-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.story-top h3{margin:0 0 6px;overflow-wrap:anywhere}.story-meta{font-size:13px;color:var(--muted);line-height:1.5}.status{display:inline-block;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:bold;background:#332448;color:#decaff;white-space:nowrap}.status.published{background:#173c2c;color:#b9f6d0}.story-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.story-actions button{flex:0 0 auto}
-.chapter-item{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #382d50;padding:12px 0}.chapter-item:last-child{border-bottom:0}.chapter-name{min-width:0;overflow-wrap:anywhere}.chapter-name strong{display:block;margin-bottom:5px}.empty{padding:16px;background:#171221;border:1px dashed #514365;border-radius:10px;color:var(--muted);line-height:1.5}.cover-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px;background:#171221;border:1px solid var(--line);border-radius:10px}.cover-preview img{width:76px;height:108px;object-fit:cover;border-radius:6px}.cover-preview .note{overflow-wrap:anywhere}
+#message{margin-top:16px;padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}#message:empty{display:none}.success{background:#f5eede;color:#0f7335}.error{background:#f5eddc;color:#513e0c}.info-message{background:#f4ecda;color:#503c0b}
+.story-list{display:grid;gap:12px}.story-item{border:1px solid #eee1c3;border-radius:12px;padding:14px;background:#f9f5ec}.story-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.story-top h3{margin:0 0 6px;overflow-wrap:anywhere}.story-meta{font-size:13px;color:var(--muted);line-height:1.5}.status{display:inline-block;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:bold;background:#f2e9d3;color:#5b450d;white-space:nowrap}.status.published{background:#f5eede;color:#0f7335}.story-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.story-actions button{flex:0 0 auto}
+.chapter-item{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #f0e5cc;padding:12px 0}.chapter-item:last-child{border-bottom:0}.chapter-name{min-width:0;overflow-wrap:anywhere}.chapter-name strong{display:block;margin-bottom:5px}.empty{padding:16px;background:#f9f5ec;border:1px dashed #dad2bd;border-radius:10px;color:var(--muted);line-height:1.5}.cover-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px;background:#f9f5ec;border:1px solid var(--line);border-radius:10px}.cover-preview img{width:76px;height:108px;object-fit:cover;border-radius:6px}.cover-preview .note{overflow-wrap:anywhere}
 hr{border:0;border-top:1px solid var(--line);margin:24px 0}
 @media(max-width:540px){body{padding:12px}.panel{padding:15px}h1{font-size:24px}.field-row{grid-template-columns:1fr}.story-top{display:block}.story-top .status{margin-top:8px}.chapter-item{align-items:flex-start}.chapter-item button{flex-shrink:0}}
 </style>
+<link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
 <main>

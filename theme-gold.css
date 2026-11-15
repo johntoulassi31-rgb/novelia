@@ -1,0 +1,7 @@
+/* Finitions du thème doré et blanc de Novelia */
+[hidden]{display:none!important}
+.button,button.primary,.primary,.btn:not(.secondary){
+  background-image:linear-gradient(135deg,#e6c862 0%,#c9a227 55%,#a97f12 100%);
+  box-shadow:0 4px 14px rgba(169,127,18,.28);
+}
+.button:hover,button.primary:hover,.primary:hover,.btn:not(.secondary):hover{filter:brightness(1.06)}

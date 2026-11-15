@@ -4,43 +4,44 @@
   <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#100d19">
+  <meta name="theme-color" content="#fbf8f1">
   <meta name="description" content="Actualités, notifications et nouvelles activités sur Novelia.">
   <title>Actualités — Novelia</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 20px 15px; background: #100d19; color: #f5f1ff; font-family: Arial, sans-serif; }
+    body { margin: 0; padding: 20px 15px; background: #fbf8f1; color: #392b08; font-family: Arial, sans-serif; }
     main { width: 100%; max-width: 760px; margin: 20px auto; }
-    .panel, .notification { background: #1c1729; border: 1px solid #382b50; border-radius: 15px; padding: 18px; margin-bottom: 14px; }
-    h1, h2 { color: #c5a3ff; }
+    .panel, .notification { background: #f8f3e6; border: 1px solid #f0e6cd; border-radius: 15px; padding: 18px; margin-bottom: 14px; }
+    h1, h2 { color: #7d5f12; }
     h1 { margin-top: 0; }
     p { line-height: 1.5; }
-    .muted { color: #c5bdd6; }
+    .muted { color: #675937; }
     .actions, .card-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
-    button, .link { display: inline-block; padding: 11px 15px; border: 0; border-radius: 9px; background: #9b6bff; color: white; font-weight: bold; text-decoration: none; cursor: pointer; font-size: 14px; }
-    .secondary { background: #382b50; }
+    button, .link { display: inline-block; padding: 11px 15px; border: 0; border-radius: 9px; background: #ae8419; color: #2a2011; font-weight: bold; text-decoration: none; cursor: pointer; font-size: 14px; }
+    .secondary { background: #f0e6cd; }
     button:disabled { opacity: .55; cursor: wait; }
-    .notification { border-left: 4px solid #59466f; }
-    .notification.unread { border-left-color: #b58aff; background: #241b36; }
+    .notification { border-left: 4px solid #d4cab0; }
+    .notification.unread { border-left-color: #936f15; background: #f6efdf; }
     .notification-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .badge { font-size: 12px; border-radius: 99px; padding: 5px 9px; background: #382b50; color: #eee2ff; }
-    .unread .badge { background: #6e42a8; }
+    .badge { font-size: 12px; border-radius: 99px; padding: 5px 9px; background: #f0e6cd; color: #46350a; }
+    .unread .badge { background: #cab06d; }
     .notification-message { overflow-wrap: anywhere; }
-    .notification-date { font-size: 12px; color: #b5a8c8; }
+    .notification-date { font-size: 12px; color: #7d6d44; }
     #status { overflow-wrap: anywhere; }
-    .error { color: #ffaaaa; }
-    .success { color: #a9efbd; }
-    .empty { padding: 22px 5px; text-align: center; color: #c5bdd6; }
+    .error { color: #7e0a0a; }
+    .success { color: #188136; }
+    .empty { padding: 22px 5px; text-align: center; color: #675937; }
     .hint { font-size: 13px; }
     @media (min-width: 600px) { body { padding: 28px 20px; } .panel, .notification { padding: 22px; } }
 
     body{padding:0 0 78px}
-    .site-header{position:sticky;top:0;z-index:20;background:#191324f5;border-bottom:1px solid #382b50;padding:13px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;backdrop-filter:blur(12px)}
-    .site-logo{font-weight:bold;font-size:21px;color:#c5a3ff;text-decoration:none}.site-nav{display:flex;gap:12px;flex-wrap:wrap}.site-nav a{color:#e0d5f6;text-decoration:none;font-size:13px}
-    .feed-tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid #382b50;margin:14px 0 18px;scrollbar-width:none}.feed-tabs button{flex:1;min-width:max-content;border-radius:0;border:0;border-bottom:3px solid transparent;background:transparent;color:#c5bdd6;padding:13px 10px}.feed-tabs button.active{border-bottom-color:#ff8bba;color:#fff}
-    .activity{display:flex;gap:12px;align-items:flex-start;padding:15px;background:#1c1729;border:1px solid #382b50;border-radius:13px;margin:10px 0}.avatar{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;background:#30233e;border-radius:50%;color:#d8c9f5;font-weight:bold}.activity-copy{flex:1;min-width:0}.activity-copy p{margin:0 0 5px;overflow-wrap:anywhere}.activity-cover{width:65px;height:88px;object-fit:cover;border-radius:5px;background:#30233e;flex:0 0 65px}.bottom-nav{display:none}
-    @media(max-width:699px){.site-header{padding:11px 12px}.site-nav{display:none}main{padding:0 12px 20px}body{padding-bottom:70px}.panel,.notification{padding:15px}.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:8px 4px max(8px,env(safe-area-inset-bottom));background:#110d19f5;border-top:1px solid #382b50}.bottom-nav a{color:#c5bdd6;text-decoration:none;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0}.bottom-nav a span:first-child{font-size:22px}.bottom-nav a[aria-current=page]{color:#ff8bba}}
+    .site-header{position:sticky;top:0;z-index:20;background:#f9f4eaf5;border-bottom:1px solid #f0e6cd;padding:13px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;backdrop-filter:blur(12px)}
+    .site-logo{font-weight:bold;font-size:21px;color:#7d5f12;text-decoration:none}.site-nav{display:flex;gap:12px;flex-wrap:wrap}.site-nav a{color:#544112;text-decoration:none;font-size:13px}
+    .feed-tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid #f0e6cd;margin:14px 0 18px;scrollbar-width:none}.feed-tabs button{flex:1;min-width:max-content;border-radius:0;border:0;border-bottom:3px solid transparent;background:transparent;color:#675937;padding:13px 10px}.feed-tabs button.active{border-bottom-color:#926f15;color:#1f1b14}
+    .activity{display:flex;gap:12px;align-items:flex-start;padding:15px;background:#f8f3e6;border:1px solid #f0e6cd;border-radius:13px;margin:10px 0}.avatar{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;background:#f4ebd8;border-radius:50%;color:#614b12;font-weight:bold}.activity-copy{flex:1;min-width:0}.activity-copy p{margin:0 0 5px;overflow-wrap:anywhere}.activity-cover{width:65px;height:88px;object-fit:cover;border-radius:5px;background:#f4ebd8;flex:0 0 65px}.bottom-nav{display:none}
+    @media(max-width:699px){.site-header{padding:11px 12px}.site-nav{display:none}main{padding:0 12px 20px}body{padding-bottom:70px}.panel,.notification{padding:15px}.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:8px 4px max(8px,env(safe-area-inset-bottom));background:#fbf8f1f5;border-top:1px solid #f0e6cd}.bottom-nav a{color:#675937;text-decoration:none;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0}.bottom-nav a span:first-child{font-size:22px}.bottom-nav a[aria-current=page]{color:#926f15}}
   </style>
+<link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
 <header class="site-header"><a href="index.html" class="site-logo">✦ NOVELIA</a><nav class="site-nav"><a href="index.html">Accueil</a><a href="discovery.html">Découverte</a><a href="library.html">Bibliothèque</a><a href="community.html">Communauté</a><a href="author-dashboard.html">Écrire</a></nav></header>
