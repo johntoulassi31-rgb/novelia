@@ -111,11 +111,13 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
         <button class="button primary" id="resumeReading" hidden>Reprendre la lecture</button>
         <button class="button favorite-button" id="favoriteButton">♡ Ajouter aux favoris</button>
         <button class="button story-like-button" id="storyLikeButton" hidden aria-pressed="false">♡ J’aime cette œuvre</button>
+        <button class="button secondary" id="shareStoryButton" hidden type="button">Partager</button>
         <button class="button secondary report-button" id="reportStoryButton" hidden type="button">Signaler cette œuvre</button>
       </div>
       <p class="like-counter" id="storyLikeCount" role="status" hidden>Chargement des J’aime…</p>
       <p class="summary" id="storyLikeMessage" role="status" aria-live="polite"></p>
       <p class="summary" id="favoriteMessage" role="status"></p>
+      <p class="summary" id="shareMessage" role="status" aria-live="polite"></p>
       <p class="summary" id="progressMessage" role="status"></p>
     </div>
   </div>
@@ -318,7 +320,7 @@ function applyReaderPrefs() {
   root.style.setProperty('--muted', t.muted);
   root.style.setProperty('--border', t.border);
   root.style.setProperty('--heading', t.heading);
-  root.style.setProperty('--purple', t.#b8860b);
+  root.style.setProperty('--purple', t.purple);
   root.style.setProperty('--novel-font-size', readerPrefs.fontSize + 'px');
   root.style.setProperty('--novel-line-height', readerPrefs.lineHeight);
   $("readerFontSize").value = String(readerPrefs.fontSize);
@@ -965,6 +967,7 @@ function showStory() {
   $("storyLikeButton").hidden = !isDatabaseStory;
   $("storyLikeCount").hidden = !isDatabaseStory;
   $("reportStoryButton").hidden = !isDatabaseStory;
+  $("shareStoryButton").hidden = !isDatabaseStory;
   $("storyLikeMessage").textContent = "";
 
   const saved = savedChapterIndex();
@@ -977,6 +980,30 @@ function showStory() {
 }
 
 $("storyLikeButton").addEventListener("click", toggleStoryLike);
+
+$("shareStoryButton").addEventListener("click", async () => {
+  if (!isDatabaseStory || !story || !story.id) return;
+  const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+  const readerUrl = base + "reader.html?db_story=" + encodeURIComponent(story.id);
+  let url = readerUrl;
+  try {
+    const pageUrl = base + "histoire/" + encodeURIComponent(story.id) + ".html";
+    const check = await fetch(pageUrl, { method: "HEAD", cache: "no-store" });
+    if (check.ok) url = pageUrl;
+  } catch (error) { /* on garde le lien du lecteur */ }
+  const data = { title: story.title, text: "Lis « " + story.title + " » sur Novelia", url };
+  try {
+    if (navigator.share) { await navigator.share(data); return; }
+  } catch (error) {
+    if (error && error.name === "AbortError") return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    $("shareMessage").textContent = "Lien copié : " + url;
+  } catch (error) {
+    $("shareMessage").textContent = "Copie ce lien pour le partager : " + url;
+  }
+});
 
 $("favoriteButton").addEventListener("click", async () => {
   const list = getFavorites();
