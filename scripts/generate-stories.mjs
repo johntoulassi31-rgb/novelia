@@ -93,15 +93,15 @@ function page(s, author) {
 <meta property="og:url" content="${esc(url)}">
 ${cover ? `<meta property="og:image" content="${esc(cover)}">\n` : ""}<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>
 <style>
-body{margin:0;background:#100d19;color:#f8f5ff;font-family:Arial,sans-serif;line-height:1.6}
-header{padding:20px;background:#191324;border-bottom:1px solid #39284c}
-header a{color:#f8f5ff;text-decoration:none;font-weight:bold;font-size:20px}
+body{margin:0;background:#fbf8f1;color:#352808;font-family:Arial,sans-serif;line-height:1.6}
+header{padding:20px;background:#f9f4ea;border-bottom:1px solid #f1e7d0}
+header a{color:#352808;text-decoration:none;font-weight:bold;font-size:20px}
 main{max-width:760px;margin:0 auto;padding:24px 16px;display:flex;gap:24px;flex-wrap:wrap}
-img{width:220px;max-width:100%;border-radius:12px;object-fit:cover;aspect-ratio:2/3;background:#191324}
+img{width:220px;max-width:100%;border-radius:12px;object-fit:cover;aspect-ratio:2/3;background:#f9f4ea}
 .info{flex:1;min-width:240px}
 h1{margin:0 0 8px}
-.meta{color:#bca9d6;font-size:14px;margin-bottom:16px}
-.btn{display:inline-block;margin-top:12px;background:#7957a0;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold}
+.meta{color:#7d6835;font-size:14px;margin-bottom:16px}
+.btn{display:inline-block;margin-top:12px;background:#b8a36c;color:#1f1b14;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold}
 p{white-space:pre-line}
 </style>
 </head>
