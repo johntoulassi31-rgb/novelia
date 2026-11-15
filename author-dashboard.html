@@ -42,4 +42,5 @@ const best=stories.find(s=>s.status!=="published")||stories[0],cont=$("continueW
 renderStories();await loadComments(ids);await loadDrafts();renderRem();status("Espace auteur chargé.","success")}
 $("refreshButton").addEventListener("click",async()=>{const b=$("refreshButton");b.disabled=true;try{await loadDashboard()}catch(e){status("Erreur : "+(e.message||String(e)),"error")}finally{b.disabled=false}});
 loadDashboard().catch(e=>{console.error(e);status("Erreur de chargement : "+(e.message||String(e)),"error")});
-</script></body></html>
+</script><script src="bottom-nav.js" defer></script>
+</body></html>
