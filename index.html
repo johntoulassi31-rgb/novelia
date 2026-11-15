@@ -125,6 +125,24 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 @media(min-width:700px){.shelf-card.featured{flex-basis:250px}.shelf-card{flex-basis:170px}.shelf-track{gap:15px}}
 
 </style>
+<style>
+.hero-carousel{margin:18px 16px 24px}
+.hc-track{position:relative;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.hc-track::-webkit-scrollbar{display:none}
+.hc-slide{flex:0 0 100%;box-sizing:border-box;scroll-snap-align:center;position:relative;overflow:hidden;min-height:210px;padding:28px 22px;border-radius:20px;display:flex;flex-direction:column;justify-content:center}
+.hc-1{background:radial-gradient(circle at 85% 15%,#573889 0,transparent 34%),linear-gradient(135deg,#302045,#191324 70%)}
+.hc-2{background:linear-gradient(135deg,#7f1d3d,#302045)}
+.hc-3{background:linear-gradient(135deg,#1f3a5c,#2a1d45)}
+.hc-slide h1{font-size:30px;margin:10px 0}
+.hc-slide h2{font-size:28px;margin:10px 0;color:#fff}
+.hc-slide p{color:#e7dcf7;line-height:1.6;margin:6px 0}
+.hc-slide .button{display:inline-block;text-decoration:none;text-align:center;margin-top:8px}
+.hc-dots{display:flex;justify-content:center;gap:8px;margin-top:12px}
+.hc-dots button{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:#51475e;cursor:pointer}
+.hc-dots button[aria-current="true"]{background:#ff8bba;width:22px;border-radius:99px}
+@media(min-width:700px){.hero-carousel{max-width:1000px;margin-left:auto;margin-right:auto}.hc-slide h1,.hc-slide h2{font-size:44px}}
+@media(max-width:699px){.hero-carousel{margin:12px 12px 20px}.hc-slide{padding:21px 17px;min-height:190px;border-radius:16px}.hc-slide h1,.hc-slide h2{font-size:26px}}
+</style>
 </head>
 <body>
 <header>
@@ -148,11 +166,28 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
     <button id="logoutButton" class="account-button" hidden>Déconnexion</button>
   </div>
 </header>
-<section class="hero" id="accueil">
-  <p>TON PROCHAIN UNIVERS T'ATTEND</p>
-  <h1>Là où chaque histoire prend vie.</h1>
-  <p>Explore des romans captivants et des webtoons fascinants. Trouve ta prochaine histoire préférée.</p>
-  <button class="button" id="explore">Explorer les histoires</button>
+<section class="hero-carousel" id="accueil" aria-roledescription="carrousel" aria-label="À la une">
+  <div class="hc-track" id="heroTrack">
+    <article class="hc-slide hc-1" aria-label="Bannière 1 sur 3">
+      <p>TON PROCHAIN UNIVERS T'ATTEND</p>
+      <h1>Là où chaque histoire prend vie.</h1>
+      <p>Explore des romans captivants et des webtoons fascinants. Trouve ta prochaine histoire préférée.</p>
+      <div><button class="button" id="explore">Explorer les histoires</button></div>
+    </article>
+    <article class="hc-slide hc-2" aria-label="Bannière 2 sur 3">
+      <p>POUR LES AUTEURS</p>
+      <h2>Écris ton histoire.</h2>
+      <p>Publie tes romans et tes webtoons, et fais-les découvrir à tes lecteurs.</p>
+      <div><a class="button" href="publish.html">Commencer à écrire</a></div>
+    </article>
+    <article class="hc-slide hc-3" aria-label="Bannière 3 sur 3">
+      <p>AUTEURS</p>
+      <h2>Suis tes auteurs préférés.</h2>
+      <p>Abonne-toi à tes auteurs et retrouve leurs histoires directement sur ton accueil.</p>
+      <div><a class="button" href="authors.html">Découvrir les auteurs</a></div>
+    </article>
+  </div>
+  <div class="hc-dots" id="heroDots"></div>
 </section>
 <main id="histoires">
   <section class="shelf" aria-labelledby="recommendTitle">
@@ -1006,6 +1041,42 @@ filterStories();
         .catch(error => console.warn("Service worker non enregistré :", error));
     });
   }
+</script>
+<script>
+(function () {
+  var track = document.getElementById("heroTrack"), dots = document.getElementById("heroDots");
+  if (!track || !dots) return;
+  var slides = Array.prototype.slice.call(track.children), i = 0, timer = null;
+  function mark() {
+    Array.prototype.forEach.call(dots.children, function (b, k) { b.setAttribute("aria-current", String(k === i)); });
+  }
+  function go(k) {
+    i = k;
+    track.scrollTo({ left: slides[k].offsetLeft, behavior: "smooth" });
+    mark();
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+  slides.forEach(function (s, k) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-label", "Aller à la bannière " + (k + 1));
+    b.addEventListener("click", function () { stop(); go(k); });
+    dots.appendChild(b);
+  });
+  track.addEventListener("scroll", function () {
+    var k = Math.round(track.scrollLeft / (slides[0].offsetWidth + 12));
+    if (k !== i && k >= 0 && k < slides.length) { i = k; mark(); }
+  }, { passive: true });
+  ["pointerdown", "touchstart", "focusin", "wheel"].forEach(function (ev) {
+    track.addEventListener(ev, stop, { passive: true });
+  });
+  mark();
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    timer = setInterval(function () {
+      if (!document.hidden) go((i + 1) % slides.length);
+    }, 6000);
+  }
+})();
 </script>
 <script src="bottom-nav.js" defer></script>
 </body>
