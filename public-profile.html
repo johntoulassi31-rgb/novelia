@@ -45,7 +45,9 @@
     .info h3 { margin: 0 0 4px; font-size: 15px; overflow-wrap: anywhere; }
     .muted { margin: 0; color: #675937; font-size: 13px; }
     .empty { grid-column: 1 / -1; color: #675937; text-align: center; padding: 24px 0; }
-      [hidden]{display:none!important}
+      .ambassador{display:inline-flex;align-items:center;gap:8px;margin:10px auto 0;padding:4px 16px 4px 6px;border-radius:999px;background:#fbf4de;border:1px solid #d4af37;font-weight:bold;color:#7a5c0e;font-size:14px}
+    .ambassador img{width:44px;height:44px}
+    [hidden]{display:none!important}
   </style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
@@ -56,6 +58,7 @@
   <div class="avatar" id="avatar" aria-hidden="true">?</div>
   <h1 id="name">Profil public</h1>
   <p id="username" class="username">Chargement...</p>
+  <div id="ambassador" class="ambassador" hidden><img src="images/badge-ambassadeur.png" alt="Badge Ambassadeur Novelia" width="44" height="44"><span>Ambassadeur Novelia</span></div>
 
   <div class="stats">
     <div class="stat"><strong id="statWorks">–</strong><span>Œuvres</span></div>
@@ -279,6 +282,10 @@ async function loadPage() {
     $("username").textContent = "@" + profile.username;
     $("avatar").textContent = initials(profile.display_name || profile.username);
     document.title = (profile.display_name || profile.username) + " — Novelia";
+    try {
+      const { data: amb } = await supabase.from("ambassadors").select("user_id").eq("user_id", profile.id).maybeSingle();
+      $("ambassador").hidden = !amb;
+    } catch (e) { /* table absente : pas de badge */ }
 
     const [followersResult, followingResult, storiesResult] =
       await Promise.all([

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fbf8f1">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://johntoulassi31-rgb.github.io/novelia/ambassadeur.html">
+<title>Deviens ambassadeur Novelia</title>
+<meta name="description" content="Rejoins l'équipe bénévole des ambassadeurs Novelia, fais découvrir la plateforme et obtiens un badge exclusif.">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fbf8f1;color:#2a2011;font-family:Arial,sans-serif;line-height:1.6}
+main{max-width:680px;margin:0 auto;padding:20px 16px 48px}
+a{color:#9a7414}
+.back{font-size:14px;text-decoration:none}
+.hero{text-align:center;padding:12px 0 8px}
+.hero img{width:170px;height:170px;max-width:60%}
+h1{margin:8px 0;font-size:28px}
+h2{margin:26px 0 8px;font-size:19px;color:#7a5c0e}
+.lead{color:#5a4a2a}
+.card{background:#fffdf6;border:1px solid #eadfbf;border-radius:16px;padding:18px;margin-top:18px}
+ul{padding-left:20px;margin:6px 0}
+li{margin:4px 0}
+label{display:block;margin:14px 0 6px;font-weight:bold;font-size:14px}
+input,textarea,select{width:100%;padding:12px;border:1px solid #d9c98f;border-radius:10px;background:#fff;color:#2a2011;font:16px Arial,sans-serif}
+textarea{min-height:120px;resize:vertical}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:normal;margin-top:16px}
+.check input{width:auto;margin-top:4px}
+button{margin-top:18px;width:100%;padding:14px;border:0;border-radius:12px;font:bold 16px Arial,sans-serif;color:#2a2011;cursor:pointer;
+  background:linear-gradient(135deg,#e6c862,#c9a227 55%,#a97f12);box-shadow:0 4px 14px rgba(169,127,18,.28)}
+button:disabled{opacity:.6;cursor:wait}
+#status{margin-top:14px;min-height:20px;overflow-wrap:anywhere}
+.error{color:#a12727}.ok{color:#1f7a45}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← Accueil Novelia</a>
+
+  <section class="hero">
+    <img src="images/badge-ambassadeur.png" alt="Badge Ambassadeur Novelia" width="170" height="170">
+    <h1>Deviens ambassadeur Novelia</h1>
+    <p class="lead">Un rôle bénévole pour celles et ceux qui aiment les histoires et veulent faire grandir la communauté.</p>
+  </section>
+
+  <section class="card">
+    <h2>Ce que font les ambassadeurs</h2>
+    <ul>
+      <li>Faire connaître Novelia autour d'eux (réseaux sociaux, groupes de lecture, amis).</li>
+      <li>Inviter des auteurs à publier leurs histoires.</li>
+      <li>Partager des histoires qu'ils aiment et encourager les auteurs par des likes et des commentaires.</li>
+      <li>Remonter des idées et des problèmes pour améliorer la plateforme.</li>
+    </ul>
+    <h2>Ce que tu reçois</h2>
+    <ul>
+      <li>Le <strong>badge Ambassadeur Novelia</strong>, réservé aux ambassadeurs, affiché sur ton profil public.</li>
+      <li>Une place dans l'équipe qui construit Novelia dès ses débuts.</li>
+    </ul>
+    <p class="lead"><strong>Important :</strong> le rôle d'ambassadeur est bénévole, il n'est pas rémunéré. Il faut avoir au moins 16 ans.</p>
+  </section>
+
+  <section class="card" id="box">
+    <h2 style="margin-top:0">Je candidate</h2>
+    <p id="intro" class="lead">Chargement…</p>
+
+    <form id="form" hidden novalidate>
+      <label for="full_name">Nom complet</label>
+      <input id="full_name" maxlength="120" autocomplete="name" required>
+
+      <label for="city">Ville et pays</label>
+      <input id="city" maxlength="120" placeholder="Ex. Lomé, Togo">
+
+      <label for="channels">Où pourrais-tu faire connaître Novelia ?</label>
+      <input id="channels" maxlength="500" placeholder="Ex. WhatsApp, TikTok, Facebook, école…">
+
+      <label for="motivation">Pourquoi veux-tu devenir ambassadeur ?</label>
+      <textarea id="motivation" maxlength="1500" placeholder="Quelques lignes suffisent (20 caractères minimum)."></textarea>
+
+      <label for="availability">Ta disponibilité</label>
+      <select id="availability">
+        <option value="Environ 1 h par semaine">Environ 1 h par semaine</option>
+        <option value="2 à 3 h par semaine">2 à 3 h par semaine</option>
+        <option value="Plus de 4 h par semaine">Plus de 4 h par semaine</option>
+      </select>
+
+      <label class="check"><input type="checkbox" id="consent">
+        <span>J'ai au moins 16 ans, je comprends que le rôle est bénévole, et j'accepte la <a href="confidentialite.html">politique de confidentialité</a>.</span></label>
+
+      <button type="submit" id="submit">Envoyer ma candidature</button>
+    </form>
+    <p id="status" role="status" aria-live="polite"></p>
+  </section>
+</main>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+
+const db = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
+const $ = id => document.getElementById(id);
+const STATUS = {
+  pending: "Ta candidature a bien été reçue et elle est en cours d'examen. Merci !",
+  approved: "Félicitations, tu es ambassadeur Novelia ! Ton badge s'affiche sur ton profil public.",
+  rejected: "Ta candidature n'a pas été retenue pour le moment. Merci de ton intérêt pour Novelia.",
+  revoked: "Ton statut d'ambassadeur a pris fin. Merci pour ton engagement."
+};
+
+function setStatus(text, cls) { $("status").textContent = text; $("status").className = cls || ""; }
+
+async function init() {
+  let user = null;
+  try {
+    const { data } = await db.auth.getUser();
+    user = data && data.user;
+  } catch (e) { user = null; }
+
+  if (!user) {
+    $("intro").textContent = "";
+    const a = document.createElement("a");
+    a.href = "login.html"; a.textContent = "Connecte-toi ou crée un compte";
+    $("intro").append(a, " pour envoyer ta candidature.");
+    return;
+  }
+
+  const { data, error } = await db.from("ambassador_applications")
+    .select("status").eq("user_id", user.id).maybeSingle();
+  if (error) {
+    $("intro").textContent = "Les candidatures ne sont pas encore ouvertes. Reviens bientôt !";
+    return;
+  }
+  if (data) {
+    $("intro").textContent = STATUS[data.status] || STATUS.pending;
+    return;
+  }
+  $("intro").textContent = "Remplis ce formulaire, nous te répondrons dès que possible.";
+  $("form").hidden = false;
+}
+
+$("form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const full_name = $("full_name").value.trim();
+  const motivation = $("motivation").value.trim();
+  if (full_name.length < 2) return setStatus("Indique ton nom complet.", "error");
+  if (motivation.length < 20) return setStatus("Explique ta motivation en 20 caractères au moins.", "error");
+  if (!$("consent").checked) return setStatus("Coche la case pour confirmer ton âge et accepter les conditions.", "error");
+
+  $("submit").disabled = true;
+  setStatus("Envoi en cours…", "");
+  const { error } = await db.from("ambassador_applications").insert({
+    full_name,
+    city: $("city").value.trim() || null,
+    channels: $("channels").value.trim() || null,
+    motivation,
+    availability: $("availability").value
+  });
+  $("submit").disabled = false;
+  if (error) {
+    const dup = String(error.code) === "23505";
+    return setStatus(dup ? "Tu as déjà envoyé une candidature." : "Impossible d'envoyer la candidature : " + error.message, "error");
+  }
+  $("form").hidden = true;
+  $("intro").textContent = STATUS.pending;
+  setStatus("", "");
+});
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#fbf8f1">
+<title>Ambassadeurs — Administration Novelia</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#fbf8f1;color:#2a2011;font-family:Arial,sans-serif;line-height:1.5}
+main{max-width:760px;margin:0 auto}
+a{color:#9a7414}
+h1{margin:12px 0 4px;font-size:24px}
+h2{margin:24px 0 10px;font-size:17px;color:#7a5c0e}
+.muted{color:#6b5a3a;font-size:13px}
+.card{background:#fffdf6;border:1px solid #eadfbf;border-radius:14px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 4px;font-size:16px}
+.card p{margin:4px 0;overflow-wrap:anywhere}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button{padding:10px 14px;border:0;border-radius:10px;font:bold 14px Arial,sans-serif;cursor:pointer;color:#2a2011;
+  background:linear-gradient(135deg,#e6c862,#c9a227 55%,#a97f12)}
+button.no{background:#f1e6cd}
+button:disabled{opacity:.6;cursor:wait}
+#status{margin:12px 0;overflow-wrap:anywhere}
+.error{color:#a12727}
+</style>
+</head>
+<body>
+<main>
+  <a href="admin.html">← Administration</a>
+  <h1>Candidatures d'ambassadeurs</h1>
+  <p id="status" role="status" aria-live="polite">Chargement…</p>
+  <div id="content" hidden>
+    <h2>En attente</h2><div id="pending"></div>
+    <h2>Ambassadeurs</h2><div id="approved"></div>
+    <h2>Refusées ou terminées</h2><div id="other"></div>
+  </div>
+</main>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+
+const db = createClient(
+  "https://czwaokqpqgrghxeeyguq.supabase.co",
+  "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+);
+const $ = id => document.getElementById(id);
+function setStatus(t, cls) { $("status").textContent = t; $("status").className = cls || ""; }
+
+function line(parent, label, value) {
+  if (!value) return;
+  const p = document.createElement("p");
+  const b = document.createElement("strong"); b.textContent = label + " : ";
+  p.append(b, document.createTextNode(value)); parent.append(p);
+}
+
+function button(text, cls, handler) {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = text; if (cls) b.className = cls;
+  b.addEventListener("click", async () => { b.disabled = true; await handler(); b.disabled = false; });
+  return b;
+}
+
+async function decide(id, decision) {
+  const { error } = await db.rpc("novelia_review_ambassador", { application_id: id, decision });
+  if (error) { setStatus("Action impossible : " + error.message, "error"); return; }
+  await load();
+}
+
+function render(app, names) {
+  const card = document.createElement("div"); card.className = "card";
+  const h = document.createElement("h3");
+  h.textContent = app.full_name + (names.get(app.user_id) ? " (@" + names.get(app.user_id) + ")" : "");
+  card.append(h);
+  line(card, "Ville", app.city);
+  line(card, "Réseaux", app.channels);
+  line(card, "Disponibilité", app.availability);
+  line(card, "Motivation", app.motivation);
+  line(card, "Reçue le", new Date(app.created_at).toLocaleDateString("fr-FR"));
+  const row = document.createElement("div"); row.className = "row";
+  if (app.status === "pending") {
+    row.append(button("Approuver", "", () => decide(app.id, "approved")),
+               button("Refuser", "no", () => decide(app.id, "rejected")));
+  } else if (app.status === "approved") {
+    row.append(button("Retirer le statut", "no", () => decide(app.id, "revoked")));
+  } else {
+    row.append(button("Approuver quand même", "", () => decide(app.id, "approved")));
+  }
+  card.append(row);
+  return card;
+}
+
+async function load() {
+  setStatus("Chargement…");
+  $("content").hidden = true;
+  try {
+    const { data: auth } = await db.auth.getUser();
+    if (!auth || !auth.user) { setStatus("Connecte-toi avec ton compte administrateur.", "error"); return; }
+    const { data: adm } = await db.from("app_admins").select("user_id").eq("user_id", auth.user.id).maybeSingle();
+    if (!adm) { setStatus("Cette page est réservée aux administrateurs.", "error"); return; }
+
+    const { data: apps, error } = await db.from("ambassador_applications")
+      .select("id,user_id,full_name,city,channels,motivation,availability,status,created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    const ids = [...new Set(apps.map(a => a.user_id))];
+    const names = new Map();
+    if (ids.length) {
+      const { data: profs } = await db.from("profiles").select("id,username").in("id", ids);
+      (profs || []).forEach(p => names.set(p.id, p.username));
+    }
+    ["pending", "approved", "other"].forEach(id => $(id).replaceChildren());
+    const empty = id => { const p = document.createElement("p"); p.className = "muted"; p.textContent = "Aucune pour le moment."; $(id).append(p); };
+    apps.forEach(a => {
+      const zone = a.status === "pending" ? "pending" : a.status === "approved" ? "approved" : "other";
+      $(zone).append(render(a, names));
+    });
+    ["pending", "approved", "other"].forEach(id => { if (!$(id).children.length) empty(id); });
+    $("content").hidden = false;
+    setStatus("");
+  } catch (e) {
+    console.error(e);
+    setStatus("Impossible de charger les candidatures : " + (e.message || "erreur inconnue"), "error");
+  }
+}
+load();
+</script>
+</body>
+</html>

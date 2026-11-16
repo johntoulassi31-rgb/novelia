@@ -132,6 +132,7 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 .hc-slide{flex:0 0 100%;box-sizing:border-box;scroll-snap-align:center;position:relative;overflow:hidden;min-height:210px;padding:28px 22px;border-radius:20px;display:flex;flex-direction:column;justify-content:center}
 .hc-1{background:radial-gradient(circle at 85% 15%,#d9c799 0,transparent 34%),linear-gradient(135deg,#f3ead6,#f9f4ea 70%)}
 .hc-2{background:linear-gradient(135deg,#efe0b9,#f3ead6)}
+.hc-4{background:linear-gradient(135deg,#f6e7a8,#fbf4de)}
 .hc-3{background:linear-gradient(135deg,#f0e6cd,#f4ebd8)}
 .hc-slide h1{font-size:30px;margin:10px 0}
 .hc-slide h2{font-size:28px;margin:10px 0;color:#1f1b14}
@@ -169,23 +170,29 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 </header>
 <section class="hero-carousel" id="accueil" aria-roledescription="carrousel" aria-label="À la une">
   <div class="hc-track" id="heroTrack">
-    <article class="hc-slide hc-1" aria-label="Bannière 1 sur 3">
+    <article class="hc-slide hc-1" aria-label="Bannière 1 sur 4">
       <p>TON PROCHAIN UNIVERS T'ATTEND</p>
       <h1>Là où chaque histoire prend vie.</h1>
       <p>Explore des romans captivants et des webtoons fascinants. Trouve ta prochaine histoire préférée.</p>
       <div><button class="button" id="explore">Explorer les histoires</button></div>
     </article>
-    <article class="hc-slide hc-2" aria-label="Bannière 2 sur 3">
+    <article class="hc-slide hc-2" aria-label="Bannière 2 sur 4">
       <p>POUR LES AUTEURS</p>
       <h2>Écris ton histoire.</h2>
       <p>Publie tes romans et tes webtoons, et fais-les découvrir à tes lecteurs.</p>
       <div><a class="button" href="publish.html">Commencer à écrire</a></div>
     </article>
-    <article class="hc-slide hc-3" aria-label="Bannière 3 sur 3">
+    <article class="hc-slide hc-3" aria-label="Bannière 3 sur 4">
       <p>AUTEURS</p>
       <h2>Suis tes auteurs préférés.</h2>
       <p>Abonne-toi à tes auteurs et retrouve leurs histoires directement sur ton accueil.</p>
       <div><a class="button" href="authors.html">Découvrir les auteurs</a></div>
+    </article>
+    <article class="hc-slide hc-4" aria-label="Bannière 4 sur 4">
+      <p>BÉNÉVOLAT</p>
+      <h2>Deviens ambassadeur Novelia.</h2>
+      <p>Fais découvrir Novelia autour de toi et obtiens un badge exclusif sur ton profil.</p>
+      <div><a class="button" href="ambassadeur.html">Je candidate</a></div>
     </article>
   </div>
   <div class="hc-dots" id="heroDots"></div>
@@ -1034,7 +1041,7 @@ updateFavoriteButtons();
 await loadPublishedStories();
 filterStories();
 </script>
-<p style="text-align:center;padding:24px 16px;font-size:13px"><a href="confidentialite.html" style="color:#7d6835">Politique de confidentialité</a></p>
+<p style="text-align:center;padding:24px 16px;font-size:13px"><a href="ambassadeur.html" style="color:#9a7414">Devenir ambassadeur</a> · <a href="confidentialite.html" style="color:#7d6835">Politique de confidentialité</a></p>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
