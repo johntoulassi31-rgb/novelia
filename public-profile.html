@@ -45,7 +45,9 @@
     .info h3 { margin: 0 0 4px; font-size: 15px; overflow-wrap: anywhere; }
     .muted { margin: 0; color: #675937; font-size: 13px; }
     .empty { grid-column: 1 / -1; color: #675937; text-align: center; padding: 24px 0; }
-      .ambassador{display:inline-flex;align-items:center;gap:8px;margin:10px auto 0;padding:4px 16px 4px 6px;border-radius:999px;background:#fbf4de;border:1px solid #d4af37;font-weight:bold;color:#7a5c0e;font-size:14px}
+      .bio{max-width:520px;margin:10px auto 0;padding:0 16px;color:#5a4a2a;white-space:pre-line;overflow-wrap:anywhere}
+    .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+    .ambassador{display:inline-flex;align-items:center;gap:8px;margin:10px auto 0;padding:4px 16px 4px 6px;border-radius:999px;background:#fbf4de;border:1px solid #d4af37;font-weight:bold;color:#7a5c0e;font-size:14px}
     .ambassador img{width:44px;height:44px}
     [hidden]{display:none!important}
   </style>
@@ -58,6 +60,7 @@
   <div class="avatar" id="avatar" aria-hidden="true">?</div>
   <h1 id="name">Profil public</h1>
   <p id="username" class="username">Chargement...</p>
+  <p id="bio" class="bio" hidden></p>
   <div id="ambassador" class="ambassador" hidden><img src="images/badge-ambassadeur.png" alt="Badge Ambassadeur Novelia" width="44" height="44"><span>Ambassadeur Novelia</span></div>
 
   <div class="stats">
@@ -286,6 +289,19 @@ async function loadPage() {
       const { data: amb } = await supabase.from("ambassadors").select("user_id").eq("user_id", profile.id).maybeSingle();
       $("ambassador").hidden = !amb;
     } catch (e) { /* table absente : pas de badge */ }
+    try {
+      const { data: ex, error: exError } = await supabase.from("profiles").select("avatar_url, bio").eq("id", profile.id).maybeSingle();
+      if (!exError && ex) {
+        if (ex.bio) { $("bio").textContent = ex.bio; $("bio").hidden = false; }
+        if (/^https?:\/\//i.test(ex.avatar_url || "")) {
+          const img = document.createElement("img");
+          img.alt = "";
+          img.addEventListener("error", () => { $("avatar").textContent = initials(profile.display_name || profile.username); });
+          img.src = ex.avatar_url;
+          $("avatar").replaceChildren(img);
+        }
+      }
+    } catch (e) { /* colonnes pas encore activées */ }
 
     const [followersResult, followingResult, storiesResult] =
       await Promise.all([

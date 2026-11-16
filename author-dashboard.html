@@ -44,4 +44,5 @@ renderStories();await loadComments(ids);await loadDrafts();renderRem();status("E
 $("refreshButton").addEventListener("click",async()=>{const b=$("refreshButton");b.disabled=true;try{await loadDashboard()}catch(e){status("Erreur : "+(e.message||String(e)),"error")}finally{b.disabled=false}});
 loadDashboard().catch(e=>{console.error(e);status("Erreur de chargement : "+(e.message||String(e)),"error")});
 </script><script src="bottom-nav.js" defer></script>
+<script src="suspension-banner.js" defer></script>
 </body></html>

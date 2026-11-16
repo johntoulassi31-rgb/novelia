@@ -43,6 +43,7 @@
     ".nb a[aria-current=page]{color:#926f15}" +
     ".nb a[aria-current=page] svg{fill:rgba(146,111,21,.22)}" +
     ".nb a[aria-current=page]::after{content:'';position:absolute;bottom:0;left:25%;right:25%;height:3px;border-radius:3px 3px 0 0;background:#926f15}" +
+    ".nb-badge{position:absolute;top:0;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#d1432d;color:#fff;font:bold 10px/17px Arial,sans-serif;text-align:center}" +
     "}";
   document.head.appendChild(css);
 
@@ -58,4 +59,37 @@
   });
   document.body.appendChild(nav);
   document.body.classList.add("has-nb");
+
+  // Pastille de notifications non lues (lecture directe, sans second client Supabase)
+  var SB_URL = "https://czwaokqpqgrghxeeyguq.supabase.co";
+  var SB_KEY = "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg";
+  function setBadge(n) {
+    var a = nav.querySelector('a[href="notifications.html"]');
+    if (!a) return;
+    var el = a.querySelector(".nb-badge");
+    if (!n) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement("b"); el.className = "nb-badge"; a.appendChild(el); }
+    el.textContent = n > 9 ? "9+" : String(n);
+  }
+  function refreshBadge() {
+    try {
+      var raw = localStorage.getItem("sb-czwaokqpqgrghxeeyguq-auth-token");
+      if (!raw) { setBadge(0); return; }
+      var s = JSON.parse(raw);
+      if (!s || !s.access_token || !s.user || (s.expires_at && s.expires_at * 1000 < Date.now())) return;
+      fetch(SB_URL + "/rest/v1/notifications?select=id&recipient_id=eq." + encodeURIComponent(s.user.id) + "&is_read=eq.false", {
+        method: "HEAD",
+        headers: { apikey: SB_KEY, Authorization: "Bearer " + s.access_token, Prefer: "count=exact", Range: "0-0" }
+      }).then(function (r) {
+        var cr = r.headers.get("content-range") || "";
+        var n = parseInt(cr.split("/")[1], 10);
+        if (!isNaN(n)) { sessionStorage.setItem("nb_unread", String(n)); setBadge(n); }
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  var cached = parseInt(sessionStorage.getItem("nb_unread") || "0", 10);
+  if (cached) setBadge(cached);
+  refreshBadge();
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshBadge(); });
+  window.addEventListener("pageshow", refreshBadge);
 })();

@@ -57,6 +57,11 @@
     #status { margin-top: 16px; overflow-wrap: anywhere; }
     .email { overflow-wrap: anywhere; }
       a{color:#9a7414}
+    textarea{width:100%;padding:12px;border:1px solid #d9c98f;border-radius:10px;background:#fff;color:#2a2011;font:16px Arial,sans-serif;resize:vertical}
+    .avatar-row{display:flex;gap:12px;align-items:center}
+    #avatarPreview{border-radius:50%;object-fit:cover}
+    #avatarPreview[hidden]{display:none}
+    .hint{font-size:13px;opacity:.8;margin:6px 0 0}
   </style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
@@ -89,6 +94,16 @@
         maxlength="50"
         placeholder="Le nom visible sur ton profil"
       >
+
+      <label for="bio">Biographie (facultatif)</label>
+      <textarea id="bio" maxlength="300" rows="4" placeholder="Parle un peu de toi, de ce que tu écris ou lis…"></textarea>
+
+      <label for="avatarFile">Photo de profil (facultatif)</label>
+      <div class="avatar-row">
+        <img id="avatarPreview" alt="Ta photo de profil" width="72" height="72" hidden>
+        <input id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp">
+      </div>
+      <p class="hint">L'image est réduite automatiquement avant l'envoi. Formats : JPG, PNG ou WebP.</p>
 
       <button type="submit" id="saveButton">
         Enregistrer mon profil
@@ -123,8 +138,43 @@
     const displayNameEl = document.getElementById("displayName");
     const statusEl = document.getElementById("status");
     const saveButton = document.getElementById("saveButton");
+    const bioEl = document.getElementById("bio");
+    const avatarFile = document.getElementById("avatarFile");
+    const avatarPreview = document.getElementById("avatarPreview");
 
     let currentUser = null;
+    let currentAvatar = "";
+
+    function showAvatar(url) {
+      if (/^https?:\/\//i.test(url || "")) { avatarPreview.src = url; avatarPreview.hidden = false; }
+      else { avatarPreview.hidden = true; }
+    }
+
+    avatarFile.addEventListener("change", () => {
+      const f = avatarFile.files[0];
+      if (f) { avatarPreview.src = URL.createObjectURL(f); avatarPreview.hidden = false; }
+    });
+
+    // Recadre en carré 320x320 et compresse en JPEG avant l'envoi
+    async function resizeAvatar(file) {
+      const bmp = await createImageBitmap(file);
+      const size = Math.min(bmp.width, bmp.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = 320; canvas.height = 320;
+      canvas.getContext("2d").drawImage(bmp, (bmp.width - size) / 2, (bmp.height - size) / 2, size, size, 0, 0, 320, 320);
+      return await new Promise((resolve, reject) =>
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error("Image illisible.")), "image/jpeg", 0.85));
+    }
+
+    async function uploadAvatar(file) {
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Format non pris en charge (JPG, PNG ou WebP).");
+      if (file.size > 10 * 1024 * 1024) throw new Error("Image trop lourde (10 Mo maximum).");
+      const blob = await resizeAvatar(file);
+      const path = currentUser.id + "/" + Date.now() + ".jpg";
+      const up = await supabase.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg" });
+      if (up.error) throw up.error;
+      return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    }
 
     async function loadProfile() {
       statusEl.textContent = "Chargement du profil...";
@@ -156,6 +206,15 @@
         usernameEl.value = data.username || "";
         displayNameEl.value = data.display_name || "";
       }
+
+      try {
+        const ex = await supabase.from("profiles").select("bio, avatar_url").eq("id", user.id).maybeSingle();
+        if (!ex.error && ex.data) {
+          bioEl.value = ex.data.bio || "";
+          currentAvatar = ex.data.avatar_url || "";
+          showAvatar(currentAvatar);
+        }
+      } catch (e) { /* colonnes pas encore activées */ }
 
       statusEl.textContent = "Profil chargé.";
     }
@@ -199,6 +258,29 @@
           return;
         }
 
+        const extras = { bio: bioEl.value.trim() || null };
+        const file = avatarFile.files[0];
+        if (file) {
+          try {
+            statusEl.textContent = "Envoi de la photo...";
+            extras.avatar_url = await uploadAvatar(file);
+          } catch (e) {
+            statusEl.textContent = "Profil enregistré, mais la photo n'a pas pu être envoyée : " + (e.message || "erreur");
+            return;
+          }
+        }
+        const ex = await supabase.from("profiles").update(extras).eq("id", currentUser.id);
+        if (ex.error) {
+          statusEl.textContent = "Profil enregistré, mais la biographie et la photo ne sont pas encore activées.";
+          return;
+        }
+        if (extras.avatar_url) {
+          const old = currentAvatar.split("/avatars/")[1];
+          if (old) { try { await supabase.storage.from("avatars").remove([old]); } catch (e) {} }
+          currentAvatar = extras.avatar_url;
+          showAvatar(currentAvatar);
+          avatarFile.value = "";
+        }
         statusEl.textContent = "Profil enregistré avec succès.";
       });
 
