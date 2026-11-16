@@ -15,6 +15,7 @@ const STATIC_PAGES = [
   ["discovery.html", 0.8],
   ["authors.html", 0.7],
   ["novelia-plus.html", 0.6],
+  ["ambassadeur.html", 0.5],
 ];
 
 const esc = (s) =>
