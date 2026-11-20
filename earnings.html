@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fbf8f1"><meta name="robots" content="noindex,nofollow">
+<title>Mes revenus | Novelia</title><link rel="stylesheet" href="theme-gold.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fbf8f1;color:#392b08;font:15px/1.55 Arial,sans-serif}
+header{padding:14px 18px;background:#f9f4ea;border-bottom:1px solid #eee3c9;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+a{color:#76570c}main{max-width:900px;margin:auto;padding:22px 16px 60px}h1{font-size:30px;margin:0 0 6px}h2{font-size:21px;margin:26px 0 10px}
+.card{background:#f8f3e6;border:1px solid #eee3c9;border-radius:14px;padding:16px;margin:12px 0}
+.balance{font-size:34px;font-weight:bold;color:#76570c}.muted{color:#756746}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.field{margin:10px 0}.field label{display:block;font-weight:bold;font-size:13px;margin-bottom:5px}
+input,select{width:100%;padding:11px;border:1px solid #dfd2b4;border-radius:8px;background:#fffdf8;color:#392b08;font:inherit}
+button{padding:10px 13px;border:0;border-radius:8px;background:#c3941c;color:#2a2011;font-weight:bold;cursor:pointer}
+button.secondary{background:#e9dfc8}button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e8dcc2}
+.row:last-child{border-bottom:0}.amount{font-weight:bold;white-space:nowrap}.positive{color:#286b3d}.negative{color:#9a342d}.notice{padding:12px;border-radius:9px;background:#fffaf0;border:1px solid #e8dcc2}
+small{color:#756746}@media(max-width:540px){main{padding:15px 12px 45px}.balance{font-size:28px}}
+</style></head>
+<body>
+<header><a href="profile.html">← Mon profil</a><a href="publish.html">Studio d’écriture</a></header>
+<main>
+<h1>Mes revenus d’auteur</h1><p class="muted">Consulte tes gains, tes opérations et tes moyens de retrait.</p>
+<section class="card"><div class="muted">Solde disponible</div><div id="balance" class="balance">— XOF</div><p id="monetizationStatus" class="muted">Vérification du programme…</p></section>
+<div class="grid">
+<section class="card"><strong id="totalEarned">— XOF</strong><p class="muted">Gains nets cumulés</p></section>
+<section class="card"><strong id="totalWithdrawn">— XOF</strong><p class="muted">Montants réservés ou retirés</p></section>
+</div>
+<h2>Mes moyens de retrait</h2>
+<section class="card">
+<p class="muted">Pour le lancement au Togo : Moov Money et TMoney. Le numéro est enregistré uniquement pour ton compte.</p>
+<form id="destinationForm">
+<div class="grid"><div class="field"><label for="operator">Opérateur</label><select id="operator"><option value="moov_tg">Moov Money</option><option value="tmoney_tg">TMoney</option></select></div>
+<div class="field"><label for="phone">Numéro (+228)</label><input id="phone" inputmode="tel" placeholder="+22890000000" pattern="\+228[0-9]{8}" required></div></div>
+<div class="field"><label for="holder">Nom du titulaire</label><input id="holder" maxlength="120" minlength="2" required></div>
+<label><input id="isDefault" type="checkbox" style="width:auto"> Définir comme moyen par défaut</label>
+<button type="submit">Ajouter ce moyen</button><p id="destinationMessage" class="muted" role="status"></p>
+</form>
+<div id="destinations"></div>
+</section>
+<h2>Demander un retrait</h2>
+<section class="card">
+<form id="payoutForm"><div class="field"><label for="destination">Moyen de retrait</label><select id="destination" required><option value="">Choisir un numéro…</option></select></div>
+<div class="field"><label for="amount">Montant à retirer (XOF)</label><input id="amount" type="number" min="1" step="1" required></div>
+<button id="payoutButton" type="submit" disabled>Demander le retrait</button><p id="payoutMessage" class="muted" role="status"></p></form>
+<p class="notice">Les demandes sont soumises à vérification. Un retrait n’est confirmé qu’après le retour de l’opérateur de paiement.</p>
+</section>
+<h2>Historique des gains</h2><section class="card"><div id="ledger"><p class="muted">Chargement…</p></div></section>
+<h2>Demandes de retrait</h2><section class="card"><div id="payoutHistory"><p class="muted">Chargement…</p></div></section>
+<p><a href="index.html">Retour à l’accueil Novelia</a></p>
+</main>
+<script type="module">
+import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const db=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"),$=id=>document.getElementById(id);
+const fmt=n=>new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(Number(n)||0)+" XOF";
+const date=v=>v?new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium",timeStyle:"short"}).format(new Date(v)):"—";
+const el=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;};
+let user=null,config=null,destinations=[];
+async function init(){
+ const auth=await db.auth.getUser();user=auth.data?.user;
+ if(!user){$("balance").textContent="Connexion requise";$("monetizationStatus").textContent="Connecte-toi depuis ton profil pour consulter ton portefeuille.";return;}
+ const [cfg,bal,ledger,payouts,dests]=await Promise.all([
+  db.from("novelia_public_monetization_config").select("enabled,author_share_bps,minimum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof").single(),
+  db.from("novelia_author_wallet_balances").select("available_balance_xof").eq("author_id",user.id).maybeSingle(),
+  db.from("novelia_author_wallet_ledger").select("id,amount_xof,entry_type,description,created_at").eq("author_id",user.id).order("created_at",{ascending:false}).limit(100),
+  db.from("novelia_payout_requests").select("id,amount_xof,status,created_at,processed_at,destination_operator,destination_phone_number").eq("author_id",user.id).order("created_at",{ascending:false}).limit(50),
+  db.from("novelia_payout_destinations").select("id,operator,phone_number,account_holder,is_default").eq("author_id",user.id).order("created_at",{ascending:false})
+ ]);
+ config=cfg.data||{enabled:false,minimum_payout_xof:5000,author_share_bps:7000};
+ const balance=Number(bal.data?.available_balance_xof||0);$("balance").textContent=fmt(balance);
+ $("monetizationStatus").textContent=config.enabled?"Programme actif · Part auteur : "+(Number(config.author_share_bps)/100)+" % · Retrait minimum : "+fmt(config.minimum_payout_xof):"Programme de rémunération désactivé pour le moment. Aucun achat ni retrait réel ne peut être effectué.";
+ const rows=ledger.data||[];
+ const earned=rows.filter(x=>Number(x.amount_xof)>0&&["chapter_sale","manual_adjustment","payout_release"].includes(x.entry_type)).reduce((a,x)=>a+Number(x.amount_xof),0);
+ const withdrawn=rows.filter(x=>x.entry_type==="payout_hold").reduce((a,x)=>a+Math.abs(Number(x.amount_xof)),0);
+ $("totalEarned").textContent=fmt(earned);$("totalWithdrawn").textContent=fmt(withdrawn);
+ destinations=dests.data||[];renderDestinations();
+ $("payoutButton").disabled=!config.enabled||destinations.length===0;
+ $("amount").min=String(config.minimum_payout_xof||1);
+ $("amount").placeholder="Minimum "+fmt(config.minimum_payout_xof);
+ renderLedger(rows);renderPayouts(payouts.data||[]);
+}
+function renderDestinations(){
+ const root=$("destinations"),select=$("destination");root.replaceChildren();select.replaceChildren(new Option("Choisir un numéro…",""));
+ destinations.forEach(d=>{
+  const label=(d.operator==="moov_tg"?"Moov Money":"TMoney")+" · "+d.phone_number+" · "+d.account_holder;
+  select.add(new Option(label,d.id));
+  const row=el("div","row");const info=el("span","",label+(d.is_default?" · Par défaut":""));
+  const del=el("button","secondary","Supprimer");del.onclick=async()=>{if(!confirm("Supprimer ce moyen de retrait ?"))return;const r=await db.from("novelia_payout_destinations").delete().eq("id",d.id);$("destinationMessage").textContent=r.error?"Suppression impossible : "+r.error.message:"Moyen supprimé.";await init();};
+  row.append(info,del);root.append(row);
+ });
+ if(!destinations.length)root.append(el("p","muted","Aucun moyen de retrait enregistré."));
+}
+function renderLedger(rows){
+ const root=$("ledger");root.replaceChildren();
+ if(!rows.length){root.append(el("p","muted","Aucun gain pour le moment. Les revenus apparaîtront après les premières ventes confirmées."));return;}
+ const labels={chapter_sale:"Vente de chapitre",chapter_refund:"Remboursement",payout_hold:"Retrait réservé",payout_release:"Solde libéré",manual_adjustment:"Ajustement"};
+ rows.forEach(x=>{const row=el("div","row"),left=el("div","",x.description||labels[x.entry_type]||x.entry_type);left.append(el("small","",date(x.created_at)));const amount=el("span","amount "+(Number(x.amount_xof)>=0?"positive":"negative"),(Number(x.amount_xof)>0?"+":"")+fmt(x.amount_xof));row.append(left,amount);root.append(row);});
+}
+function renderPayouts(rows){
+ const root=$("payoutHistory");root.replaceChildren();
+ if(!rows.length){root.append(el("p","muted","Aucune demande de retrait."));return;}
+ const labels={requested:"En attente",approved:"Approuvée",processing:"Transfert en cours",paid:"Payée",failed:"Échec",cancelled:"Annulée"};
+ rows.forEach(x=>{const row=el("div","row"),left=el("div","",labels[x.status]||x.status);left.append(el("small","",date(x.created_at)+" · "+(x.destination_operator==="moov_tg"?"Moov":"TMoney")+" "+x.destination_phone_number));row.append(left,el("span","amount",fmt(x.amount_xof)));root.append(row);});
+}
+$("destinationForm").onsubmit=async e=>{
+ e.preventDefault();const msg=$("destinationMessage");msg.textContent="Enregistrement…";
+ const phone=$("phone").value.trim();if(!/^\+228[0-9]{8}$/.test(phone)){msg.textContent="Saisis un numéro togolais au format +228XXXXXXXX.";return;}
+ if($("isDefault").checked){const reset=await db.from("novelia_payout_destinations").update({is_default:false}).eq("author_id",user.id).eq("is_default",true);if(reset.error){msg.textContent="Impossible de modifier le moyen par défaut.";return;}}
+ const r=await db.from("novelia_payout_destinations").insert({author_id:user.id,operator:$("operator").value,phone_number:phone,account_holder:$("holder").value.trim(),is_default:$("isDefault").checked});
+ msg.textContent=r.error?"Ajout impossible : "+r.error.message:"Moyen de retrait ajouté.";if(!r.error){$("destinationForm").reset();await init();}
+};
+$("payoutForm").onsubmit=async e=>{
+ e.preventDefault();const msg=$("payoutMessage");const amount=Number($("amount").value);
+ if(!config?.enabled){msg.textContent="Les retraits ne sont pas encore activés.";return;}
+ if(!Number.isSafeInteger(amount)||amount<Number(config.minimum_payout_xof)){msg.textContent="Le montant doit être supérieur ou égal au minimum de retrait.";return;}
+ const b=$("payoutButton");b.disabled=true;msg.textContent="Envoi de la demande…";
+ const r=await db.rpc("novelia_request_payout",{p_destination_id:$("destination").value,p_amount_xof:amount});
+ msg.textContent=r.error?"Demande impossible : "+r.error.message:"Demande enregistrée. Le montant est réservé jusqu’au traitement.";
+ $("amount").value="";await init();
+};
+init();
+</script><script src="bottom-nav.js" defer></script>
+</body></html>
