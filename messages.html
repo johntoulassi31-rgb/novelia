@@ -139,7 +139,7 @@ async function start(){
    if(re)throw re;if(!relation?.length)throw new Error("Pour limiter les messages indésirables, un abonnement dans l’un ou l’autre sens est nécessaire avant de démarrer une conversation.");
    const c=await findOrCreateConversation(p);await openConversation(c,p);
   }
-  refreshTimer=setInterval(()=>{if(activeConversation&&!document.hidden)loadMessages().catch(()=>{});},12000);
+  refreshTimer=setInterval(()=>{if(activeConversation&&!activeBlockId&&!document.hidden)loadMessages().catch(()=>{});},12000);
  }catch(error){say(error.message||"Impossible de charger les messages.","error");}
 }
 start();
