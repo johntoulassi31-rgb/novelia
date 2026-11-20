@@ -738,7 +738,19 @@ createForm.addEventListener("submit", async event => {
   }
 });
 
+async function flushChapterDraftBeforeContextChange(){
+  const hadTimer=Boolean(chapterAutosaveTimer);
+  if(chapterAutosaveTimer){clearTimeout(chapterAutosaveTimer);chapterAutosaveTimer=null;}
+  if(chapterAutosaveInProgress){
+    chapterAutosavePending=true;
+    while(chapterAutosaveInProgress) await new Promise(resolve=>window.setTimeout(resolve,40));
+  }else if(hadTimer){
+    await saveChapterDraftToCloud();
+  }
+}
+
 async function openStoryEditor(storyId) {
+  await flushChapterDraftBeforeContextChange();
   showMessage("");
   const story = ownedStories.find(item => item.id === storyId);
   if (!story || !currentUser) {
@@ -774,7 +786,8 @@ function setSelectValue(select, value) {
   }
 }
 
-$("cancelEditStory").addEventListener("click", () => {
+$("cancelEditStory").addEventListener("click", async () => {
+  await flushChapterDraftBeforeContextChange();
   $("editStoryPanel").classList.add("hidden");
   selectedStory = null;
   chaptersForSelectedStory = [];
@@ -1129,11 +1142,7 @@ $("removeChapterAudio").addEventListener("click", async () => {
 
 async function openChapterEditor(chapter = null) {
   if (!selectedStory) return showMessage("Sélectionne d’abord une histoire.", "error");
-  if (chapterAutosaveTimer) {
-    clearTimeout(chapterAutosaveTimer);
-    chapterAutosaveTimer = null;
-    await saveChapterDraftToCloud();
-  }
+  await flushChapterDraftBeforeContextChange();
   chapterMode = chapter ? "edit" : "add";
   chapterRemoteDraftId = null;
   $("chapterId").value = chapter?.id || "";
