@@ -1280,7 +1280,7 @@ window.addEventListener("online", () => {
   if (currentUser) flushPendingDrafts();
 });
 window.addEventListener("beforeunload", event => {
-  if (autosaveTimer || autosaveInProgress || chapterAutosaveTimer || chapterAutosaveInProgress) {
+  if (autosaveTimer || autosaveInProgress || autosavePending || chapterAutosaveTimer || chapterAutosaveInProgress || chapterAutosavePending) {
     event.preventDefault();
     event.returnValue = "";
   }
