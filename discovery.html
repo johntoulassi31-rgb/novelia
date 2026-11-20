@@ -269,7 +269,7 @@ async function loadDiscovery() {
     const authorStoryCounts = new Map();
     items.forEach(story => authorStoryCounts.set(String(story.author_id), (authorStoryCounts.get(String(story.author_id)) || 0) + 1));
     const completedOrSaved = new Set([...likedIds, ...savedIds]);
-    const personal = items.filter(s => {
+    const scoredPersonal = items.filter(s => {
       const progress = Number(progressByStory.get(String(s.id))?.progress_percent || 0);
       return (!currentUser || String(s.author_id) !== String(currentUser.id))
         && !completedOrSaved.has(String(s.id))
@@ -297,7 +297,7 @@ async function loadDiscovery() {
         : s.likesCount <= 5 ? "À découvrir";
       return {...s, recommendationScore: score, recommendationReason, explorationBoost, impressions:metrics.impressions, clicks:metrics.clicks, clickRate};
     });
-    const personal = selectDiverseRecommendations(personal, 12);
+    const personal = selectDiverseRecommendations(scoredPersonal, 12);
     if (!currentUser) {
       $("personalNote").textContent = "Connecte-toi pour personnaliser les suggestions";
       $("status").textContent = "Voici les nouveautés et les œuvres aimées par la communauté.";
