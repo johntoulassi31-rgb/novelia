@@ -107,7 +107,7 @@ function createCard(record){
  body.append(node("h2",story.title||"Œuvre sans titre"));
  body.append(node("p",(story.type||"Roman")+" · "+(story.genre||"Autre"),"meta"));
  body.append(node("p",chapters.length+" chapitre(s) ou épisode(s)","meta"));
- const media=story&&record.media&&typeof record.media==="object"?Object.values(record.media):[];const mediaBytes=media.reduce((sum,value)=>sum+(typeof value==="string"?Math.round(value.length*.75):0),0);body.append(node("p",media.length+" image(s) enregistrée(s) · "+formatBytes(mediaBytes),"meta"));
+ const media=story&&record.media&&typeof record.media==="object"?Object.values(record.media):[];const mediaBytes=media.reduce((sum,value)=>sum+(typeof value==="string"?Math.round(value.length*.75):0),0);const audio=record.audio&&typeof record.audio==="object"?Object.values(record.audio):[];const audioBytes=audio.reduce((sum,value)=>sum+(value instanceof Blob?value.size:0),0);body.append(node("p",media.length+" image(s) enregistrée(s) · "+formatBytes(mediaBytes),"meta"));body.append(node("p",audio.length+" narration(s) audio · "+formatBytes(audioBytes),"meta"));
  body.append(node("p","Enregistrée le "+formatDate(record.savedAt),"meta"));
  const updateStatus=node("p","Mises à jour non vérifiées.","meta update-status");updateStatus.setAttribute("role","status");body.append(updateStatus);
  const actions=node("div","","card-actions"),open=node("a","Lire hors connexion","btn primary");
@@ -115,7 +115,7 @@ function createCard(record){
  const check=node("button","Vérifier","check-update");check.type="button";
  const update=node("button","Mettre à jour","primary");update.type="button";update.hidden=true;
  check.addEventListener("click",()=>checkRecord(record,updateStatus,update,check));
- update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");if(!latest.changed){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}latest.record.media=record.media||{};await putRecord(latest.record);updateStatus.textContent="Copie mise à jour le "+formatDate(latest.record.savedAt)+".";update.hidden=true;await render();}catch(error){updateStatus.textContent=error.message||"Mise à jour impossible.";}finally{update.disabled=false;check.disabled=false;}});
+ update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");if(!latest.changed){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}latest.record.media=record.media||{};latest.record.audio=record.audio||{};await putRecord(latest.record);updateStatus.textContent="Copie mise à jour le "+formatDate(latest.record.savedAt)+".";update.hidden=true;await render();}catch(error){updateStatus.textContent=error.message||"Mise à jour impossible.";}finally{update.disabled=false;check.disabled=false;}});
  const del=node("button","Supprimer la copie","danger");del.type="button";
  del.addEventListener("click",async()=>{if(!confirm("Supprimer la copie hors connexion de « "+(story.title||"cette œuvre")+" » sur cet appareil ?"))return;del.disabled=true;try{await removeOne(record.id);await render();}catch(error){$("status").textContent="Suppression impossible : "+(error.message||String(error));$("status").className="error";del.disabled=false;}});
  actions.append(check,update,del);body.append(actions);card.append(body);return card;
@@ -125,7 +125,7 @@ async function render(){
  try{
   const records=await getAll();recordCache.clear();records.forEach(record=>recordCache.set(record.id,record));records.sort((a,b)=>Date.parse(b.savedAt||0)-Date.parse(a.savedAt||0));
   const totalChapters=records.reduce((sum,r)=>sum+(Array.isArray(r.chapters)?r.chapters.length:0),0);
-  const bytes=records.reduce((sum,r)=>sum+new Blob([JSON.stringify(r)]).size,0);
+  const bytes=records.reduce((sum,r)=>sum+new Blob([JSON.stringify(r)]).size+Object.values(r.audio||{}).reduce((n,b)=>n+(b instanceof Blob?b.size:0),0),0);
   $("workCount").textContent=String(records.length);$("chapterCount").textContent=String(totalChapters);$("totalSize").textContent=formatBytes(bytes);
   $("downloadList").replaceChildren();
   if(!records.length){$("downloadList").append(node("p","Aucune œuvre enregistrée pour le moment. Ouvre une histoire lorsque tu es connecté, puis utilise « Enregistrer pour hors connexion ».","empty"));}
