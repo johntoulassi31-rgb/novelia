@@ -370,6 +370,15 @@ async function saveCreateDraftToCloud() {
       story_id: null,
       title: snapshot.title.trim() || "Nouvelle histoire sans titre",
       content: snapshot.content,
+      metadata: {
+        description: snapshot.description,
+        type: snapshot.type,
+        genre: snapshot.genre,
+        cover: snapshot.cover,
+        chapterTitle: snapshot.chapterTitle,
+        status: snapshot.status,
+        version: 1
+      },
       updated_at: new Date().toISOString()
     };
     let result;
@@ -551,13 +560,22 @@ async function initialize() {
     queueAutosave();
   } else {
     const { data: cloudDraft, error: cloudError } = await supabase.from("novelia_author_drafts")
-      .select("id,title,content,updated_at").eq("author_id", currentUser.id)
+      .select("id,title,content,metadata,updated_at").eq("author_id", currentUser.id)
       .is("story_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
     if (!cloudError && cloudDraft) {
       remoteDraftId = cloudDraft.id;
-      $("title").value = cloudDraft.title || "";
-      $("content").value = cloudDraft.content || "";
-      setAutosaveStatus("Dernier brouillon récupéré depuis ton compte Novelia.");
+      const metadata = cloudDraft.metadata && typeof cloudDraft.metadata === "object" ? cloudDraft.metadata : {};
+      restoreCreateDraft({
+        title: cloudDraft.title || "",
+        content: cloudDraft.content || "",
+        description: metadata.description || "",
+        type: metadata.type || "roman",
+        genre: metadata.genre || "Romance",
+        cover: metadata.cover || "",
+        chapterTitle: metadata.chapterTitle || "",
+        status: metadata.status || "draft"
+      });
+      setAutosaveStatus("Brouillon complet récupéré depuis ton compte Novelia.");
       try { localStorage.setItem(localDraftKey(), JSON.stringify({...getCreateDraftSnapshot(),remoteDraftId})); } catch {}
     }
   }
