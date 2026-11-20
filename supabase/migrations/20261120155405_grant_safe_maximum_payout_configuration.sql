@@ -1,0 +1,1 @@
+grant select (maximum_payout_xof) on public.novelia_monetization_settings to anon,authenticated;
