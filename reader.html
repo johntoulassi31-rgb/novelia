@@ -1091,14 +1091,45 @@ function openReader(index, restorePosition = true) {
   const saved = getProgress()[storyKey];
   const targetIndex = currentChapter;
   const percent = restorePosition && saved?.chapter === targetIndex ? Math.max(0, Math.min(100, Number(saved.scrollPercent) || 0)) : 0;
-  if (percent > 0) {
-    window.setTimeout(() => {
+  if (percent > 0 || Number.isInteger(saved?.panelIndex)) {
+    const savedPanelIndex = Number.isInteger(saved?.panelIndex) ? saved.panelIndex : null;
+    const savedPanelOffset = Math.max(0, Math.min(1, Number(saved?.panelOffset) || 0));
+    const restore = async () => {
       if (currentChapter !== targetIndex) return;
-      const el = $("content");
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      const range = Math.max(0, el.scrollHeight - window.innerHeight);
+      const container = $("content");
+      const panels = [...container.querySelectorAll(".webtoon-panel")];
+      if (story.type === "Webtoon" && savedPanelIndex !== null && panels.length) {
+        const targetPanelIndex = Math.max(0, Math.min(savedPanelIndex, panels.length - 1));
+        // Charge les planches précédentes pour stabiliser la hauteur avant de replacer le lecteur.
+        const images = panels.slice(0, targetPanelIndex + 1)
+          .map(panel => panel.querySelector("img"))
+          .filter(Boolean);
+        images.forEach(img => { img.loading = "eager"; });
+        const decodes = images.map(img => {
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          if (typeof img.decode === "function") return img.decode().catch(() => undefined);
+          return new Promise(resolve => {
+            img.addEventListener("load", resolve, {once:true});
+            img.addEventListener("error", resolve, {once:true});
+          });
+        });
+        await Promise.race([
+          Promise.allSettled(decodes),
+          new Promise(resolve => window.setTimeout(resolve, 3500))
+        ]);
+        if (currentChapter !== targetIndex) return;
+        const panel = panels[targetPanelIndex];
+        if (panel?.isConnected) {
+          const top = panel.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({top: top + panel.offsetHeight * savedPanelOffset, behavior:"auto"});
+          return;
+        }
+      }
+      const top = container.getBoundingClientRect().top + window.scrollY;
+      const range = Math.max(0, container.scrollHeight - window.innerHeight);
       window.scrollTo({top: top + range * (percent / 100), behavior:"auto"});
-    }, 450);
+    };
+    window.setTimeout(() => { restore().catch(error => console.warn("Reprise de lecture différée :", error)); }, 250);
   }
 }
 
@@ -1266,11 +1297,31 @@ function persistCurrentReadingPosition() {
   try {
     const progress = getProgress();
     const previous = progress[storyKey] || {};
+    const position = currentContentScrollPercent();
+    const webtoonPanels = story.type === "Webtoon"
+      ? [...$("content").querySelectorAll(".webtoon-panel")]
+      : [];
+    let panelIndex = null;
+    let panelOffset = null;
+    if (webtoonPanels.length) {
+      const viewportAnchor = window.scrollY + Math.max(80, window.innerHeight * 0.35);
+      let activePanel = 0;
+      webtoonPanels.forEach((panel, index) => {
+        if (panel.getBoundingClientRect().top + window.scrollY <= viewportAnchor) activePanel = index;
+      });
+      const panel = webtoonPanels[activePanel];
+      const panelTop = panel.getBoundingClientRect().top + window.scrollY;
+      const panelHeight = Math.max(1, panel.getBoundingClientRect().height);
+      panelIndex = activePanel;
+      panelOffset = Math.max(0, Math.min(1, (window.scrollY - panelTop) / panelHeight));
+    }
     progress[storyKey] = {
       ...previous,
       chapter: currentChapter,
       total: chapters.length,
-      scrollPercent: currentContentScrollPercent(),
+      scrollPercent: position,
+      panelIndex,
+      panelOffset,
       updatedAt: new Date().toISOString(),
       syncSource: "local"
     };
