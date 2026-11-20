@@ -40,7 +40,7 @@ h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .progress-fill{height:100%;width:0;background:var(--purple);transition:width .2s}
 .novel-text{font-family:Georgia,"Times New Roman",serif;font-size:var(--novel-font-size);line-height:var(--novel-line-height);overflow-wrap:anywhere}
 .novel-text p{margin:0 0 22px;white-space:pre-wrap}
-.chapter-audio-player{margin:0 0 18px;padding:14px;border:1px solid var(--line,#ddd);border-radius:12px;background:var(--panel,#faf7ef)}.chapter-audio-player h3{margin:0 0 8px;font-size:1rem}.chapter-audio-player audio{display:block;width:100%;max-width:100%}.audio-speed-row{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.9rem}.audio-speed-row select{padding:6px;border-radius:8px}
+.chapter-audio-player{margin:0 0 18px;padding:14px;border:1px solid var(--line,#ddd);border-radius:12px;background:var(--panel,#faf7ef)}.chapter-audio-player h3{margin:0 0 8px;font-size:1rem}.chapter-audio-player audio{display:block;width:100%;max-width:100%}.audio-speed-row{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.9rem}.audio-speed-row select{padding:6px;border-radius:8px}.audio-focus-mode .chapter-audio-player{position:sticky;bottom:10px;z-index:35;box-shadow:0 8px 28px #0002}.audio-transport{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.audio-transport button{flex:1;min-width:110px}
 .webtoon-content{margin:0 -16px;background:#fdfcf9}.webtoon-panel{margin:0}.webtoon-content img{display:block;width:100%;height:auto;object-fit:contain}.webtoon-caption{margin:0;padding:12px 20px 16px;background:#fdfcf9;color:var(--text);font:15px/1.65 Georgia,"Times New Roman",serif;white-space:pre-wrap}
 .reader-tools{margin:12px 0 18px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--bg)}
 .reader-tools summary{cursor:pointer;font-weight:bold;color:var(--heading)}
@@ -152,6 +152,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
       <div class="progress-fill" id="progressFill"></div>
     </div>
     <section id="chapterAudioPlayer" class="chapter-audio-player" hidden></section>
+    <div class="actions" style="margin:0 0 12px"><button class="button secondary" id="audioFocusToggle" type="button" aria-pressed="false" hidden>Activer le mode écoute</button></div>
     <div id="content" class="novel-text"></div>
     <p class="reading-info" id="savedMessage" role="status"></p>
     <div class="chapter-nav">
@@ -303,6 +304,8 @@ const removeOfflineStory=id=>offlineDBRequest("readwrite",s=>s.delete(id));
 let offlineMediaMap={};
 let offlineAudioMap={};
 let currentAudioObjectUrl=null;
+let audioFocusMode=false;
+let activeChapterAudio=null;
 const OFFLINE_AUDIO_MAX_FILE=15*1024*1024;
 const OFFLINE_AUDIO_MAX_TOTAL=60*1024*1024;
 function offlineAudioBytes(map){return Object.values(map||{}).reduce((sum,value)=>sum+(value instanceof Blob?value.size:0),0);}
@@ -908,14 +911,26 @@ function renderWebtoon(chapter) {
   });
 }
 
+function updateMediaSession(chapter,audio){
+ if(!("mediaSession" in navigator))return;
+ try{
+  if("MediaMetadata" in window)navigator.mediaSession.metadata=new MediaMetadata({title:chapter.audio_title||chapter.title||"Novelia",artist:story?.author_name||"Novelia",album:story?.title||"Lecture audio"});
+  navigator.mediaSession.setActionHandler("play",()=>audio.play().catch(()=>{}));
+  navigator.mediaSession.setActionHandler("pause",()=>audio.pause());
+  navigator.mediaSession.setActionHandler("previoustrack",()=>{if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
+  navigator.mediaSession.setActionHandler("nexttrack",()=>{if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
+ }catch(error){console.debug("Commandes multimédias non disponibles",error);}
+}
 function renderChapterAudio(chapter) {
  const panel=$("chapterAudioPlayer");panel.replaceChildren();
  if(currentAudioObjectUrl){URL.revokeObjectURL(currentAudioObjectUrl);currentAudioObjectUrl=null;}
- panel.hidden=!chapter?.audio_url;if(!chapter?.audio_url)return;
+ panel.hidden=!chapter?.audio_url;const focusButton=$("audioFocusToggle");focusButton.hidden=!chapter?.audio_url;if(!chapter?.audio_url){activeChapterAudio=null;return;}
  const heading=document.createElement("h3");heading.textContent=chapter.audio_title||"Écouter la narration";
- const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.setAttribute("aria-label","Narration audio du chapitre");
+ const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.setAttribute("aria-label","Narration audio du chapitre");activeChapterAudio=audio;
  const cachedBlob=offlineAudioMap?.[chapter.audio_url];
  if(cachedBlob instanceof Blob){currentAudioObjectUrl=URL.createObjectURL(cachedBlob);audio.src=currentAudioObjectUrl;}else audio.src=chapter.audio_url;
+ updateMediaSession(chapter,audio);
+ audio.addEventListener("ended",()=>{if(currentChapter<chapters.length-1&&chapters[currentChapter+1]?.audio_url){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
  const speedRow=document.createElement("div");speedRow.className="audio-speed-row";
  const label=document.createElement("label");label.textContent="Vitesse";
  const select=document.createElement("select");select.setAttribute("aria-label","Vitesse de lecture audio");
@@ -943,7 +958,14 @@ function renderChapterAudio(chapter) {
   }catch(error){offlineStatus.textContent=error?.message||"Opération impossible.";}
   finally{offlineButton.disabled=false;}
  });
- offlineRow.append(offlineButton,offlineStatus);panel.append(heading,audio,speedRow,offlineRow);
+ const transport=document.createElement("div");transport.className="audio-transport";
+ const previous=document.createElement("button");previous.type="button";previous.className="button secondary";previous.textContent="← Chapitre précédent";previous.disabled=currentChapter===0;
+ previous.addEventListener("click",()=>{if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
+ const next=document.createElement("button");next.type="button";next.className="button secondary";next.textContent="Chapitre suivant →";next.disabled=currentChapter>=chapters.length-1;
+ next.addEventListener("click",()=>{if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
+ transport.append(previous,next);
+ offlineRow.append(offlineButton,offlineStatus);panel.append(heading,audio,speedRow,transport,offlineRow);
+ focusButton.hidden=false;focusButton.textContent=audioFocusMode?"Désactiver le mode écoute":"Activer le mode écoute";focusButton.setAttribute("aria-pressed",String(audioFocusMode));
 }
 function renderChapter() {
   const chapter = chapters[currentChapter];
@@ -1117,6 +1139,10 @@ $("nextChapter").addEventListener("click", () => {
   }
 });
 
+$("audioFocusToggle").addEventListener("click",()=>{
+ audioFocusMode=!audioFocusMode;document.body.classList.toggle("audio-focus-mode",audioFocusMode);
+ const button=$("audioFocusToggle");button.textContent=audioFocusMode?"Désactiver le mode écoute":"Activer le mode écoute";button.setAttribute("aria-pressed",String(audioFocusMode));
+});
 readerPrefs = getReaderPrefs();
 applyReaderPrefs();
 $("readerFontSize").addEventListener('input', () => {
