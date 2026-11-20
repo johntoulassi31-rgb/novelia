@@ -553,31 +553,34 @@ async function initialize() {
   account.textContent = "Connecté : " + (currentUser.email || "compte Novelia");
   workspace.classList.remove("hidden");
   const localDraft = readCreateDraft();
-  if (localDraft) {
-    remoteDraftId = localDraft.remoteDraftId || null;
+  const { data: cloudDraft, error: cloudError } = await supabase.from("novelia_author_drafts")
+    .select("id,title,content,metadata,updated_at").eq("author_id", currentUser.id)
+    .is("story_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
+  const localTime = Date.parse(localDraft?.savedAt || "") || 0;
+  const cloudTime = Date.parse(cloudDraft?.updated_at || "") || 0;
+  const cloudIsNewer = Boolean(cloudDraft && (!localDraft || cloudTime > localTime));
+  if (cloudIsNewer) {
+    remoteDraftId = cloudDraft.id;
+    const metadata = cloudDraft.metadata && typeof cloudDraft.metadata === "object" ? cloudDraft.metadata : {};
+    restoreCreateDraft({
+      title: cloudDraft.title || "",
+      content: cloudDraft.content || "",
+      description: metadata.description || "",
+      type: metadata.type || "roman",
+      genre: metadata.genre || "Romance",
+      cover: metadata.cover || "",
+      chapterTitle: metadata.chapterTitle || "",
+      status: metadata.status || "draft"
+    });
+    setAutosaveStatus("Version en ligne la plus récente récupérée.");
+    try { localStorage.setItem(localDraftKey(), JSON.stringify({...getCreateDraftSnapshot(),remoteDraftId})); } catch {}
+  } else if (localDraft) {
+    remoteDraftId = localDraft.remoteDraftId || cloudDraft?.id || null;
     restoreCreateDraft(localDraft);
-    setAutosaveStatus("Brouillon local restauré. Vérification de la sauvegarde en ligne…");
-    queueAutosave();
-  } else {
-    const { data: cloudDraft, error: cloudError } = await supabase.from("novelia_author_drafts")
-      .select("id,title,content,metadata,updated_at").eq("author_id", currentUser.id)
-      .is("story_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
-    if (!cloudError && cloudDraft) {
-      remoteDraftId = cloudDraft.id;
-      const metadata = cloudDraft.metadata && typeof cloudDraft.metadata === "object" ? cloudDraft.metadata : {};
-      restoreCreateDraft({
-        title: cloudDraft.title || "",
-        content: cloudDraft.content || "",
-        description: metadata.description || "",
-        type: metadata.type || "roman",
-        genre: metadata.genre || "Romance",
-        cover: metadata.cover || "",
-        chapterTitle: metadata.chapterTitle || "",
-        status: metadata.status || "draft"
-      });
-      setAutosaveStatus("Brouillon complet récupéré depuis ton compte Novelia.");
-      try { localStorage.setItem(localDraftKey(), JSON.stringify({...getCreateDraftSnapshot(),remoteDraftId})); } catch {}
-    }
+    setAutosaveStatus(cloudError
+      ? "Brouillon local restauré. Comparaison avec le cloud indisponible ; ton texte local est conservé."
+      : "Brouillon local le plus récent restauré.");
+    if (!cloudError) queueAutosave();
   }
   ["title","description","type","genre","cover","chapterTitle","content","status"].forEach(id => {
     $(id).addEventListener("input", queueAutosave);
