@@ -46,13 +46,15 @@
     db.from('stories').select('id,title,description,status,story_type,created_at,moderation_hidden').order('created_at',{ascending:false}).limit(1000),
     db.from('chapters').select('id,title,content,story_id,chapter_number,created_at,moderation_hidden').order('created_at',{ascending:false}).limit(2000),
     db.from('comments').select('id,content,chapter_id,user_id,created_at,moderation_hidden').order('created_at',{ascending:false}).limit(2000),
-    db.from('profiles').select('id,username,display_name,is_suspended,suspension_reason,suspended_until,suspended_at,suspended_by').order('username',{ascending:true}).limit(1000),
+    db.from('profiles').select('id,username,display_name').order('username',{ascending:true}).limit(1000),
+    db.from('profile_moderation').select('user_id,is_suspended,suspension_reason,suspended_until,suspended_at,suspended_by'),
     db.from('user_moderation_actions').select('id,target_user_id,moderator_id,action_type,reason,suspension_until,created_at').order('created_at',{ascending:false}).limit(250)
    ]);
-   const [rr,ss,cc,cm,pp,aa]=results;
-   const problems=[];if(rr.error)problems.push('Signalements : '+rr.error.message);if(ss.error)problems.push('Romans : '+ss.error.message);if(cc.error)problems.push('Chapitres : '+cc.error.message);if(cm.error)problems.push('Commentaires : '+cm.error.message);if(pp.error)problems.push('Comptes : '+pp.error.message);if(aa.error)problems.push('Historique de modération : '+aa.error.message);
+   const [rr,ss,cc,cm,pp,pm,aa]=results;
+   const problems=[];if(rr.error)problems.push('Signalements : '+rr.error.message);if(ss.error)problems.push('Romans : '+ss.error.message);if(cc.error)problems.push('Chapitres : '+cc.error.message);if(cm.error)problems.push('Commentaires : '+cm.error.message);if(pp.error)problems.push('Comptes : '+pp.error.message);if(pm.error)problems.push('Données de modération : '+pm.error.message);if(aa.error)problems.push('Historique de modération : '+aa.error.message);
    allReports=rr.error?[]:(rr.data||[]);
-   allProfiles=pp.error?[]:(pp.data||[]);
+   const moderationByUser=new Map((pm.error?[]:(pm.data||[])).map(x=>[x.user_id,x]));
+   allProfiles=pp.error?[]:(pp.data||[]).map(p=>({...p,...(moderationByUser.get(p.id)||{is_suspended:false,suspension_reason:null,suspended_until:null,suspended_at:null,suspended_by:null})}));
    allModerationActions=aa.error?[]:(aa.data||[]);
    const storyRows=ss.error?[]:(ss.data||[]),chapterRows=cc.error?[]:(cc.data||[]),commentRows=cm.error?[]:(cm.data||[]);
    const storyMap=new Map(storyRows.map(x=>[x.id,x]));
