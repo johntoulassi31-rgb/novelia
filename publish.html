@@ -133,6 +133,7 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
         <input id="chapterId" type="hidden">
         <label for="chapterEditTitle">Titre du chapitre *</label><input id="chapterEditTitle" maxlength="200" required placeholder="Ex. : Chapitre 2 — Le secret">
         <label for="chapterEditContent">Contenu *</label><textarea id="chapterEditContent" required placeholder="Écris le contenu du chapitre…"></textarea>
+        <p id="chapterAutosaveStatus" class="note" role="status" aria-live="polite">La sauvegarde automatique démarrera dès que tu écriras.</p>
         <p id="chapterNumberHint" class="note"></p>
         <div class="form-actions"><button id="saveChapterButton" type="submit">Enregistrer le chapitre</button><button type="button" id="cancelChapter" class="secondary">Annuler</button></div>
       </form>
@@ -176,6 +177,10 @@ let autosaveTimer = null;
 let remoteDraftId = null;
 let autosaveInProgress = false;
 let autosavePending = false;
+let chapterAutosaveTimer = null;
+let chapterRemoteDraftId = null;
+let chapterAutosaveInProgress = false;
+let chapterAutosavePending = false;
 const COVER_BUCKET = "covers";
 const MAX_COVER_SIZE = 5 * 1024 * 1024;
 const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -642,9 +647,100 @@ function renderChapters() {
   });
 }
 
-function openChapterEditor(chapter = null) {
+function chapterDraftKey() {
+  return "novelia_chapter_draft_v1_" + currentUser.id + "_" + selectedStory.id + "_" + ($("chapterId").value || "new");
+}
+function setChapterAutosaveStatus(text, kind = "") {
+  const node = $("chapterAutosaveStatus");
+  if (!node) return;
+  node.textContent = text;
+  node.style.color = kind === "error" ? "#8b2b20" : kind === "success" ? "#28723c" : "";
+}
+function queueChapterAutosave() {
+  if (!currentUser || !selectedStory || chapterForm.classList.contains("hidden")) return;
+  const snapshot = { title: $("chapterEditTitle").value, content: $("chapterEditContent").value, savedAt: new Date().toISOString() };
+  try { localStorage.setItem(chapterDraftKey(), JSON.stringify(snapshot)); } catch {}
+  setChapterAutosaveStatus("Modifications en attente de sauvegarde…");
+  clearTimeout(chapterAutosaveTimer);
+  chapterAutosaveTimer = setTimeout(() => { chapterAutosaveTimer = null; saveChapterDraftToCloud(); }, 1200);
+}
+async function saveChapterDraftToCloud() {
+  if (!currentUser || !selectedStory || chapterForm.classList.contains("hidden")) return;
+  if (chapterAutosaveInProgress) { chapterAutosavePending = true; return; }
+  const title = $("chapterEditTitle").value;
+  const content = $("chapterEditContent").value;
+  if (!title.trim() && !content.trim()) return;
+  chapterAutosaveInProgress = true;
+  chapterAutosavePending = false;
+  setChapterAutosaveStatus("Sauvegarde dans ton compte Novelia…");
+  try {
+    const payload = {
+      author_id: currentUser.id,
+      story_id: selectedStory.id,
+      chapter_id: $("chapterId").value || null,
+      title: title.trim() || "Chapitre sans titre",
+      content,
+      updated_at: new Date().toISOString()
+    };
+    let result;
+    if (chapterRemoteDraftId) {
+      result = await supabase.from("novelia_author_drafts").update(payload)
+        .eq("id", chapterRemoteDraftId).eq("author_id", currentUser.id).select("id").maybeSingle();
+    } else {
+      result = await supabase.from("novelia_author_drafts").insert(payload).select("id").single();
+    }
+    if (result.error) throw result.error;
+    if (!result.data?.id) throw new Error("La sauvegarde n’a pas été confirmée.");
+    chapterRemoteDraftId = result.data.id;
+    setChapterAutosaveStatus("Chapitre sauvegardé automatiquement à " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + ".", "success");
+  } catch (error) {
+    setChapterAutosaveStatus("Sauvegarde en ligne impossible. Le texte reste conservé sur cet appareil. " + (error?.message || ""), "error");
+  } finally {
+    chapterAutosaveInProgress = false;
+    if (chapterAutosavePending) saveChapterDraftToCloud();
+  }
+}
+async function restoreChapterDraft(chapter) {
+  chapterRemoteDraftId = null;
+  const key = chapterDraftKey();
+  let snapshot = null;
+  try { snapshot = JSON.parse(localStorage.getItem(key) || "null"); } catch {}
+  if (!snapshot) {
+    const query = supabase.from("novelia_author_drafts").select("id,title,content,updated_at")
+      .eq("author_id", currentUser.id).eq("story_id", selectedStory.id);
+    const { data, error } = chapter
+      ? await query.eq("chapter_id", chapter.id).order("updated_at", {ascending:false}).limit(1).maybeSingle()
+      : await query.is("chapter_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
+    if (!error && data) {
+      chapterRemoteDraftId = data.id;
+      snapshot = {title:data.title || "",content:data.content || ""};
+    }
+  }
+  if (snapshot) {
+    if (snapshot.title) $("chapterEditTitle").value = snapshot.title;
+    if (snapshot.content) $("chapterEditContent").value = snapshot.content;
+    setChapterAutosaveStatus("Brouillon récupéré. Tu peux reprendre ton écriture.");
+  } else {
+    setChapterAutosaveStatus("La sauvegarde automatique démarrera dès que tu écriras.");
+  }
+}
+async function clearChapterDraft() {
+  clearTimeout(chapterAutosaveTimer);
+  chapterAutosaveTimer = null;
+  const id = chapterRemoteDraftId;
+  chapterRemoteDraftId = null;
+  try { localStorage.removeItem(chapterDraftKey()); } catch {}
+  if (id && currentUser) {
+    const { error } = await supabase.from("novelia_author_drafts").delete().eq("id", id).eq("author_id", currentUser.id);
+    if (error) console.warn("Suppression du brouillon de chapitre impossible :", error.message);
+  }
+}
+async function openChapterEditor(chapter = null) {
   if (!selectedStory) return showMessage("Sélectionne d’abord une histoire.", "error");
+  clearTimeout(chapterAutosaveTimer);
+  chapterAutosaveTimer = null;
   chapterMode = chapter ? "edit" : "add";
+  chapterRemoteDraftId = null;
   $("chapterId").value = chapter?.id || "";
   $("chapterFormTitle").textContent = chapter ? "Modifier le chapitre" : "Ajouter un chapitre";
   $("chapterEditTitle").value = chapter?.title || "";
@@ -655,10 +751,14 @@ function openChapterEditor(chapter = null) {
     : "Le nouveau chapitre sera enregistré sous le numéro " + nextNumber + ".";
   setBusy(saveChapterButton, false, "Enregistrement…", chapter ? "Enregistrer les modifications" : "Enregistrer le chapitre");
   chapterForm.classList.remove("hidden");
+  setChapterAutosaveStatus("Recherche d’un brouillon…");
+  await restoreChapterDraft(chapter);
   chapterForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 $("showAddChapter").addEventListener("click", () => openChapterEditor());
+$("chapterEditTitle").addEventListener("input", queueChapterAutosave);
+$("chapterEditContent").addEventListener("input", queueChapterAutosave);
 $("cancelChapter").addEventListener("click", () => {
   chapterForm.reset();
   chapterForm.classList.add("hidden");
@@ -696,6 +796,7 @@ chapterForm.addEventListener("submit", async event => {
       chaptersForSelectedStory.sort((a, b) => Number(a.chapter_number) - Number(b.chapter_number));
       showMessage("Chapitre " + nextNumber + " enregistré avec succès.", "success");
     }
+    await clearChapterDraft();
     renderChapters();
     chapterForm.reset();
     chapterForm.classList.add("hidden");
@@ -720,7 +821,7 @@ $("refreshStories").addEventListener("click", async () => {
 });
 
 window.addEventListener("beforeunload", event => {
-  if (autosaveTimer || autosaveInProgress) {
+  if (autosaveTimer || autosaveInProgress || chapterAutosaveTimer || chapterAutosaveInProgress) {
     event.preventDefault();
     event.returnValue = "";
   }
