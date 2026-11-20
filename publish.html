@@ -150,6 +150,13 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
         <input id="chapterId" type="hidden">
         <label for="chapterEditTitle">Titre du chapitre *</label><input id="chapterEditTitle" maxlength="200" required placeholder="Ex. : Chapitre 2 — Le secret">
         <label for="chapterEditContent">Contenu *</label><textarea id="chapterEditContent" required placeholder="Écris le contenu du chapitre…"></textarea>
+        <section class="premium-chapter-settings">
+          <h3>Monétisation du chapitre</h3>
+          <label class="premium-toggle" for="chapterPremium"><input id="chapterPremium" type="checkbox"> Proposer ce chapitre à l’achat</label>
+          <label for="chapterPrice">Prix du chapitre (XOF)</label>
+          <input id="chapterPrice" type="number" min="100" max="50000" step="1" inputmode="numeric" placeholder="Ex. : 500">
+          <p id="premiumChapterStatus" class="note">Les chapitres restent gratuits tant que le programme de rémunération n’est pas activé.</p>
+        </section>
         <section id="webtoonComposer" class="webtoon-composer hidden">
           <h3>Créer l’épisode illustré</h3>
           <p class="note">Importe tes planches dans l’ordre de lecture. Novelia les optimise, les héberge et les insère automatiquement dans le contenu de l’épisode.</p>
@@ -216,6 +223,7 @@ const chapterForm = $("chapterForm");
 const saveChapterButton = $("saveChapterButton");
 
 let currentUser = null;
+let monetizationConfig = {enabled:false,minimum_chapter_price_xof:100,maximum_chapter_price_xof:50000};
 let ownedStories = [];
 let selectedStory = null;
 let chaptersForSelectedStory = [];
@@ -573,6 +581,8 @@ async function initialize() {
     return;
   }
   currentUser = data.user;
+  const monetizationResult=await supabase.from("novelia_public_monetization_config").select("enabled,minimum_chapter_price_xof,maximum_chapter_price_xof").single();
+  if(!monetizationResult.error&&monetizationResult.data)monetizationConfig=monetizationResult.data;
   account.textContent = "Connecté : " + (currentUser.email || "compte Novelia");
   workspace.classList.remove("hidden");
   const localDraft = readCreateDraft();
@@ -874,7 +884,7 @@ editStoryForm.addEventListener("submit", async event => {
 async function loadChapters(storyId) {
   chapterList.replaceChildren(make("p", "muted", "Chargement des chapitres…"));
   const { data, error } = await supabase.from("chapters")
-    .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds")
+    .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds,is_premium,price_xof")
     .eq("story_id", storyId)
     .order("chapter_number", { ascending: true });
   if (error) {
@@ -897,7 +907,7 @@ function renderChapters() {
     const details = make("div", "chapter-name");
     details.appendChild(make("strong", "", "Chapitre " + chapter.chapter_number + " — " + chapter.title));
     const preview = (chapter.content || "").replace(/\s+/g, " ").trim();
-    details.appendChild(make("span", "story-meta", preview.length > 110 ? preview.slice(0, 110) + "…" : preview));
+    details.appendChild(make("span", "story-meta", (chapter.is_premium ? "Premium · " + Number(chapter.price_xof||0).toLocaleString("fr-FR") + " XOF · " : "Gratuit · ") + (preview.length > 110 ? preview.slice(0, 110) + "…" : preview)));
     const edit = make("button", "secondary small", "Modifier");
     edit.type = "button";
     edit.addEventListener("click", () => openChapterEditor(chapter));
@@ -1182,6 +1192,15 @@ async function openChapterEditor(chapter = null) {
   refreshChapterAudioComposer(chapter);
   $("chapterEditTitle").value = chapter?.title || "";
   $("chapterEditContent").value = chapter?.content || "";
+  $("chapterPremium").checked = Boolean(chapter?.is_premium);
+  $("chapterPremium").disabled = !monetizationConfig.enabled && !chapter?.is_premium;
+  $("chapterPrice").value = chapter?.price_xof ?? "";
+  $("chapterPrice").min = String(monetizationConfig.minimum_chapter_price_xof || 100);
+  $("chapterPrice").max = String(monetizationConfig.maximum_chapter_price_xof || 50000);
+  $("chapterPrice").disabled = !monetizationConfig.enabled || !chapter?.is_premium;
+  $("premiumChapterStatus").textContent = monetizationConfig.enabled
+    ? "Part auteur : " + (Number(monetizationConfig.author_share_bps || 7000)/100) + " %. Prix autorisé : " + monetizationConfig.minimum_chapter_price_xof + " à " + monetizationConfig.maximum_chapter_price_xof + " XOF."
+    : "Programme désactivé : les nouveaux chapitres restent gratuits. Un ancien chapitre payant peut être rendu gratuit.";
   const nextNumber = chaptersForSelectedStory.reduce((max, item) => Math.max(max, Number(item.chapter_number) || 0), 0) + 1;
   $("chapterNumberHint").textContent = chapter
     ? "Numéro actuel : chapitre " + chapter.chapter_number + ". Le numéro reste inchangé lors de la modification."
@@ -1226,11 +1245,15 @@ chapterForm.addEventListener("submit", async event => {
   try {
     if (chapterMode === "edit") {
       const chapterId = $("chapterId").value;
-      const { data, error } = await supabase.from("chapters")
-        .update({ title, content })
+      const isPremium=$("chapterPremium").checked;
+  const chapterPrice=isPremium?Number($("chapterPrice").value):null;
+  if(isPremium&&(!monetizationConfig.enabled||!Number.isInteger(chapterPrice)||chapterPrice<Number(monetizationConfig.minimum_chapter_price_xof)||chapterPrice>Number(monetizationConfig.maximum_chapter_price_xof)))return showMessage("Le prix est invalide ou la monétisation n’est pas activée.", "error");
+  const chapterValues={title,content,is_premium:isPremium,price_xof:chapterPrice};
+  const { data, error } = await supabase.from("chapters")
+        .update(chapterValues)
         .eq("id", chapterId)
         .eq("story_id", selectedStory.id)
-        .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds")
+        .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds,is_premium,price_xof")
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Le chapitre n’a pas été modifié. Vérifie les autorisations de la base de données.");
@@ -1239,8 +1262,8 @@ chapterForm.addEventListener("submit", async event => {
     } else {
       const nextNumber = chaptersForSelectedStory.reduce((max, item) => Math.max(max, Number(item.chapter_number) || 0), 0) + 1;
       const { data, error } = await supabase.from("chapters")
-        .insert({ story_id: selectedStory.id, title, content, chapter_number: nextNumber })
-        .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds")
+        .insert({ story_id: selectedStory.id, title, content, chapter_number: nextNumber, is_premium:isPremium, price_xof:chapterPrice })
+        .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds,is_premium,price_xof")
         .single();
       if (error) throw error;
       chaptersForSelectedStory.push(data);
