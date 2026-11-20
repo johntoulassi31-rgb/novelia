@@ -360,7 +360,7 @@ async function saveChapterAudioOffline(chapter){
  audio[chapter.audio_url]=blob;
  const savedChapters=new Map((previous?.chapters||[]).map(ch=>[String(ch.id),ch]));
  savedChapters.set(String(chapter.id),chapter);
- await putOfflineStory({id:dbStoryId,story:previous?.story||story,chapters:[...savedChapters.values()],media:previous?.media||{},audio,savedAt:new Date().toISOString()});
+ await putOfflineStory({id:dbStoryId,story:previous?.story||story,chapters:[...savedChapters.values()],media:previous?.media||{},mediaMissing:previous?.mediaMissing||[],audio,savedAt:new Date().toISOString()});
  offlineAudioMap=audio;
  return blob.size;
 }
@@ -1685,7 +1685,7 @@ $("offlineSaveButton")?.addEventListener("click",async()=>{const b=$("offlineSav
 $("offlineSelectButton")?.addEventListener("click",()=>{$("offlineChapterPicker").hidden=!$("offlineChapterPicker").hidden;});
 $("offlineSelectAll")?.addEventListener("change",event=>{$("offlineChapterList").querySelectorAll(".offline-chapter-choice").forEach(input=>input.checked=event.target.checked);});
 $("offlineChapterList")?.addEventListener("change",()=>{const inputs=[...$("offlineChapterList").querySelectorAll(".offline-chapter-choice")];$("offlineSelectAll").checked=inputs.length>0&&inputs.every(input=>input.checked);});
-$("offlineDownloadSelected")?.addEventListener("click",async()=>{const button=$("offlineDownloadSelected"),status=$("offlineSelectionStatus");const selected=[...$("offlineChapterList").querySelectorAll(".offline-chapter-choice:checked")].map(input=>chapters[Number(input.value)]).filter(Boolean);button.disabled=true;status.textContent="Enregistrement des chapitres et récupération des images…";try{const result=await saveSelectedOffline(selected);status.textContent=result.count+" chapitre(s) ajouté(s), "+result.mediaSaved+" image(s) copiée(s) localement"+(result.mediaFailed?" ; "+result.mediaFailed+" image(s) non copiée(s) (CORS, taille ou réseau).":".")+" Total : "+result.total+" chapitre(s).";$("offlineSaveButton").textContent="Supprimer la copie hors connexion";}catch(error){status.textContent=error.message||"Téléchargement impossible.";}finally{button.disabled=false;}});
+$("offlineDownloadSelected")?.addEventListener("click",async()=>{const button=$("offlineDownloadSelected"),status=$("offlineSelectionStatus");const selected=[...$("offlineChapterList").querySelectorAll(".offline-chapter-choice:checked")].map(input=>chapters[Number(input.value)]).filter(Boolean);button.disabled=true;status.textContent="Enregistrement des chapitres et récupération des images…";try{const result=await saveSelectedOffline(selected);status.textContent=result.count+" chapitre(s) ajouté(s), "+result.saved+" image(s) copiée(s) localement"+(result.failed?" ; "+result.failed+" image(s) manquante(s) : vérifie la connexion avant lecture hors ligne.":".")+" Total : "+result.total+" chapitre(s).";$("offlineSaveButton").textContent="Supprimer la copie hors connexion";}catch(error){status.textContent=error.message||"Téléchargement impossible.";}finally{button.disabled=false;}});
 window.addEventListener("online", () => {
   if (!currentUser || !isDatabaseStory || isOfflineMode) return;
   saveDetailedProgressToCloud();
