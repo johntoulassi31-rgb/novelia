@@ -52,7 +52,7 @@ button:disabled{opacity:.55;cursor:wait}
   <p class="hint" id="quotaInfo"></p>
   <p id="status" role="status" aria-live="polite">Lecture du stockage local…</p>
 </section>
-<div class="toolbar"><strong>Mes copies hors connexion</strong><div class="card-actions"><button id="checkAllButton" type="button">Vérifier les mises à jour</button><button id="refreshButton" type="button">Actualiser</button></div></div>
+<div class="toolbar"><strong>Mes copies hors connexion</strong><div class="card-actions"><button id="checkAllButton" type="button">Vérifier les mises à jour</button><button id="refreshButton" type="button">Actualiser</button><button id="clearAllButton" class="danger" type="button">Tout supprimer</button></div></div>
 <section class="download-list" id="downloadList"><p class="empty">Chargement…</p></section>
 </main>
 <nav class="bottom-nav" aria-label="Navigation rapide">
@@ -107,6 +107,7 @@ function createCard(record){
  body.append(node("h2",story.title||"Œuvre sans titre"));
  body.append(node("p",(story.type||"Roman")+" · "+(story.genre||"Autre"),"meta"));
  body.append(node("p",chapters.length+" chapitre(s) ou épisode(s)","meta"));
+ const media=story&&record.media&&typeof record.media==="object"?Object.values(record.media):[];const mediaBytes=media.reduce((sum,value)=>sum+(typeof value==="string"?Math.round(value.length*.75):0),0);body.append(node("p",media.length+" image(s) enregistrée(s) · "+formatBytes(mediaBytes),"meta"));
  body.append(node("p","Enregistrée le "+formatDate(record.savedAt),"meta"));
  const updateStatus=node("p","Mises à jour non vérifiées.","meta update-status");updateStatus.setAttribute("role","status");body.append(updateStatus);
  const actions=node("div","","card-actions"),open=node("a","Lire hors connexion","btn primary");
@@ -114,7 +115,7 @@ function createCard(record){
  const check=node("button","Vérifier","check-update");check.type="button";
  const update=node("button","Mettre à jour","primary");update.type="button";update.hidden=true;
  check.addEventListener("click",()=>checkRecord(record,updateStatus,update,check));
- update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");if(!latest.changed){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}await putRecord(latest.record);updateStatus.textContent="Copie mise à jour le "+formatDate(latest.record.savedAt)+".";update.hidden=true;await render();}catch(error){updateStatus.textContent=error.message||"Mise à jour impossible.";}finally{update.disabled=false;check.disabled=false;}});
+ update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");if(!latest.changed){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}latest.record.media=record.media||{};await putRecord(latest.record);updateStatus.textContent="Copie mise à jour le "+formatDate(latest.record.savedAt)+".";update.hidden=true;await render();}catch(error){updateStatus.textContent=error.message||"Mise à jour impossible.";}finally{update.disabled=false;check.disabled=false;}});
  const del=node("button","Supprimer la copie","danger");del.type="button";
  del.addEventListener("click",async()=>{if(!confirm("Supprimer la copie hors connexion de « "+(story.title||"cette œuvre")+" » sur cet appareil ?"))return;del.disabled=true;try{await removeOne(record.id);await render();}catch(error){$("status").textContent="Suppression impossible : "+(error.message||String(error));$("status").className="error";del.disabled=false;}});
  actions.append(check,update,del);body.append(actions);card.append(body);return card;
@@ -134,7 +135,9 @@ async function render(){
  }catch(error){$("status").textContent=error.message||"Impossible de lire les téléchargements."; $("status").className="error";$("downloadList").replaceChildren(node("p","Le stockage hors connexion est inaccessible sur cet appareil.","empty"));}
 }
 $("checkAllButton").addEventListener("click",async()=>{const button=$("checkAllButton");button.disabled=true;try{if(!navigator.onLine)throw new Error("Connecte-toi à Internet pour vérifier les mises à jour.");const cards=[...$("downloadList").querySelectorAll(".download-card")];for(const card of cards){const check=card.querySelector(".check-update"),update=card.querySelector("button.primary"),status=card.querySelector(".update-status"),record=recordCache.get(card.dataset.storyId);if(check&&update&&status&&record)await checkRecord(record,status,update,check);}const available=$("downloadList").querySelectorAll(".download-card button.primary:not([hidden])").length;$("status").textContent="Vérification terminée : "+available+" mise(s) à jour disponible(s).";$("status").className="success";}catch(error){$("status").textContent=error.message||"Vérification impossible.";$("status").className="error";}finally{button.disabled=false;}});
-$("refreshButton").addEventListener("click",render);render();
+$("refreshButton").addEventListener("click",render);
+$("clearAllButton").addEventListener("click",async()=>{if(!confirm("Supprimer toutes les copies hors connexion enregistrées sur cet appareil ? Cette action est irréversible."))return;const button=$("clearAllButton");button.disabled=true;try{const records=await getAll();for(const record of records)await removeOne(record.id);$("status").textContent=records.length+" copie(s) supprimée(s) de cet appareil.";$("status").className="success";await render();}catch(error){$("status").textContent=error.message||"Suppression impossible.";$("status").className="error";}finally{button.disabled=false;}});
+render();
 </script>
 </body>
 </html>
