@@ -1,6 +1,16 @@
 /* Barre de navigation du bas, commune à toutes les pages principales (écrans étroits). */
 (function () {
   "use strict";
+  // Décor saisonnier temporaire : actif jusqu'au 19 janvier 2027 inclus.
+  var seasonEnd = new Date(2027, 0, 20, 0, 0, 0, 0);
+  if (new Date() < seasonEnd && !document.querySelector('link[data-novelia-season]')) {
+    var seasonalCss = document.createElement("link");
+    seasonalCss.rel = "stylesheet";
+    seasonalCss.href = "christmas.css?v=2026-noel";
+    seasonalCss.setAttribute("data-novelia-season", "true");
+    document.head.appendChild(seasonalCss);
+    document.documentElement.classList.add("novelia-noel");
+  }
   var ICONS = {
     home: '<path d="M3 10.5 12 3l9 7.5V21H3z"/><path d="M9 21v-6h6v6"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
