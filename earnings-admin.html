@@ -29,6 +29,9 @@ button{padding:9px 12px;margin:4px;border:0;border-radius:8px;background:#c3941c
 </div><button type="submit">Enregistrer les paramètres</button><p id="settingsMessage" class="muted" role="status"></p>
 </form>
 <h2>Demandes de retrait des auteurs</h2><div id="requests" class="card"><p class="muted">Chargement…</p></div>
+<h2>Achats premium et remboursements</h2>
+<p class="warning">Cette action enregistre un remboursement déjà réalisé auprès de CinetPay ou par un autre moyen. Elle ne transfère pas l’argent au lecteur. N’utilise le bouton qu’après avoir effectué le remboursement.</p>
+<div id="purchases" class="card"><p class="muted">Chargement…</p></div>
 </section></main>
 <script type="module">
 import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
@@ -42,15 +45,37 @@ async function init(){
  $("status").textContent="Accès administrateur confirmé.";$("panel").hidden=false;await load();
 }
 async function load(){
- const [s,p]=await Promise.all([
+ const [s,p,buy]=await Promise.all([
   db.from("novelia_monetization_settings").select("enabled,author_share_bps,minimum_payout_xof,maximum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof,moov_fee_bps,tmoney_fee_bps,settlement_hold_days,daily_payout_limit_xof,weekly_payout_limit_xof,monthly_payout_limit_xof,daily_collection_limit_xof,weekly_collection_limit_xof,monthly_collection_limit_xof").eq("id",true).single(),
-  db.from("novelia_payout_requests").select("id,author_id,destination_operator,destination_phone_number,destination_account_holder,amount_xof,provider_fee_xof,status,provider_transaction_id,admin_note,created_at").order("created_at",{ascending:false}).limit(100)
+  db.from("novelia_payout_requests").select("id,author_id,destination_operator,destination_phone_number,destination_account_holder,amount_xof,provider_fee_xof,status,provider_transaction_id,admin_note,created_at").order("created_at",{ascending:false}).limit(100),
+  db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,stories(title),chapters(title)").eq("status","paid").order("paid_at",{ascending:false}).limit(100)
  ]);
  if(s.error){$("settingsMessage").textContent="Impossible de charger les paramètres : "+s.error.message;return;}
  $("enabled").checked=s.data.enabled;$("share").value=(Number(s.data.author_share_bps)/100).toFixed(2);
  $("minPayout").value=s.data.minimum_payout_xof;$("maxPayout").value=s.data.maximum_payout_xof;$("holdDays").value=s.data.settlement_hold_days;$("dailyLimit").value=s.data.daily_payout_limit_xof;$("weeklyLimit").value=s.data.weekly_payout_limit_xof;$("monthlyLimit").value=s.data.monthly_payout_limit_xof;$("dailyCollection").value=s.data.daily_collection_limit_xof;$("weeklyCollection").value=s.data.weekly_collection_limit_xof;$("monthlyCollection").value=s.data.monthly_collection_limit_xof;$("minPrice").value=s.data.minimum_chapter_price_xof;$("maxPrice").value=s.data.maximum_chapter_price_xof;
  $("moovFee").value=(Number(s.data.moov_fee_bps)/100).toFixed(2);$("tmoneyFee").value=(Number(s.data.tmoney_fee_bps)/100).toFixed(2);
  const root=$("requests");root.replaceChildren();
+ const purchaseRoot=$("purchases");purchaseRoot.replaceChildren();
+ if(buy.error){purchaseRoot.append(el("p","muted","Impossible de charger les achats : "+buy.error.message));}
+ else if(!buy.data?.length){purchaseRoot.append(el("p","muted","Aucun achat premium confirmé à rembourser."));}
+ else for(const item of buy.data){
+  const row=el("div","row"),info=el("div","");
+  info.append(el("strong","",(item.stories?.title||"Œuvre")+" · "+(item.chapters?.title||"Chapitre")+" · "+fmt(item.gross_amount_xof)));
+  info.append(el("small","muted","Paiement confirmé le "+new Date(item.paid_at||item.created_at).toLocaleString("fr-FR")));
+  const button=el("button","secondary","Enregistrer un remboursement déjà effectué");
+  button.onclick=async()=>{
+   if(!confirm("As-tu déjà remboursé ce lecteur hors de Novelia ? Cette action retirera son accès au chapitre et ajustera le solde de l’auteur."))return;
+   const reference=prompt("Référence du remboursement (obligatoire) :","");
+   if(!reference?.trim())return;
+   const reason=prompt("Motif du remboursement (facultatif) :","")||null;
+   button.disabled=true;
+   const result=await db.rpc("novelia_mark_chapter_purchase_refunded",{p_purchase_id:item.id,p_refund_reference:reference.trim(),p_reason:reason});
+   if(result.error)alert("Remboursement non enregistré : "+result.error.message);else alert("Remboursement enregistré. L’accès au chapitre a été retiré et le solde auteur ajusté.");
+   await load();
+  };
+  row.append(info,button);purchaseRoot.append(row);
+ }
+
  if(p.error){root.append(el("p","muted","Impossible de charger les demandes : "+p.error.message));return;}
  if(!p.data?.length){root.append(el("p","muted","Aucune demande de retrait."));return;}
  const ids=[...new Set(p.data.map(x=>x.author_id))];let profiles=new Map();
