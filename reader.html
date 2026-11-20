@@ -1012,8 +1012,8 @@ function updateMediaSession(chapter,audio){
  const handlers={
   play:()=>audio.play().catch(()=>{}),
   pause:()=>audio.pause(),
-  previoustrack:()=>{if(currentChapter>0){persistCurrentReadingPosition();currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}},
-  nexttrack:()=>{if(currentChapter<chapters.length-1){persistCurrentReadingPosition();currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
+  previoustrack:()=>changeReaderChapter(currentChapter-1,{playAudio:true}),
+  nexttrack:()=>changeReaderChapter(currentChapter+1,{playAudio:true})
  };
  Object.entries(handlers).forEach(([action,handler])=>{try{navigator.mediaSession.setActionHandler(action,handler);}catch(error){console.debug("Action multimédia indisponible",action);}});
 }
