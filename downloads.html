@@ -98,7 +98,7 @@ async function fetchLatest(id){
  if(!navigator.onLine)throw new Error("Connecte-toi à Internet pour vérifier les mises à jour.");
  const {data:row,error}=await supabase.from("stories").select("id,title,description,cover_url,story_type,genre,status,author_id,moderation_hidden").eq("id",id).eq("status","published").eq("moderation_hidden",false).maybeSingle();
  if(error)throw error;if(!row)return null;
- const {data:chapterRows,error:chapterError}=await supabase.from("chapters").select("id,title,content,chapter_number,created_at,moderation_hidden,audio_url,audio_title,audio_duration_seconds").eq("story_id",id).eq("moderation_hidden",false).order("chapter_number",{ascending:true});
+ const {data:chapterRows,error:chapterError}=await supabase.from("chapters").select("id,title,content,chapter_number,created_at,moderation_hidden,audio_url,audio_title,audio_duration_seconds").eq("story_id",id).eq("moderation_hidden",false).eq("is_premium",false).order("chapter_number",{ascending:true});
  if(chapterError)throw chapterError;
  const latestStory={id:row.id,authorId:row.author_id,title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
  const latestChapters=(chapterRows||[]).map(ch=>({id:ch.id,title:ch.title,content:ch.content||"",chapter_number:ch.chapter_number,audio_url:ch.audio_url||null,audio_title:ch.audio_title||null,audio_duration_seconds:ch.audio_duration_seconds||null}));
