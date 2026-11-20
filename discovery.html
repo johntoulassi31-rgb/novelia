@@ -61,7 +61,7 @@ h1,h2{line-height:1.2}h1{margin:0 0 8px;font-size:clamp(26px,5vw,38px)}h2{font-s
   <section class="discovery-filters" aria-label="Filtres de découverte">
     <div class="search-filter"><label for="storySearch">Rechercher une histoire</label><input id="storySearch" type="search" placeholder="Titre, résumé ou genre…" autocomplete="off"></div>
     <div><label for="genreFilter">Genre</label><select id="genreFilter"><option value="">Tous les genres</option></select></div>
-    <div><label for="formatFilter">Format</label><select id="formatFilter"><option value="">Tous les formats</option><option value="roman">Romans</option><option value="webtoon">Webtoons</option></select></div>
+    <div><label for="formatFilter">Format</label><select id="formatFilter"><option value="">Tous les formats</option><option value="roman">Romans</option><option value="webtoon">Webtoons</option></select></div>\n    <div><label for="sortFilter">Trier par</label><select id="sortFilter"><option value="default">Pertinence</option><option value="rating">Mieux notées</option><option value="likes">Plus aimées</option><option value="newest">Plus récentes</option></select></div>
     <p id="filterSummary" class="filter-summary" aria-live="polite">Chargement des filtres…</p>
   </section>
   <section>
@@ -180,12 +180,18 @@ function selectDiverseRecommendations(scoredStories, limit = 12) {
   return selected;
 }
 function applyDiscoveryFilters() {
-  const query=safeText($("storySearch").value).toLocaleLowerCase("fr"),genre=$("genreFilter").value,format=$("formatFilter").value;
+  const query=safeText($("storySearch").value).toLocaleLowerCase("fr"),genre=$("genreFilter").value,format=$("formatFilter").value,sort=$("sortFilter")?.value||"default";
   const matches=s=>{const hay=[s.title,s.description,s.genre].map(v=>String(v||"")).join(" ").toLocaleLowerCase("fr");return (!query||hay.includes(query))&&(!genre||s.genre===genre)&&(!format||s.story_type===format);};
-  renderCards("recommended",personalStories.filter(matches),"Aucune suggestion ne correspond à ces filtres.");
-  renderCards("trending",trendingStories.filter(matches),"Aucune tendance ne correspond à ces filtres.");
-  renderCards("latest",latestStories.filter(matches),"Aucune nouveauté ne correspond à ces filtres.");
-  const results=allStories.filter(matches);
+  const sortItems=items=>[...items].sort((a,b)=>{
+    if(sort==="rating")return (Number(b.reviewAverage||0)-Number(a.reviewAverage||0))||(Number(b.reviewCount||0)-Number(a.reviewCount||0));
+    if(sort==="likes")return Number(b.likesCount||0)-Number(a.likesCount||0);
+    if(sort==="newest")return Date.parse(b.created_at||0)-Date.parse(a.created_at||0);
+    return 0;
+  });
+  renderCards("recommended",sortItems(personalStories.filter(matches)),"Aucune suggestion ne correspond à ces filtres.");
+  renderCards("trending",sortItems(trendingStories.filter(matches)),"Aucune tendance ne correspond à ces filtres.");
+  renderCards("latest",sortItems(latestStories.filter(matches)),"Aucune nouveauté ne correspond à ces filtres.");
+  const results=sortItems(allStories.filter(matches));
   const hasFilters=Boolean(query||genre||format);
   $("searchResultsSection").hidden=!hasFilters;
   if(hasFilters)renderCards("searchResults",results.slice(0,24),"Aucune histoire ne correspond à ces critères.");
