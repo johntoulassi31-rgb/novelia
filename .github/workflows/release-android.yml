@@ -52,9 +52,12 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Restore Android signing key
+      - name: Restore and validate Android signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/novelia-release.jks"
           test -s "$RUNNER_TEMP/novelia-release.jks" || (echo "Keystore file is empty or invalid" && exit 1)
