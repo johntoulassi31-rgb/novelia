@@ -6,7 +6,9 @@ const CDN_ORIGIN = "https://cdn.jsdelivr.net";
 
 const APP_FILES = [
   "./",
-  "./index.html",\n  "./contests.html",\n  "./contest-admin.html",
+  "./index.html",
+  "./contests.html",
+  "./contest-admin.html",
   "./reader.html",
   "./downloads.html",
   "./copyright.html",
