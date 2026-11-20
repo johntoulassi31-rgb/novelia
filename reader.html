@@ -1044,7 +1044,7 @@ function renderChapterAudio(chapter) {
  audio.addEventListener("ended",()=>{
   const hasNextAudio=currentChapter<chapters.length-1&&Boolean(chapters[currentChapter+1]?.audio_url);
   if(hasNextAudio){
-   changeReaderChapter(currentChapter+1,{playAudio:true,scroll:false});
+   changeReaderChapter(currentChapter+1,{playAudio:true});
   }else if(window.NoveliaNativeMedia){
    try{window.NoveliaNativeMedia.stopped();}catch(error){}
   }
@@ -1334,7 +1334,7 @@ $("saveReaderPrefs").addEventListener('click', async () => {
   }
 });
 
-function persistCurrentReadingPosition() {
+function persistCurrentReadingPosition({syncCloud=true}={}) {
   if ($("reader").hidden || !story || !chapters[currentChapter]) return;
   try {
     const progress = getProgress();
@@ -1370,7 +1370,7 @@ function persistCurrentReadingPosition() {
     };
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
     updateResumeButton();
-    if (currentUser && librarySyncReady && navigator.onLine) saveDetailedProgressToCloud();
+    if (syncCloud && currentUser && librarySyncReady && navigator.onLine) saveDetailedProgressToCloud();
   } catch (error) {
     console.warn("Sauvegarde de position impossible :", error);
   }
@@ -1398,7 +1398,7 @@ function changeReaderChapter(index,{playAudio=false,scroll=true}={}) {
   const target=Math.max(0,Math.min(index,chapters.length-1));
   if(target===currentChapter||!chapters[target]) return false;
   if(scrollSaveTimer){window.clearTimeout(scrollSaveTimer);scrollSaveTimer=null;}
-  persistCurrentReadingPosition();
+  persistCurrentReadingPosition({syncCloud:false});
   currentChapter=target;
   renderChapter();
   if(scroll) $("reader").scrollIntoView({behavior:"smooth",block:"start"});
