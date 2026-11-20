@@ -1,0 +1,10 @@
+/* Bandeaux illustrés Novelia */
+.hero-carousel .hc-slide{background-size:cover;background-position:center;isolation:isolate;color:#fff;text-shadow:0 2px 12px #0009}
+.hero-carousel .hc-slide:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(17,10,25,.84),rgba(17,10,25,.42) 68%,rgba(17,10,25,.2))}
+.hero-carousel .hc-slide p,.hero-carousel .hc-slide h1,.hero-carousel .hc-slide h2{color:#fff}
+.hero-carousel .hc-slide .button{color:#241a09;text-shadow:none}
+.hero-carousel .hc-1{background-image:url("https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1600&q=85")}
+.hero-carousel .hc-2{background-image:url("https://images.unsplash.com/photo-1455390582262-044c3d9a9d0?auto=format&fit=crop&w=1600&q=85")}
+.hero-carousel .hc-3{background-image:url("https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1600&q=85")}
+.hero-carousel .hc-4{background-image:url("https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=1600&q=85")}
+@media(max-width:699px){.hero-carousel .hc-slide{background-position:center}.hero-carousel .hc-slide:before{background:linear-gradient(90deg,rgba(17,10,25,.88),rgba(17,10,25,.5))}}
