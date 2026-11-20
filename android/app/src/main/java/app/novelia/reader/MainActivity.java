@@ -100,51 +100,55 @@ public class MainActivity extends Activity {
 
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setGravity(Gravity.CENTER_HORIZONTAL);
-        content.setPadding(dp(28), dp(28), dp(28), dp(28));
+        content.setGravity(Gravity.CENTER);
+        content.setPadding(dp(26), dp(24), dp(26), dp(24));
         FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
         screen.addView(content, contentParams);
 
         TextView brand = new TextView(this);
         brand.setText("Novelia");
-        brand.setTextColor(Color.rgb(255, 211, 119));
+        brand.setTextColor(Color.rgb(255, 207, 91));
         brand.setTextSize(58);
         brand.setTypeface(Typeface.SERIF, Typeface.ITALIC);
         brand.setGravity(Gravity.CENTER);
-        brand.setShadowLayer(dp(12), 0, 0, Color.rgb(194, 126, 29));
+        brand.setShadowLayer(dp(14), 0, dp(2), Color.rgb(190, 112, 23));
         content.addView(brand, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView tagline = new TextView(this);
         tagline.setText("Lire sans limites");
         tagline.setTextColor(Color.rgb(239, 205, 143));
-        tagline.setTextSize(17);
+        tagline.setTextSize(15);
         tagline.setTypeface(Typeface.SERIF, Typeface.ITALIC);
         tagline.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams taglineParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        taglineParams.bottomMargin = dp(28);
+        taglineParams.bottomMargin = dp(22);
         content.addView(tagline, taglineParams);
+
+        View separator = new View(this);
+        GradientDrawable line = new GradientDrawable();
+        line.setColor(Color.rgb(197, 145, 59));
+        line.setCornerRadius(dp(2));
+        separator.setBackground(line);
+        LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(dp(74), dp(1));
+        lineParams.bottomMargin = dp(18);
+        content.addView(separator, lineParams);
 
         TextView quote = new TextView(this);
         quote.setText("Lire c’est nous permettre de rêver\\n"
-            + "Grâce au roman, grâce aux BD, grâce à la poésie.\\n\\n"
+            + "Grâce au roman, grâce aux BD, grâce à la poésie.\\n"
             + "Lire c’est voyager à travers le temps\\n"
             + "Voyager parmi tous les peuples,\\n"
             + "Lire c’est avoir le monde entier à nos pieds,\\n"
             + "Sans bouger !!!");
-        quote.setTextColor(Color.rgb(255, 242, 218));
-        quote.setTextSize(17);
-        quote.setTypeface(Typeface.SERIF);
+        quote.setTextColor(Color.rgb(247, 229, 199));
+        quote.setTextSize(12);
+        quote.setTypeface(Typeface.SERIF, Typeface.ITALIC);
         quote.setGravity(Gravity.CENTER);
-        quote.setLineSpacing(dp(5), 1.0f);
-        quote.setPadding(dp(18), dp(22), dp(18), dp(22));
-        GradientDrawable panel = new GradientDrawable();
-        panel.setColor(Color.argb(105, 8, 5, 31));
-        panel.setCornerRadius(dp(18));
-        panel.setStroke(dp(1), Color.argb(210, 218, 169, 86));
-        quote.setBackground(panel);
+        quote.setLineSpacing(dp(3), 1.0f);
+        quote.setPadding(dp(8), dp(4), dp(8), dp(4));
         content.addView(quote, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return screen;
