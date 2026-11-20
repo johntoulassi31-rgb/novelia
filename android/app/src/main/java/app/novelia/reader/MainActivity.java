@@ -190,8 +190,21 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    private boolean isHomePage() {
+        if (webView == null || webView.getUrl() == null) return true;
+        Uri current = Uri.parse(webView.getUrl());
+        String path = current.getPath();
+        return "johntoulassi31-rgb.github.io".equals(current.getHost())
+            && (path == null || path.isEmpty() || "/".equals(path) || "/index.html".equals(path));
+    }
+
     @Override public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
+        // Treat Novelia Home as the native root. Do not replay the WebView's
+        // entire URL history when the device Back button is pressed.
+        if (webView != null && !isHomePage()) {
+            webView.loadUrl(HOME);
+            return;
+        }
+        super.onBackPressed();
     }
 }
