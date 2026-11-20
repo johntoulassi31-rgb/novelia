@@ -1010,8 +1010,8 @@ function updateMediaSession(chapter,audio){
  const handlers={
   play:()=>audio.play().catch(()=>{}),
   pause:()=>audio.pause(),
-  previoustrack:()=>{if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}},
-  nexttrack:()=>{if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
+  previoustrack:()=>{if(currentChapter>0){persistCurrentReadingPosition();currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}},
+  nexttrack:()=>{if(currentChapter<chapters.length-1){persistCurrentReadingPosition();currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
  };
  Object.entries(handlers).forEach(([action,handler])=>{try{navigator.mediaSession.setActionHandler(action,handler);}catch(error){console.debug("Action multimédia indisponible",action);}});
 }
@@ -1296,6 +1296,7 @@ $("resumeReading").addEventListener("click", () => openReader(savedChapterIndex(
 
 $("previousChapter").addEventListener("click", () => {
   if (currentChapter > 0) {
+    persistCurrentReadingPosition();
     currentChapter--;
     renderChapter();
     $("reader").scrollIntoView({behavior:"smooth",block:"start"});
@@ -1304,6 +1305,7 @@ $("previousChapter").addEventListener("click", () => {
 
 $("nextChapter").addEventListener("click", () => {
   if (currentChapter < chapters.length - 1) {
+    persistCurrentReadingPosition();
     currentChapter++;
     renderChapter();
     $("reader").scrollIntoView({behavior:"smooth",block:"start"});
