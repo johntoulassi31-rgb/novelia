@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "novelia-shell-v63";
+const CACHE_NAME = "novelia-shell-v64";
 const CACHE_PREFIX = "novelia-shell-";
 const CDN_CACHE = "novelia-cdn-v1";
 const CDN_ORIGIN = "https://cdn.jsdelivr.net";
@@ -27,6 +27,7 @@ const APP_FILES = [
   "./offline.html",
   "./bottom-nav.js",
   "./theme-gold.css",
+  "./christmas.css",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
