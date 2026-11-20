@@ -38,7 +38,7 @@ h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .chapter h2{color:var(--heading);font-size:21px;line-height:1.4}
 .progress-track{width:100%;height:7px;border-radius:20px;background:#f4ecd9;overflow:hidden;margin:12px 0 22px}
 .progress-fill{height:100%;width:0;background:var(--purple);transition:width .2s}
-.novel-text{font-family:Georgia,"Times New Roman",serif;font-size:var(--novel-font-size);line-height:var(--novel-line-height);overflow-wrap:anywhere}
+.novel-text{font-family:var(--novel-font-family,Georgia,"Times New Roman",serif);font-size:var(--novel-font-size);line-height:var(--novel-line-height);overflow-wrap:anywhere}
 .novel-text p{margin:0 0 22px;white-space:pre-wrap}
 .chapter-audio-player{margin:0 0 18px;padding:14px;border:1px solid var(--line,#ddd);border-radius:12px;background:var(--panel,#faf7ef)}.chapter-audio-player h3{margin:0 0 8px;font-size:1rem}.chapter-audio-player audio{display:block;width:100%;max-width:100%}.audio-speed-row{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.9rem}.audio-speed-row select{padding:6px;border-radius:8px}.audio-focus-mode .chapter-audio-player{position:sticky;bottom:10px;z-index:35;box-shadow:0 8px 28px #0002}.audio-transport{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.audio-transport button{flex:1;min-width:110px}
 .webtoon-content{margin:0 -16px;background:#fdfcf9}.webtoon-panel{margin:0}.webtoon-content img{display:block;width:100%;height:auto;object-fit:contain}.webtoon-caption{margin:0;padding:12px 20px 16px;background:#fdfcf9;color:var(--text);font:15px/1.65 Georgia,"Times New Roman",serif;white-space:pre-wrap}
@@ -180,7 +180,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
       <div class="reader-tools-grid">
         <div><label for="readerFontSize">Taille du texte : <span id="readerFontLabel">18 px</span></label><input id="readerFontSize" type="range" min="14" max="30" value="18"></div>
         <div><label for="readerTheme">Thème</label><select id="readerTheme"><option value="dark">Sombre</option><option value="sepia">Sépia</option><option value="light">Clair</option></select></div>
-        <div><label for="readerLineHeight">Espacement des lignes</label><select id="readerLineHeight"><option value="1.5">Compact</option><option value="1.8">Confortable</option><option value="2">Aéré</option></select></div>
+        <div><label for="readerLineHeight">Espacement des lignes</label><select id="readerLineHeight"><option value="1.5">Compact</option><option value="1.8">Confortable</option><option value="2">Aéré</option></select></div><div><label for="readerFontFamily">Police d’écriture</label><select id="readerFontFamily"><option value="Georgia, Times New Roman, serif">Georgia</option><option value="Arial, sans-serif">Arial</option><option value="Times New Roman, serif">Times New Roman</option><option value="Verdana, sans-serif">Verdana</option><option value="Tahoma, sans-serif">Tahoma</option><option value="Trebuchet MS, sans-serif">Trebuchet MS</option></select></div>
       </div>
       <div class="actions"><button class="button secondary" id="saveReaderPrefs" type="button">Enregistrer mes réglages</button></div>
       <p class="reader-pref-status" id="readerPrefsStatus" role="status" aria-live="polite"></p>
@@ -307,7 +307,7 @@ const demoStories = {
 const FAVORITES_KEY = "novelia_favorites";
 const PROGRESS_KEY = "novelia_progress";
 const READER_PREFS_KEY = "novelia_reader_preferences_v1";
-let readerPrefs = {fontSize:18, theme:"dark", lineHeight:"2"};
+let readerPrefs = {fontSize:18, theme:"dark", lineHeight:"2", fontFamily:"Georgia, Times New Roman, serif"};
 let scrollSaveTimer = null;
 let lastPreferenceSave = Promise.resolve();
 const params = new URLSearchParams(location.search);
@@ -427,7 +427,8 @@ function getReaderPrefs() {
   return {
     fontSize: Number.isFinite(size) ? Math.max(14, Math.min(30, size)) : 18,
     theme: ["dark", "sepia", "light"].includes(raw.theme) ? raw.theme : "light",
-    lineHeight: ["1.5", "1.8", "2"].includes(line) ? line : "2"
+    lineHeight: ["1.5", "1.8", "2"].includes(line) ? line : "2",
+    fontFamily: ["Georgia, Times New Roman, serif", "Arial, sans-serif", "Times New Roman, serif", "Verdana, sans-serif", "Tahoma, sans-serif", "Trebuchet MS, sans-serif"].includes(raw.fontFamily) ? raw.fontFamily : "Georgia, Times New Roman, serif"
   };
 }
 
@@ -448,6 +449,8 @@ function applyReaderPrefs() {
   root.style.setProperty('--purple', t.purple);
   root.style.setProperty('--novel-font-size', readerPrefs.fontSize + 'px');
   root.style.setProperty('--novel-line-height', readerPrefs.lineHeight);
+  root.style.setProperty('--novel-font-family', readerPrefs.fontFamily || 'Georgia, Times New Roman, serif');
+  if ($('readerFontFamily')) $('readerFontFamily').value = readerPrefs.fontFamily || 'Georgia, Times New Roman, serif';
   $("readerFontSize").value = String(readerPrefs.fontSize);
   $("readerFontLabel").textContent = readerPrefs.fontSize + ' px';
   $("readerTheme").value = readerPrefs.theme;
@@ -1490,11 +1493,16 @@ $("readerLineHeight").addEventListener('change', () => {
   readerPrefs.lineHeight = $("readerLineHeight").value;
   applyReaderPrefs();
 });
+$("readerFontFamily").addEventListener("change", () => {
+  readerPrefs.fontFamily = $("readerFontFamily").value;
+  applyReaderPrefs();
+});
 $("saveReaderPrefs").addEventListener('click', async () => {
   readerPrefs = {
     fontSize: Math.max(14, Math.min(30, Number($("readerFontSize").value) || 18)),
     theme: $("readerTheme").value,
-    lineHeight: $("readerLineHeight").value
+    lineHeight: $("readerLineHeight").value,
+    fontFamily: $("readerFontFamily").value
   };
   applyReaderPrefs();
   $("readerPrefsStatus").textContent = currentUser ? 'Enregistrement des réglages…' : 'Réglages enregistrés sur cet appareil. Connecte-toi pour les synchroniser entre appareils.';
