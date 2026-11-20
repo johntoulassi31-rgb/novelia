@@ -929,6 +929,11 @@ document.getElementById("reportForm").addEventListener("submit", async event => 
   status.textContent = "Envoi du signalement…";
 
   try {
+    if (document.getElementById("reportReason").value === "copyright") {
+      const query = new URLSearchParams({type:reportTarget.type,id:reportTarget.id,title:reportTarget.title||"Œuvre Novelia",details:document.getElementById("reportDetails").value.trim()});
+      window.location.href = "copyright.html?" + query.toString();
+      return;
+    }
     const { error } = await supabase.from("content_reports").insert({
       reporter_id: currentUser.id,
       target_type: reportTarget.type,
