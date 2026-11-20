@@ -150,19 +150,26 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 <body>
 <header>
   <div class="logo">✦ NOVELIA</div>
-  <nav>
-    <a href="#accueil">Accueil</a>
-    <a href="#histoires" data-nav="Roman">Romans</a>
-    <a href="#histoires" data-nav="Webtoon">Webtoons</a>
-    <a href="library.html">Bibliothèque</a>
-    <a href="downloads.html">Téléchargements</a>
-    <a href="publish.html">Publier</a>
-    <a href="author-dashboard.html">Espace auteur</a>
-    <a href="community.html">Communauté</a>\n    <a href="contests.html">Concours</a>
-    <a href="discovery.html">Découverte</a>
-    <a href="authors.html">Découvrir les auteurs</a><a href="members.html">Membres</a>
-    <a href="notifications.html" class="notification-link">Notifications <span id="notificationBadge" class="notification-badge" aria-label="Notifications non lues" hidden>0</span></a>
-    <a href="profile.html">Mon profil</a>
+  <nav class="home-nav" aria-label="Navigation principale">
+    <details class="nav-menu">
+      <summary aria-label="Ouvrir le menu principal">☰ <span>Menu</span></summary>
+      <div class="nav-menu-panel">
+        <a href="#accueil">Accueil</a>
+        <a href="#histoires" data-nav="Roman">Romans</a>
+        <a href="#histoires" data-nav="Webtoon">Webtoons</a>
+        <a href="library.html">Bibliothèque</a>
+        <a href="downloads.html">Téléchargements</a>
+        <a href="publish.html">Publier</a>
+        <a href="author-dashboard.html">Espace auteur</a>
+        <a href="community.html">Communauté</a>
+        <a href="contests.html">Concours</a>
+        <a href="discovery.html">Découverte</a>
+        <a href="authors.html">Découvrir les auteurs</a>
+        <a href="members.html">Membres</a>
+        <a href="notifications.html" class="notification-link">Notifications <span id="notificationBadge" class="notification-badge" aria-label="Notifications non lues" hidden>0</span></a>
+        <a href="profile.html">Mon profil</a>
+      </div>
+    </details>
   </nav>
   <div class="account-area">
     <span id="accountStatus">Vérification du compte...</span>
