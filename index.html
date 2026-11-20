@@ -124,6 +124,22 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 }
 @media(min-width:700px){.shelf-card.featured{flex-basis:250px}.shelf-card{flex-basis:170px}.shelf-track{gap:15px}}
 
+/* Accueil : mêmes couvertures en grille que la bibliothèque, sans crochet ni cœur */
+.stories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px}
+.story{background:transparent;border:0;border-radius:0;overflow:visible}
+.home-book-cover{display:block;color:inherit;text-decoration:none}
+.home-book-cover .cover-image,.home-book-cover .empty-cover{display:block;width:100%;aspect-ratio:2/3;min-height:0;object-fit:cover;border:1px solid #f1e7d0;border-radius:5px;box-shadow:0 2px 8px #392b0818}
+.home-book-info{padding:0;margin-top:8px}
+.home-book-info h3{margin:0;font-size:14px;font-weight:500;line-height:1.35}
+.home-book-info h3 a{color:inherit;text-decoration:none}
+.shelf-track{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px;overflow:visible;padding:2px 0 8px;scroll-snap-type:none}
+.shelf-card,.shelf-card.featured{display:flex;flex-direction:column;flex-basis:auto;min-width:0;max-width:none;border:0;border-radius:0;background:transparent;overflow:visible;box-shadow:none}
+.shelf-card:hover{transform:none;border-color:transparent}
+.shelf-cover,.shelf-placeholder{width:100%;aspect-ratio:2/3;height:auto;object-fit:cover;border:1px solid #f1e7d0;border-radius:5px;box-shadow:0 2px 8px #392b0818}
+.shelf-info{padding:0;margin-top:8px}
+.shelf-title{font-size:14px;font-weight:500;line-height:1.35;-webkit-line-clamp:2}
+@media(min-width:700px){.stories,.shelf-track{grid-template-columns:repeat(5,minmax(0,1fr));gap:22px 17px}.shelf-card,.shelf-card.featured{flex-basis:auto}}
+@media(max-width:699px){.stories,.shelf-track{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 12px}.shelf-card,.shelf-card.featured{flex-basis:auto;max-width:none}.shelf-cover,.shelf-placeholder{aspect-ratio:2/3}}
 </style>
 <style>
 .hero-carousel{margin:18px 16px 24px}
@@ -232,7 +248,6 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
     <button class="filter active" data-filter="Tous">Tout</button>
     <button class="filter" data-filter="Roman">Romans</button>
     <button class="filter" data-filter="Webtoon">Webtoons</button>
-    <button class="filter" data-filter="Favoris">♡ Mes favoris</button>
   </div>
   <div class="stories" id="storiesGrid">
     <!-- Les œuvres publiées sont chargées depuis Supabase. -->
@@ -369,7 +384,6 @@ function makeElement(tag, className, text) {
 }
 
 function addPublishedStory(story) {
-  // Compare les identifiants directement pour éviter les sélecteurs contenant un ID spécial.
   const existing = [...grid.querySelectorAll(".story")].some(card => String(card.dataset.id) === String(story.id));
   if (existing) return;
 
@@ -381,62 +395,30 @@ function addPublishedStory(story) {
   card.dataset.storyTitle = story.title || "Œuvre Novelia";
   card.dataset.storyDescription = story.description || "";
 
+  const coverLink = makeElement("a", "home-book-cover");
+  coverLink.href = "reader.html?db_story=" + encodeURIComponent(story.id) + "&open=1";
+  coverLink.setAttribute("aria-label", "Lire " + (story.title || "cette histoire"));
   if (story.cover_url) {
     const img = makeElement("img", "cover-image");
     img.src = story.cover_url;
-    img.alt = "Couverture de " + story.title;
+    img.alt = "Couverture de " + (story.title || "l’histoire");
     img.loading = "lazy";
-    img.onerror = () => {
-      img.hidden = true;
-      const fallback = card.querySelector(".empty-cover");
-      if (fallback) fallback.hidden = false;
-    };
-    card.appendChild(img);
-    const fallback = makeElement("div", "empty-cover", story.title);
-    fallback.hidden = true;
-    card.appendChild(fallback);
+    img.onerror = () => img.replaceWith(makeElement("div", "empty-cover", story.title || "Novelia"));
+    coverLink.appendChild(img);
   } else {
-    card.appendChild(makeElement("div", "empty-cover", story.title));
+    coverLink.appendChild(makeElement("div", "empty-cover", story.title || "Novelia"));
   }
+  card.appendChild(coverLink);
 
-  const favorite = makeElement("button", "favorite favorite-card", "♡");
-  favorite.type = "button";
-  favorite.dataset.favorite = String(story.id);
-  favorite.setAttribute("aria-label", "Ajouter aux favoris");
-  favorite.setAttribute("aria-pressed", "false");
-  card.appendChild(favorite);
-
-  const info = makeElement("div", "info");
-  info.appendChild(makeElement("h3", "", story.title));
-  info.appendChild(makeElement("p", "", (story.genre || "Autre") + " · " + type));
-  if (story.status === "published") info.appendChild(makeElement("span", "published-label", "Publié sur Novelia"));
-
-  const readButton = makeElement("button", "button read", "Découvrir");
-  readButton.type = "button";
-  readButton.dataset.dbStory = String(story.id);
-  info.appendChild(readButton);
-
-  // Les œuvres de démonstration locales ne possèdent pas d'identifiant dans public.stories.
-  const likeArea = makeElement("div", "like-area");
-  const likeButton = makeElement("button", "story-like", "♡ J’aime");
-  likeButton.type = "button";
-  likeButton.dataset.likeStory = String(story.id);
-  likeButton.setAttribute("aria-pressed", "false");
-  likeButton.setAttribute("aria-label", "Aimer cette œuvre");
-  const likeCount = makeElement("span", "like-count", "Chargement…");
-  likeCount.dataset.likeCount = String(story.id);
-  likeArea.append(likeButton, likeCount);
-  info.appendChild(likeArea);
-
-  const reportButton = makeElement("button", "report-button", "Signaler cette œuvre");
-  reportButton.type = "button";
-  reportButton.dataset.reportStory = String(story.id);
-  info.appendChild(reportButton);
-
+  const info = makeElement("div", "info home-book-info");
+  const title = makeElement("h3", "", story.title || "Œuvre Novelia");
+  const titleLink = makeElement("a", "", story.title || "Œuvre Novelia");
+  titleLink.href = coverLink.href;
+  title.appendChild(titleLink);
+  info.appendChild(title);
   card.appendChild(info);
   grid.appendChild(card);
 }
-
 function shelfCard(story, featured = false) {
   const link = document.createElement("a");
   link.className = "shelf-card" + (featured ? " featured" : "");
@@ -465,18 +447,11 @@ function shelfCard(story, featured = false) {
     link.appendChild(cover);
   }
   const info = document.createElement("div");
-  info.className = "shelf-info";
-  const badge = document.createElement("span");
-  badge.className = "shelf-badge";
-  badge.textContent = story.story_type === "webtoon" || story.type === "Webtoon" ? "Webtoon" : "Roman";
+  info.className = "shelf-info home-book-info";
   const title = document.createElement("span");
   title.className = "shelf-title";
   title.textContent = titleText;
-  const meta = document.createElement("span");
-  meta.className = "shelf-meta";
-  const likes = story.isDemo ? 0 : (storyLikeCounts.get(id) || 0);
-  meta.textContent = (story.genre || "Autre") + " · ♥ " + likes;
-  info.append(badge, title, meta);
+  info.appendChild(title);
   link.appendChild(info);
   return link;
 }
