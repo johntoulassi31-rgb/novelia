@@ -156,27 +156,63 @@ async function loadDiscovery() {
     const likesCount = new Map();
     if (!likesError) (likesRows || []).forEach(row => likesCount.set(String(row.story_id), (likesCount.get(String(row.story_id)) || 0) + 1));
     items.forEach(s => s.likesCount = likesCount.get(String(s.id)) || 0);
-    let likedIds = [], savedIds = [], followedAuthors = [];
+    let likedIds = [], savedIds = [], followedAuthors = [], progressRows = [], favoriteRows = [];
     if (currentUser) {
-      const [likedResult, savedResult, followsResult] = await Promise.all([
+      const [likedResult, savedResult, followsResult, progressResult] = await Promise.all([
         supabase.from("story_likes").select("story_id").eq("user_id", currentUser.id).limit(1000),
-        supabase.from("user_library").select("story_key").eq("user_id", currentUser.id).limit(1000),
-        supabase.from("follows").select("followed_id").eq("follower_id", currentUser.id).limit(1000)
+        supabase.from("user_library").select("story_key,is_favorite,last_chapter").eq("user_id", currentUser.id).eq("is_archived", false).limit(1000),
+        supabase.from("follows").select("followed_id").eq("follower_id", currentUser.id).limit(1000),
+        supabase.from("novelia_reading_progress").select("story_id,progress_percent,updated_at").eq("user_id", currentUser.id).order("updated_at", {ascending:false}).limit(1000)
       ]);
       if (!likedResult.error) likedIds = (likedResult.data || []).map(row => String(row.story_id));
-      if (!savedResult.error) savedIds = (savedResult.data || []).map(row => String(row.story_key || "").replace(/^db_/, ""));
+      if (!savedResult.error) {
+        savedIds = (savedResult.data || []).map(row => String(row.story_key || "").replace(/^db_/, ""));
+        favoriteRows = (savedResult.data || []).filter(row => row.is_favorite);
+      }
       if (!followsResult.error) followedAuthors = (followsResult.data || []).map(row => String(row.followed_id));
+      if (!progressResult.error) progressRows = progressResult.data || [];
     }
-    const likedOrSaved = new Set([...likedIds, ...savedIds]);
+    const likedSet = new Set(likedIds);
+    const savedSet = new Set(savedIds);
+    const progressByStory = new Map();
+    progressRows.forEach(row => {
+      const key = String(row.story_id);
+      const previous = progressByStory.get(key);
+      if (!previous || Date.parse(row.updated_at || "") > Date.parse(previous.updated_at || "")) progressByStory.set(key, row);
+    });
     const tasteGenres = new Map();
-    items.forEach(story => { if (likedOrSaved.has(String(story.id)) && story.genre) tasteGenres.set(story.genre, (tasteGenres.get(story.genre) || 0) + 1); });
+    items.forEach(story => {
+      const id = String(story.id);
+      let weight = 0;
+      if (likedSet.has(id)) weight += 3;
+      if (savedSet.has(id)) weight += 2;
+      if (favoriteRows.some(row => String(row.story_key || "").replace(/^db_/, "") === id)) weight += 2;
+      const progress = Number(progressByStory.get(id)?.progress_percent || 0);
+      if (progress > 0) weight += progress >= 80 ? 3 : progress >= 25 ? 2 : 1;
+      if (weight && story.genre) tasteGenres.set(story.genre, (tasteGenres.get(story.genre) || 0) + weight);
+    });
     const maxGenre = [...tasteGenres.entries()].sort((a,b) => b[1]-a[1])[0]?.[0] || null;
     const followedSet = new Set(followedAuthors);
-    const personal = items.filter(s => !likedOrSaved.has(String(s.id))).map(s => {
-      let score = recentScore(s);
-      if (maxGenre && s.genre === maxGenre) score += 25;
-      if (currentUser && s.author_id && followedSet.has(String(s.author_id))) score += 50;
-      return {...s, recommendationScore: score};
+    const authorStoryCounts = new Map();
+    items.forEach(story => authorStoryCounts.set(String(story.author_id), (authorStoryCounts.get(String(story.author_id)) || 0) + 1));
+    const completedOrSaved = new Set([...likedIds, ...savedIds]);
+    const personal = items.filter(s => {
+      const progress = Number(progressByStory.get(String(s.id))?.progress_percent || 0);
+      return (!currentUser || String(s.author_id) !== String(currentUser.id))
+        && !completedOrSaved.has(String(s.id))
+        && progress < 95;
+    }).map(s => {
+      const ageDays = Math.max(0, (dateNow - (Date.parse(s.created_at || "") || dateNow)) / 86400000);
+      const genreAffinity = tasteGenres.get(s.genre) || 0;
+      const authorCount = authorStoryCounts.get(String(s.author_id)) || 1;
+      const explorationBoost = (s.likesCount <= 2 ? 28 : s.likesCount <= 5 ? 15 : 0)
+        + (authorCount <= 2 ? 12 : authorCount <= 4 ? 6 : 0)
+        + (ageDays <= 14 ? 10 : 0);
+      const engagementScore = Math.log1p(s.likesCount || 0) * 4;
+      const freshnessScore = Math.max(0, 24 - Math.min(ageDays, 24));
+      const score = genreAffinity * 9 + engagementScore + freshnessScore + explorationBoost
+        + (currentUser && followedSet.has(String(s.author_id)) ? 18 : 0);
+      return {...s, recommendationScore: score, explorationBoost};
     }).sort((a,b) => b.recommendationScore-a.recommendationScore).slice(0,12);
     if (!currentUser) {
       $("personalNote").textContent = "Connecte-toi pour personnaliser les suggestions";
@@ -189,7 +225,7 @@ async function loadDiscovery() {
       $("status").textContent = "Ton compte est connecté. Les tendances et nouveautés sont disponibles dès maintenant.";
     }
     personalStories=personal;
-    trendingStories=[...items].sort((a,b)=>recentScore(b)-recentScore(a)).slice(0,12);
+    trendingStories=[...items].sort((a,b)=>(Math.log1p(b.likesCount||0)*5 + Math.max(0,20-Math.min((dateNow-(Date.parse(b.created_at||"")||dateNow))/86400000,20))) - (Math.log1p(a.likesCount||0)*5 + Math.max(0,20-Math.min((dateNow-(Date.parse(a.created_at||"")||dateNow))/86400000,20)))).slice(0,12);
     latestStories=[...items].sort((a,b)=>(Date.parse(b.created_at||"")||0)-(Date.parse(a.created_at||"")||0)).slice(0,12);
     applyDiscoveryFilters();
   } catch (err) {
