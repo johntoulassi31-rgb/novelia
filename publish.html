@@ -89,6 +89,7 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
       <input id="chapterTitle" maxlength="200" required placeholder="Ex. : Chapitre 1 — La rencontre">
       <label for="content">Contenu du chapitre *</label>
       <textarea id="content" required placeholder="Commence à écrire ici…"></textarea>
+      <p id="autosaveStatus" class="note" role="status" aria-live="polite">La sauvegarde automatique démarrera dès que tu écriras.</p>
       <p class="note">Pour un webtoon, tu peux pour le moment saisir du texte et des liens d’images dans le contenu.</p>
       <label for="status">Visibilité</label>
       <select id="status"><option value="published">Publier maintenant</option><option value="draft">Garder en brouillon</option></select>
@@ -171,6 +172,10 @@ let chaptersForSelectedStory = [];
 let chapterMode = "add";
 let createCoverPreviewUrl = null;
 let editCoverPreviewUrl = null;
+let autosaveTimer = null;
+let remoteDraftId = null;
+let autosaveInProgress = false;
+let autosavePending = false;
 const COVER_BUCKET = "covers";
 const MAX_COVER_SIZE = 5 * 1024 * 1024;
 const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -241,6 +246,103 @@ function setBusy(button, busy, busyText, normalText) {
   button.textContent = busy ? busyText : normalText;
 }
 
+const LOCAL_DRAFT_PREFIX = "novelia_editor_draft_v1_";
+function localDraftKey() { return LOCAL_DRAFT_PREFIX + (currentUser?.id || "guest"); }
+function readCreateDraft() {
+  try { return JSON.parse(localStorage.getItem(localDraftKey()) || "null"); }
+  catch { return null; }
+}
+function setAutosaveStatus(text, kind = "") {
+  const node = $("autosaveStatus");
+  if (!node) return;
+  node.textContent = text;
+  node.style.color = kind === "error" ? "#8b2b20" : kind === "success" ? "#28723c" : "";
+}
+function getCreateDraftSnapshot() {
+  return {
+    title: $("title").value,
+    description: $("description").value,
+    type: $("type").value,
+    genre: $("genre").value,
+    cover: $("cover").value,
+    chapterTitle: $("chapterTitle").value,
+    content: $("content").value,
+    status: $("status").value,
+    savedAt: new Date().toISOString()
+  };
+}
+function restoreCreateDraft(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return;
+  $("title").value = snapshot.title || "";
+  $("description").value = snapshot.description || "";
+  $("type").value = snapshot.type || "roman";
+  setSelectValue($("genre"), snapshot.genre || "Romance");
+  $("cover").value = snapshot.cover || "";
+  $("chapterTitle").value = snapshot.chapterTitle || "";
+  $("content").value = snapshot.content || "";
+  $("status").value = snapshot.status || "draft";
+}
+function queueAutosave() {
+  if (!currentUser) return;
+  const snapshot = getCreateDraftSnapshot();
+  try { localStorage.setItem(localDraftKey(), JSON.stringify(snapshot)); }
+  catch { setAutosaveStatus("Sauvegarde locale indisponible sur cet appareil.", "error"); }
+  setAutosaveStatus("Modifications en attente de sauvegarde…");
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(saveCreateDraftToCloud, 1200);
+}
+async function saveCreateDraftToCloud() {
+  if (!currentUser) return;
+  if (autosaveInProgress) { autosavePending = true; return; }
+  const snapshot = getCreateDraftSnapshot();
+  if (!snapshot.title.trim() && !snapshot.chapterTitle.trim() && !snapshot.content.trim()) {
+    setAutosaveStatus("La sauvegarde automatique démarrera dès que tu écriras.");
+    return;
+  }
+  autosaveInProgress = true;
+  autosavePending = false;
+  setAutosaveStatus("Sauvegarde dans ton compte Novelia…");
+  try {
+    const payload = {
+      author_id: currentUser.id,
+      story_id: null,
+      title: snapshot.title.trim() || "Nouvelle histoire sans titre",
+      content: snapshot.content,
+      updated_at: new Date().toISOString()
+    };
+    let result;
+    if (remoteDraftId) {
+      result = await supabase.from("novelia_author_drafts").update(payload)
+        .eq("id", remoteDraftId).eq("author_id", currentUser.id).select("id").maybeSingle();
+    } else {
+      result = await supabase.from("novelia_author_drafts").insert(payload).select("id").single();
+    }
+    if (result.error) throw result.error;
+    if (!result.data?.id) throw new Error("Le brouillon n’a pas été confirmé par la base de données.");
+    remoteDraftId = result.data.id;
+    try {
+      const saved = getCreateDraftSnapshot();
+      localStorage.setItem(localDraftKey(), JSON.stringify({ ...saved, remoteDraftId }));
+    } catch {}
+    setAutosaveStatus("Brouillon sauvegardé automatiquement à " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + ".", "success");
+  } catch (error) {
+    setAutosaveStatus("Sauvegarde en ligne impossible. Ton texte reste conservé sur cet appareil. " + (error?.message || ""), "error");
+  } finally {
+    autosaveInProgress = false;
+    if (autosavePending) saveCreateDraftToCloud();
+  }
+}
+function clearCreateDraft() {
+  clearTimeout(autosaveTimer);
+  const id = remoteDraftId;
+  remoteDraftId = null;
+  try { localStorage.removeItem(localDraftKey()); } catch {}
+  if (id && currentUser) supabase.from("novelia_author_drafts").delete()
+    .eq("id", id).eq("author_id", currentUser.id).then(({error}) => {
+      if (error) console.warn("Suppression du brouillon temporaire impossible :", error.message);
+    });
+}
+
 function switchTab(tabName) {
   document.querySelectorAll("[data-tab]").forEach(button => {
     button.classList.toggle("active", button.dataset.tab === tabName);
@@ -283,6 +385,28 @@ async function initialize() {
   currentUser = data.user;
   account.textContent = "Connecté : " + (currentUser.email || "compte Novelia");
   workspace.classList.remove("hidden");
+  const localDraft = readCreateDraft();
+  if (localDraft) {
+    remoteDraftId = localDraft.remoteDraftId || null;
+    restoreCreateDraft(localDraft);
+    setAutosaveStatus("Brouillon local restauré. Vérification de la sauvegarde en ligne…");
+    queueAutosave();
+  } else {
+    const { data: cloudDraft, error: cloudError } = await supabase.from("novelia_author_drafts")
+      .select("id,title,content,updated_at").eq("author_id", currentUser.id)
+      .is("story_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
+    if (!cloudError && cloudDraft) {
+      remoteDraftId = cloudDraft.id;
+      $("title").value = cloudDraft.title || "";
+      $("content").value = cloudDraft.content || "";
+      setAutosaveStatus("Dernier brouillon récupéré depuis ton compte Novelia.");
+      try { localStorage.setItem(localDraftKey(), JSON.stringify({...getCreateDraftSnapshot(),remoteDraftId})); } catch {}
+    }
+  }
+  ["title","description","type","genre","cover","chapterTitle","content","status"].forEach(id => {
+    $(id).addEventListener("input", queueAutosave);
+    $(id).addEventListener("change", queueAutosave);
+  });
   await loadOwnStories();
 }
 
@@ -383,6 +507,7 @@ createForm.addEventListener("submit", async event => {
     showMessage(status === "published"
       ? "Histoire publiée et premier chapitre enregistré. Tu peux la gérer dans « Mes histoires »."
       : "Brouillon enregistré avec son premier chapitre. Tu pourras modifier son contenu ou la publier depuis « Mes histoires ».", "success");
+    clearCreateDraft();
     createForm.reset();
     showCoverPreview(null, "");
     await loadOwnStories();
@@ -594,8 +719,16 @@ $("refreshStories").addEventListener("click", async () => {
   showMessage("Liste des histoires actualisée.", "success");
 });
 
+window.addEventListener("beforeunload", event => {
+  if (autosaveTimer || autosaveInProgress) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+});
+
 supabase.auth.onAuthStateChange((_event, session) => {
   if (!session?.user) {
+    clearTimeout(autosaveTimer);
     currentUser = null;
     account.textContent = "Tu n’es plus connecté. Reconnecte-toi pour gérer tes histoires.";
     loginArea.classList.remove("hidden");
