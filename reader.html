@@ -1485,6 +1485,33 @@ async function loadComments() {
       replyButton.textContent = "Répondre";
       replyButton.addEventListener("click", () => beginReply(comment));
       actions.appendChild(replyButton);
+      if (comment.user_id === currentUser.id) {
+        const editButton=document.createElement("button");
+        editButton.type="button";editButton.className="button secondary";editButton.textContent="Modifier";
+        editButton.addEventListener("click",async()=>{
+          const revised=window.prompt("Modifier ton commentaire :",comment.content||"");
+          if(revised===null)return;
+          const value=revised.trim();
+          if(!value){$("commentsStatus").textContent="Le commentaire ne peut pas être vide.";return;}
+          if(value.length>2000){$("commentsStatus").textContent="Maximum 2 000 caractères.";return;}
+          editButton.disabled=true;
+          const {error}=await supabase.from("comments").update({content:value}).eq("id",comment.id).eq("user_id",currentUser.id);
+          editButton.disabled=false;
+          if(error){$("commentsStatus").textContent="Modification impossible : "+error.message;return;}
+          await loadComments();
+        });
+        const deleteButton=document.createElement("button");
+        deleteButton.type="button";deleteButton.className="button secondary";deleteButton.textContent="Supprimer";
+        deleteButton.addEventListener("click",async()=>{
+          if(!confirm("Supprimer définitivement ce commentaire ?"))return;
+          deleteButton.disabled=true;
+          const {error}=await supabase.from("comments").delete().eq("id",comment.id).eq("user_id",currentUser.id);
+          deleteButton.disabled=false;
+          if(error){$("commentsStatus").textContent="Suppression impossible : "+error.message;return;}
+          await loadComments();
+        });
+        actions.append(editButton,deleteButton);
+      }
     }
 
     const reportCommentButton = document.createElement("button");
