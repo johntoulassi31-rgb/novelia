@@ -538,7 +538,7 @@ async function loadDetailedProgressFromCloud() {
   }
   const chapterIndex = chapters.findIndex(ch => String(ch.id) === String(data.chapter_id));
   if (chapterIndex < 0) return;
-  const cloudIsNewer = !local || progressTime(data.updated_at) > progressTime(local.updatedAt);
+  const cloudIsNewer = !local || local.syncSource === 'library' || progressTime(data.updated_at) > progressTime(local.updatedAt);
   if (!cloudIsNewer) {
     if (progressTime(local.updatedAt) > progressTime(data.updated_at)) await saveDetailedProgressToCloud();
     return;
