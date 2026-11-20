@@ -23,6 +23,10 @@ public class MainActivity extends Activity {
     private static MainActivity instance;
     private String currentMediaTitle = "Novelia";
     private String currentMediaAuthor = "Novelia";
+    private final AudioManager.OnAudioFocusChangeListener audioFocusListener = this::handleAudioFocusChange;
+    private boolean hasAudioFocus = false;
+    private boolean resumeAfterFocusGain = false;
+    private boolean pauseWasCausedByFocus = false;
     private static final String HOME = "https://johntoulassi31-rgb.github.io/novelia/";
 
     @Override public void onCreate(Bundle savedInstanceState) {
@@ -61,6 +65,40 @@ public class MainActivity extends Activity {
         else webView.restoreState(savedInstanceState);
     }
 
+    private void handleAudioFocusChange(int focusChange) {
+        if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+                || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+            resumeAfterFocusGain = true;
+            pauseWasCausedByFocus = true;
+            sendPlayerCommand("pause");
+        } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+            resumeAfterFocusGain = false;
+            pauseWasCausedByFocus = false;
+            hasAudioFocus = false;
+            sendPlayerCommand("pause");
+        } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN && resumeAfterFocusGain) {
+            resumeAfterFocusGain = false;
+            pauseWasCausedByFocus = false;
+            sendPlayerCommand("play");
+        }
+    }
+
+    private boolean requestMediaAudioFocus() {
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        int result = audioManager.requestAudioFocus(audioFocusListener,
+            AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        return hasAudioFocus;
+    }
+
+    private void abandonMediaAudioFocus() {
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        audioManager.abandonAudioFocus(audioFocusListener);
+        hasAudioFocus = false;
+        resumeAfterFocusGain = false;
+        pauseWasCausedByFocus = false;
+    }
+
     private void sendPlayerCommand(String command) {
         runOnUiThread(() -> {
             if (webView != null) webView.evaluateJavascript(
@@ -69,6 +107,10 @@ public class MainActivity extends Activity {
     }
 
     private void setNativePlayback(String title, String author, boolean playing) {
+        if (playing && !hasAudioFocus && !requestMediaAudioFocus()) {
+            sendPlayerCommand("pause");
+            return;
+        }
         currentMediaTitle = title == null ? "Novelia" : title;
         currentMediaAuthor = author == null ? "Novelia" : author;
         mediaSession.setMetadata(new MediaMetadata.Builder()
@@ -102,6 +144,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void paused() {
             runOnUiThread(() -> {
                 setNativePlayback(currentMediaTitle, currentMediaAuthor, false);
+                if (!pauseWasCausedByFocus) abandonMediaAudioFocus();
                 Intent service = new Intent(MainActivity.this, NoveliaPlaybackService.class);
                 service.setAction(NoveliaPlaybackService.ACTION_PAUSE);
                 service.putExtra(NoveliaPlaybackService.EXTRA_TITLE, currentMediaTitle);
@@ -111,6 +154,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void stopped() {
             runOnUiThread(() -> {
+                abandonMediaAudioFocus();
                 mediaSession.setActive(false);
                 stopService(new Intent(MainActivity.this, NoveliaPlaybackService.class));
             });
@@ -132,6 +176,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         if (isFinishing()) {
+            abandonMediaAudioFocus();
             stopService(new Intent(this, NoveliaPlaybackService.class));
             releaseNativeSession();
             instance = null;
