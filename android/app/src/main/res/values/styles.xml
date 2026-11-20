@@ -2,10 +2,10 @@
     <style name="NoveliaTheme" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#C3941C</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">#FBF8F1</item>
-        <item name="android:navigationBarColor">#FBF8F1</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#10082E</item>
+        <item name="android:navigationBarColor">#10082E</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowBackground">@drawable/novelia_splash</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
