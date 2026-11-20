@@ -25,6 +25,7 @@
 <p class="muted small">Des pistes personnalisées à partir des informations de tes œuvres et des statistiques disponibles. Elles ne garantissent pas une hausse de lectures.</p>
 <div id="recommendationList"><p class="muted">Analyse en cours…</p></div>
 </section></section>
+<section class="panel" id="publicationReceipts"><h2>Historique des empreintes de publication</h2><p class="muted small">Novelia conserve automatiquement une empreinte SHA-256 des versions publiées de tes œuvres et chapitres, avec leur date d’enregistrement. Cette trace technique aide à retrouver une version publiée, mais ne constitue pas un dépôt légal ni une décision juridique sur la titularité des droits.</p><div id="publicationReceiptsList"><p class="muted">Chargement des empreintes…</p></div><p class="muted small"><a href="copyright.html">Déposer une réclamation relative aux droits d’auteur</a></p></section>
 <section class="panel"><div class="top"><h2>Mes histoires</h2><a class="btn secondary" href="publish.html">Gérer les publications</a></div><div id="storyGrid" class="grid"><p class="muted">Chargement…</p></div></section>
 <section class="panel"><div class="top"><h2>Commentaires récents</h2><button id="refreshButton" class="secondary">Actualiser</button></div><div id="commentsList"><p class="muted">Chargement…</p></div></section>
 <section class="panel"><h2>Brouillons d’auteur</h2><p class="muted small">La date planifiée est informative. La publication automatique exige un service serveur distinct.</p><div id="draftList"><p class="muted">Chargement…</p></div><a class="btn secondary" href="publish.html">Ouvrir l’éditeur</a></section>
@@ -132,6 +133,27 @@ async function loadDiscoveryAnalytics(){
  });
  list.append(wrap);
 }
+
+async function loadPublicationReceipts(){
+ const box=$("publicationReceiptsList");box.replaceChildren();
+ if(!user){box.append(el("p","Connecte-toi pour consulter tes empreintes de publication.","muted"));return}
+ const {data,error}=await supabase.from("novelia_publication_receipts")
+  .select("id,target_type,event_type,target_title,content_sha256,content_bytes,recorded_at")
+  .eq("author_id",user.id).order("recorded_at",{ascending:false}).limit(100);
+ if(error){box.append(el("p","Impossible de charger les empreintes : "+error.message,"error"));return}
+ if(!data?.length){box.append(el("p","Aucune empreinte pour le moment. Les prochaines publications et mises à jour seront enregistrées automatiquement.","muted"));return}
+ const labels={story_published:"Publication de l’œuvre",story_updated:"Mise à jour de l’œuvre",chapter_published:"Publication d’un chapitre",chapter_updated:"Mise à jour d’un chapitre"};
+ data.forEach(r=>{
+  const card=el("article",undefined,"receipt");
+  card.style.cssText="border:1px solid var(--line);border-radius:12px;padding:13px;margin:10px 0;background:var(--panel)";
+  card.append(el("strong",r.target_title||"Version sans titre"));
+  card.append(el("p",labels[r.event_type]||r.event_type,"muted small"));
+  card.append(el("p",new Date(r.recorded_at).toLocaleString("fr-FR")+" · "+Number(r.content_bytes||0).toLocaleString("fr-FR")+" octets","muted small"));
+  const hash=el("code",r.content_sha256);hash.style.cssText="display:block;overflow-wrap:anywhere;font-size:12px;user-select:all";
+  card.append(el("span","Empreinte SHA-256 :","muted small"),hash);
+  box.append(card);
+ });
+}
 async function loadDashboard(){const {data:a,error:ae}=await supabase.auth.getUser();if(ae)throw ae;user=a.user;if(!user){status("Connecte-toi pour gérer tes histoires.","error");$("storyGrid").replaceChildren(el("p","Connexion requise.","muted"));const link=el("a","Se connecter","btn");link.href="login.html";$("storyGrid").append(link);$("draftList").textContent="Connexion requise.";return}
 const {data:p,error:pe}=await supabase.from("profiles").select("username,display_name").eq("id",user.id).maybeSingle();if(!pe)$("authorHandle").textContent=p?.username?"@"+p.username:(p?.display_name||user.email||"Auteur Novelia");
 const {data:rows,error}=await supabase.from("stories").select("id,title,description,cover_url,genre,status,moderation_hidden,created_at,author_id").eq("author_id",user.id).order("created_at",{ascending:false});if(error)throw error;stories=rows||[];const ids=stories.map(s=>s.id);
@@ -141,7 +163,7 @@ $("chapterCount").textContent=chapters.length;
 let likes=[];if(ids.length){const r=await supabase.from("story_likes").select("story_id").in("story_id",ids);if(r.error)throw r.error;likes=r.data||[]}const likeMap=new Map();likes.forEach(x=>likeMap.set(x.story_id,(likeMap.get(x.story_id)||0)+1));stories.forEach(s=>s.likeCount=likeMap.get(s.id)||0);$("likesCount").textContent=likes.length;
 let comments=[];const cids=chapters.map(c=>c.id);if(cids.length){const r=await supabase.from("comments").select("chapter_id,moderation_hidden").in("chapter_id",cids).eq("moderation_hidden",false);if(r.error)throw r.error;comments=r.data||[]}const chapterStory=new Map(chapters.map(c=>[c.id,c.story_id]));const commentMap=new Map();comments.forEach(c=>{const sid=chapterStory.get(c.chapter_id);commentMap.set(sid,(commentMap.get(sid)||0)+1)});stories.forEach(s=>s.commentCount=commentMap.get(s.id)||0);$("commentsCount").textContent=comments.length;
 const best=stories.find(s=>s.status!=="published")||stories[0],cont=$("continueWriting");cont.replaceChildren();if(best){if(best.cover_url){const img=el("img");img.className="cover";img.src=best.cover_url;img.alt="Couverture de "+(best.title||"histoire");img.onerror=()=>img.replaceWith(el("div",best.title||"Novelia","cover"));cont.append(img)}else cont.append(el("div",best.title||"Novelia","cover"));const copy=el("div",undefined,"continue-copy");copy.append(el("p","Continuer l’écriture","muted small"),el("h3",best.title||"Sans titre"),el("p",(best.chapterCount||0)+" chapitre(s) · "+(best.status||"statut inconnu"),"muted small"));const a=el("a","Ouvrir l’éditeur","btn");a.href="publish.html";copy.append(a);cont.append(copy)}else cont.textContent="Crée ta première histoire pour commencer.";
-renderStories();await loadDiscoveryAnalytics();await loadComments(ids);await loadDrafts();renderRem();status("Espace auteur chargé.","success")}
+renderStories();await loadDiscoveryAnalytics();await loadPublicationReceipts();await loadComments(ids);await loadDrafts();renderRem();status("Espace auteur chargé.","success")}
 $("refreshAnalytics").addEventListener("click",async()=>{const b=$("refreshAnalytics");b.disabled=true;try{await loadDiscoveryAnalytics()}finally{b.disabled=false}});
 $("refreshButton").addEventListener("click",async()=>{const b=$("refreshButton");b.disabled=true;try{await loadDashboard()}catch(e){status("Erreur : "+(e.message||String(e)),"error")}finally{b.disabled=false}});
 loadDashboard().catch(e=>{console.error(e);status("Erreur de chargement : "+(e.message||String(e)),"error")});
