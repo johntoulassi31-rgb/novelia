@@ -36,7 +36,7 @@ async function init(){
 async function load(){
  const [s,p]=await Promise.all([
   db.from("novelia_monetization_settings").select("enabled,author_share_bps,minimum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof,moov_fee_bps,tmoney_fee_bps").eq("id",true).single(),
-  db.from("novelia_payout_requests").select("id,author_id,destination_operator,destination_phone_number,destination_account_holder,amount_xof,status,provider_transaction_id,admin_note,created_at").order("created_at",{ascending:false}).limit(100)
+  db.from("novelia_payout_requests").select("id,author_id,destination_operator,destination_phone_number,destination_account_holder,amount_xof,provider_fee_xof,status,provider_transaction_id,admin_note,created_at").order("created_at",{ascending:false}).limit(100)
  ]);
  if(s.error){$("settingsMessage").textContent="Impossible de charger les paramètres : "+s.error.message;return;}
  $("enabled").checked=s.data.enabled;$("share").value=(Number(s.data.author_share_bps)/100).toFixed(2);
@@ -50,7 +50,7 @@ async function load(){
  for(const req of p.data){
   const row=el("article","row"),info=el("div",""),author=profiles.get(req.author_id);
   info.append(el("strong","",(author?.display_name||author?.username||"Auteur")+" · "+fmt(req.amount_xof)));
-  info.append(el("p","muted",(labels[req.status]||req.status)+" · "+(req.destination_operator==="moov_tg"?"Moov Money":"TMoney")+" · "+req.destination_phone_number+" · "+req.destination_account_holder));
+  info.append(el("p","muted",(labels[req.status]||req.status)+" · "+(req.destination_operator==="moov_tg"?"Moov Money":"TMoney")+" · "+req.destination_phone_number+" · "+req.destination_account_holder));if(Number(req.provider_fee_xof)>0)info.append(el("small","muted","Frais de transfert : "+fmt(req.provider_fee_xof)));
   info.append(el("small","",new Date(req.created_at).toLocaleString("fr-FR")));
   const actions=el("div","");
   const addAction=(label,status,cls="secondary")=>{const b=el("button",cls,label);b.onclick=()=>updateRequest(req,status);actions.append(b);};
