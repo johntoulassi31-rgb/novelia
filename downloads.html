@@ -91,7 +91,7 @@ async function fetchLatest(id){
 }
 function extractOfflineImageUrls(record){
  const chapters=Array.isArray(record?.chapters)?record.chapters:[];
- const urls=[record?.story?.cover,...chapters.flatMap(ch=>String(ch?.content||"").split(/\\n+/).map(line=>line.trim()).filter(line=>/^https?:\\/\\/\\S+\\.(png|jpe?g|webp|gif)(\\?\\S*)?$/i.test(line)))].filter(Boolean);
+ const urls=[record?.story?.cover,...chapters.flatMap(ch=>String(ch?.content||"").split(/\r?\n+/).map(line=>line.trim()).filter(line=>/^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(line)))].filter(Boolean);
  return [...new Set(urls)];
 }
 function offlineBlobToDataUrl(blob){
