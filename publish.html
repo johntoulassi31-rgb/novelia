@@ -911,6 +911,7 @@ $("refreshVersionsButton").addEventListener("click",loadChapterVersions);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("focus-mode"))toggleFocusMode(false);});
 $("chapterEditContent").addEventListener("input", queueChapterAutosave);
 $("cancelChapter").addEventListener("click", () => {
+  toggleFocusMode(false);
   chapterForm.reset();
   chapterForm.classList.add("hidden");
   showMessage("");
@@ -949,6 +950,7 @@ chapterForm.addEventListener("submit", async event => {
     }
     await clearChapterDraft();
     renderChapters();
+    toggleFocusMode(false);
     chapterForm.reset();
     chapterForm.classList.add("hidden");
   } catch (error) {
