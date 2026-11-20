@@ -495,7 +495,7 @@ function savedChapterIndex() {
   const saved = getProgress()[storyKey] || {};
   if (saved.chapterId) {
     const matchingIndex = chapters.findIndex(ch => String(ch.id) === String(saved.chapterId));
-    if (matchingIndex >= 0) return matchingIndex;
+    return matchingIndex >= 0 ? matchingIndex : null;
   }
   const value = saved.chapter;
   return Number.isInteger(value) && value >= 0 && value < chapters.length ? value : null;
