@@ -68,6 +68,7 @@
 <body>
   <main class="container">
     <h1>Mon profil</h1><section class="stats-panel" aria-labelledby="statsTitle"><h2 id="statsTitle">Mon activité sur Novelia</h2><p class="hint">Tes statistiques communautaires, visibles uniquement depuis ton espace personnel.</p><div id="communityStats" class="stats-grid"><div class="stat"><strong>—</strong><span>Œuvres</span></div><div class="stat"><strong>—</strong><span>Abonnés</span></div><div class="stat"><strong>—</strong><span>Abonnements</span></div><div class="stat"><strong>—</strong><span>Clubs</span></div><div class="stat"><strong>—</strong><span>Messages de club</span></div><div class="stat"><strong>—</strong><span>Chapitres lus en groupe</span></div></div></section>
+    <section class="stats-panel" aria-labelledby="contestStatsTitle"><h2 id="contestStatsTitle">Mon parcours en concours</h2><p class="hint">Tes participations et tes distinctions officielles sur Novelia.</p><div id="contestStats" class="stats-grid"><div class="stat"><strong>—</strong><span>Participations</span></div><div class="stat"><strong>—</strong><span>Distinctions</span></div><div class="stat"><strong>—</strong><span>Concours récompensés</span></div></div><div id="contestHistory" class="badge-grid"><p class="badge-empty">Chargement de ton parcours…</p></div><p class="hint"><a href="contests.html">Découvrir les concours</a> · <a href="palmares.html">Consulter le palmarès public</a></p></section>
     <section class="stats-panel" aria-labelledby="badgesTitle"><h2 id="badgesTitle">Mes badges</h2><p class="hint">Des distinctions attribuées automatiquement selon ton activité réelle sur Novelia.</p><div id="earnedBadges" class="badge-grid"><p class="hint">Chargement des badges…</p></div></section>
     <p>Personnalise ton identité sur Novelia.</p>
 
@@ -227,6 +228,47 @@
       });
     }
 
+    async function loadContestProfile() {
+      const stats = document.getElementById("contestStats");
+      const history = document.getElementById("contestHistory");
+      if (!currentUser || !stats || !history) return;
+      const [entries, awards] = await Promise.all([
+        supabase.from("novelia_contest_entries").select("id", { count: "exact", head: true }).eq("author_id", currentUser.id),
+        supabase.from("novelia_contest_awards").select("id,contest_id,award_type,prize_description,awarded_at,novelia_contests(title,results_published_at),novelia_contest_entries(stories(title))").eq("author_id", currentUser.id).order("awarded_at", { ascending: false })
+      ]);
+      const awardRows = awards.error ? [] : (awards.data || []);
+      const contestIds = [...new Set(awardRows.map(row => row.contest_id).filter(Boolean))];
+      const values = [entries.error ? null : (entries.count || 0), awards.error ? null : awardRows.length, awards.error ? null : contestIds.length];
+      const labels = ["Participations", "Distinctions", "Concours récompensés"];
+      stats.replaceChildren();
+      values.forEach((value, index) => {
+        const card = document.createElement("div"); card.className = "stat";
+        const number = document.createElement("strong"); number.textContent = value === null ? "—" : Number(value).toLocaleString("fr-FR");
+        const label = document.createElement("span"); label.textContent = labels[index];
+        card.append(number, label); stats.append(card);
+      });
+      history.replaceChildren();
+      if (awards.error) {
+        const msg = document.createElement("p"); msg.className = "badge-empty"; msg.textContent = "Impossible de charger tes distinctions pour le moment."; history.append(msg); return;
+      }
+      if (!awardRows.length) {
+        const msg = document.createElement("p"); msg.className = "badge-empty"; msg.textContent = "Aucune distinction pour le moment. Tes récompenses officielles apparaîtront ici."; history.append(msg); return;
+      }
+      const names = { grand_prix: "🏆 Grand Prix Novelia", prix_jury: "⚖️ Prix du jury", prix_public: "❤️ Prix du public", coup_de_coeur: "✨ Coup de cœur du jury" };
+      awardRows.forEach(row => {
+        const card = document.createElement("article"); card.className = "badge-card";
+        const icon = document.createElement("span"); icon.className = "badge-icon"; icon.textContent = names[row.award_type]?.slice(0,2) || "🏅";
+        const info = document.createElement("div");
+        const title = document.createElement("strong"); title.textContent = names[row.award_type] || "Distinction Novelia";
+        const contest = Array.isArray(row.novelia_contests) ? row.novelia_contests[0] : row.novelia_contests;
+        const entry = Array.isArray(row.novelia_contest_entries) ? row.novelia_contest_entries[0] : row.novelia_contest_entries;
+        const story = Array.isArray(entry?.stories) ? entry.stories[0] : entry?.stories;
+        const detail = document.createElement("span");
+        detail.textContent = (contest?.title || "Concours Novelia") + (story?.title ? " · " + story.title : "") + (row.prize_description ? " · " + row.prize_description : "");
+        info.append(title, detail); card.append(icon, info); history.append(card);
+      });
+    }
+
     async function loadCommunityStats() {
       const box = document.getElementById("communityStats");
       if (!currentUser || !box) return;
@@ -304,6 +346,7 @@
       statusEl.textContent = "Profil chargé.";
       loadCommunityStats();
       loadMyBadges();
+      loadContestProfile();
     }
 
     document.getElementById("profileForm")
