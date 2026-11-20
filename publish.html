@@ -289,7 +289,7 @@ function queueAutosave() {
   catch { setAutosaveStatus("Sauvegarde locale indisponible sur cet appareil.", "error"); }
   setAutosaveStatus("Modifications en attente de sauvegarde…");
   clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(saveCreateDraftToCloud, 1200);
+  autosaveTimer = setTimeout(() => { autosaveTimer = null; saveCreateDraftToCloud(); }, 1200);
 }
 async function saveCreateDraftToCloud() {
   if (!currentUser) return;
