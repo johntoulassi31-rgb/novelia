@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /contest-admin.html
+Disallow: /contest-jury.html
 
 Sitemap: https://johntoulassi31-rgb.github.io/novelia/sitemap.xml
