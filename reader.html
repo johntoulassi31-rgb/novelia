@@ -120,7 +120,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
       </div>
       <p class="summary" id="description"></p>
       <div class="actions">
-        <button class="button primary" id="startReading">Commencer la lecture</button>\n        <button class="button secondary" id="libraryButton" type="button">＋ Ajouter à ma bibliothèque</button>
+        <button class="button primary" id="startReading">Commencer la lecture</button>
+        <button class="button secondary" id="libraryButton" type="button">＋ Ajouter à ma bibliothèque</button>
         <button class="button primary" id="resumeReading" hidden>Reprendre la lecture</button>
         <button class="button favorite-button" id="favoriteButton">♡ Ajouter aux favoris</button>
         <button class="button story-like-button" id="storyLikeButton" hidden aria-pressed="false">♡ J’aime cette œuvre</button>
@@ -134,7 +135,12 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
       <p class="summary" id="progressMessage" role="status"></p>
     </div>
   </div>
-  <div class="details"><span id="chapterCount"></span> · <a id="authorProfileLink" href="members.html">Profil de l’auteur</a></div>\n  <div class="story-sections" role="tablist" aria-label="Informations sur l’œuvre"><button type="button" data-story-section="about" aria-selected="true">Avant-propos</button><button type="button" data-story-section="characters" aria-selected="false">Personnages</button><button type="button" data-story-section="playlist" aria-selected="false">Playlist</button><button type="button" data-story-section="rewrite" aria-selected="false">Réécriture</button></div>\n  <section class="story-section-panel" id="storyAboutPanel"><h2>À propos</h2><p id="storyAboutText"></p></section>\n  <section class="story-section-panel" id="storyCharactersPanel" hidden><h2>Fiches personnages</h2><p>Les fiches personnages seront affichées ici lorsque l’auteur les aura renseignées.</p></section>\n  <section class="story-section-panel" id="storyPlaylistPanel" hidden><h2>Playlist</h2><p>Aucune playlist n’a encore été ajoutée à cette œuvre.</p></section>\n  <section class="story-section-panel" id="storyRewritePanel" hidden><h2>Réécriture</h2><p>Les informations de réécriture seront affichées ici lorsque l’auteur les aura renseignées.</p></section>
+  <div class="details"><span id="chapterCount"></span> · <a id="authorProfileLink" href="members.html">Profil de l’auteur</a></div>
+  <div class="story-sections" role="tablist" aria-label="Informations sur l’œuvre"><button type="button" data-story-section="about" aria-selected="true">Avant-propos</button><button type="button" data-story-section="characters" aria-selected="false">Personnages</button><button type="button" data-story-section="playlist" aria-selected="false">Playlist</button><button type="button" data-story-section="rewrite" aria-selected="false">Réécriture</button></div>
+  <section class="story-section-panel" id="storyAboutPanel"><h2>À propos</h2><p id="storyAboutText"></p></section>
+  <section class="story-section-panel" id="storyCharactersPanel" hidden><h2>Fiches personnages</h2><p>Les fiches personnages seront affichées ici lorsque l’auteur les aura renseignées.</p></section>
+  <section class="story-section-panel" id="storyPlaylistPanel" hidden><h2>Playlist</h2><p>Aucune playlist n’a encore été ajoutée à cette œuvre.</p></section>
+  <section class="story-section-panel" id="storyRewritePanel" hidden><h2>Réécriture</h2><p>Les informations de réécriture seront affichées ici lorsque l’auteur les aura renseignées.</p></section>
 <div class="actions" style="margin:12px 0">
 <button class="button secondary" id="offlineSaveButton" type="button" hidden>Enregistrer pour hors connexion</button>
 <p class="reading-info" id="offlineStatus" role="status" aria-live="polite"></p>
@@ -1333,7 +1339,8 @@ async function loadDatabaseStory() {
     if(catalogResult.error)throw catalogResult.error;
     if(contentResult.error)throw contentResult.error;
     const contentById=new Map((contentResult.data||[]).map(ch=>[ch.id,ch]));
-    const {data:authorProfile}=await supabase.from("profiles").select("username,display_name").eq("id",row.author_id).maybeSingle();\n    const nextStory={id:row.id,authorId:row.author_id,authorUsername:authorProfile?.username||"",authorName:authorProfile?.display_name||authorProfile?.username||"Auteur Novelia",title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
+    const {data:authorProfile}=await supabase.from("profiles").select("username,display_name").eq("id",row.author_id).maybeSingle();
+    const nextStory={id:row.id,authorId:row.author_id,authorUsername:authorProfile?.username||"",authorName:authorProfile?.display_name||authorProfile?.username||"Auteur Novelia",title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
     const nextChapters=(catalogResult.data||[]).map(meta=>{
       const unlocked=contentById.get(meta.id);
       return {id:meta.id,title:meta.title,content:unlocked?.content||"",chapter_number:meta.chapter_number,
