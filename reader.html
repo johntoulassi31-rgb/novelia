@@ -1296,7 +1296,7 @@ async function loadCachedDatabaseStory() {
     throw new Error("Connexion indisponible et aucune copie hors connexion n’a été enregistrée pour cette œuvre.");
   }
   const safeCached=sanitizeOfflineRecord(cached);
-  if(!safeCached.chapters.length)throw new Error("Aucun chapitre gratuit n’est enregistré hors connexion. Connecte-toi pour lire les chapitres premium.");
+  if(!safeCached.chapters.length){await putOfflineStory(safeCached);throw new Error("Aucun chapitre gratuit n’est enregistré hors connexion. Connecte-toi pour lire les chapitres premium.");}
   if(safeCached.chapters.length!==cached.chapters.length||Object.keys(safeCached.audio||{}).length!==Object.keys(cached.audio||{}).length||Object.keys(safeCached.media||{}).length!==Object.keys(cached.media||{}).length){
     await putOfflineStory(safeCached);
   }
