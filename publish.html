@@ -476,18 +476,24 @@ async function optimizeWebtoonImage(file){
  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Format non accepté : "+file.name);
  if(file.size>MAX_WEBTOON_SOURCE_BYTES)throw new Error(file.name+" dépasse 20 Mo.");
  const image=await loadImageForCompression(file);
- const scale=Math.min(1,1800/image.width,3000/image.height);
+ if(!image.naturalWidth||!image.naturalHeight)throw new Error("Dimensions d’image invalides : "+file.name);
+ const scale=Math.min(1,1800/image.naturalWidth,3000/image.naturalHeight);
  const canvas=document.createElement("canvas");
- canvas.width=Math.max(1,Math.round(image.width*scale));
- canvas.height=Math.max(1,Math.round(image.height*scale));
- const ctx=canvas.getContext("2d");
- if(!ctx)throw new Error("Optimisation d’image indisponible sur cet appareil.");
- ctx.fillStyle="#ffffff";ctx.fillRect(0,0,canvas.width,canvas.height);
- ctx.drawImage(image,0,0,canvas.width,canvas.height);
- const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",0.82));
- if(!blob)throw new Error("Impossible de convertir "+file.name+" en WebP.");
- if(blob.size>8*1024*1024)throw new Error("La planche optimisée reste trop volumineuse : "+file.name);
- return new File([blob],file.name.replace(/\.[^.]+$/,"")+".webp",{type:"image/webp"});
+ try{
+  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+  canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+  const ctx=canvas.getContext("2d");
+  if(!ctx)throw new Error("Optimisation d’image indisponible sur cet appareil.");
+  ctx.fillStyle="#ffffff";ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(image,0,0,canvas.width,canvas.height);
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",0.82));
+  if(!blob)throw new Error("Impossible de convertir "+file.name+" en WebP.");
+  if(blob.size>8*1024*1024)throw new Error("La planche optimisée reste trop volumineuse : "+file.name);
+  return new File([blob],file.name.replace(/\.[^.]+$/,"")+".webp",{type:"image/webp"});
+ }finally{
+  canvas.width=1;canvas.height=1;
+  image.removeAttribute("src");
+ }
 }
 async function uploadWebtoonPanel(optimized,index,originalName){
  const safeName=Date.now()+"-"+index+"-"+Math.random().toString(36).slice(2,10)+".webp";
