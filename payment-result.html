@@ -29,7 +29,7 @@ async function check(){
   $("status").textContent="Paiement confirmé. Le chapitre est maintenant accessible.";
   $("details").textContent="Montant : "+new Intl.NumberFormat("fr-FR").format(p.gross_amount_xof)+" XOF · "+(p.paid_at?new Date(p.paid_at).toLocaleString("fr-FR"):"");
   const link=document.createElement("a");link.href="reader.html?db_story="+encodeURIComponent(storyId)+"&chapter_id="+encodeURIComponent(p.chapter_id);link.textContent="Lire mon chapitre";$("actions").append(link);
- }else if(p.status==="failed"||new URLSearchParams(location.search).get("failed")==="1"){
+ }else if(p.status==="failed"){
   $("status").textContent="Le paiement n’a pas été confirmé.";
   $("details").textContent="Aucun accès payant n’a été accordé. Tu peux revenir au lecteur et réessayer.";
   const link=document.createElement("a");link.className="secondary";link.href="reader.html?db_story="+encodeURIComponent(storyId)+"&chapter_id="+encodeURIComponent(p.chapter_id);link.textContent="Retour au lecteur";$("actions").append(link);
