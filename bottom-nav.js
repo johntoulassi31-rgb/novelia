@@ -18,12 +18,12 @@
   // Page affichée -> onglet à mettre en évidence
   var ACTIVE = {
     "index.html": "index.html",
-    "discovery.html": "discovery.html", "authors.html": "discovery.html", "community.html": "discovery.html",
+    "discovery.html": "discovery.html", "authors.html": "discovery.html", "community.html": "discovery.html", "contests.html": "discovery.html", "palmares.html": "discovery.html",
     "library.html": "library.html",
     "publish.html": "publish.html", "author-dashboard.html": "publish.html",
     "notifications.html": "notifications.html"
   };
-  var SHOW_ON = ["index.html", "discovery.html", "authors.html", "community.html", "library.html", "publish.html",
+  var SHOW_ON = ["index.html", "discovery.html", "authors.html", "community.html", "contests.html", "palmares.html", "library.html", "publish.html",
     "author-dashboard.html", "notifications.html", "profile.html", "public-profile.html", "novelia-plus.html"];
 
   var page = location.pathname.split("/").pop() || "index.html";
