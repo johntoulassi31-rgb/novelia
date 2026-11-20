@@ -134,7 +134,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
       <p class="summary" id="progressMessage" role="status"></p>
     </div>
   </div>
-  <div class="details"><span id="chapterCount"></span></div>\n  <div class="story-sections" role="tablist" aria-label="Informations sur l’œuvre"><button type="button" data-story-section="about" aria-selected="true">À propos</button><button type="button" data-story-section="characters" aria-selected="false">Personnages</button><button type="button" data-story-section="playlist" aria-selected="false">Playlist</button></div>\n  <section class="story-section-panel" id="storyAboutPanel"><h2>À propos</h2><p id="storyAboutText"></p></section>\n  <section class="story-section-panel" id="storyCharactersPanel" hidden><h2>Fiches personnages</h2><p>Les fiches personnages seront affichées ici lorsque l’auteur les aura renseignées.</p></section>\n  <section class="story-section-panel" id="storyPlaylistPanel" hidden><h2>Playlist</h2><p>Aucune playlist n’a encore été ajoutée à cette œuvre.</p></section>
+  <div class="details"><span id="chapterCount"></span> · <a id="authorProfileLink" href="members.html">Profil de l’auteur</a></div>\n  <div class="story-sections" role="tablist" aria-label="Informations sur l’œuvre"><button type="button" data-story-section="about" aria-selected="true">Avant-propos</button><button type="button" data-story-section="characters" aria-selected="false">Personnages</button><button type="button" data-story-section="playlist" aria-selected="false">Playlist</button><button type="button" data-story-section="rewrite" aria-selected="false">Réécriture</button></div>\n  <section class="story-section-panel" id="storyAboutPanel"><h2>À propos</h2><p id="storyAboutText"></p></section>\n  <section class="story-section-panel" id="storyCharactersPanel" hidden><h2>Fiches personnages</h2><p>Les fiches personnages seront affichées ici lorsque l’auteur les aura renseignées.</p></section>\n  <section class="story-section-panel" id="storyPlaylistPanel" hidden><h2>Playlist</h2><p>Aucune playlist n’a encore été ajoutée à cette œuvre.</p></section>\n  <section class="story-section-panel" id="storyRewritePanel" hidden><h2>Réécriture</h2><p>Les informations de réécriture seront affichées ici lorsque l’auteur les aura renseignées.</p></section>
 <div class="actions" style="margin:12px 0">
 <button class="button secondary" id="offlineSaveButton" type="button" hidden>Enregistrer pour hors connexion</button>
 <p class="reading-info" id="offlineStatus" role="status" aria-live="polite"></p>
@@ -1333,7 +1333,7 @@ async function loadDatabaseStory() {
     if(catalogResult.error)throw catalogResult.error;
     if(contentResult.error)throw contentResult.error;
     const contentById=new Map((contentResult.data||[]).map(ch=>[ch.id,ch]));
-    const nextStory={id:row.id,authorId:row.author_id,title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
+    const {data:authorProfile}=await supabase.from("profiles").select("username,display_name").eq("id",row.author_id).maybeSingle();\n    const nextStory={id:row.id,authorId:row.author_id,authorUsername:authorProfile?.username||"",authorName:authorProfile?.display_name||authorProfile?.username||"Auteur Novelia",title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
     const nextChapters=(catalogResult.data||[]).map(meta=>{
       const unlocked=contentById.get(meta.id);
       return {id:meta.id,title:meta.title,content:unlocked?.content||"",chapter_number:meta.chapter_number,
@@ -1388,7 +1388,7 @@ function showStory() {
 }
 
 $("libraryButton").addEventListener("click",toggleLibrary);
-document.querySelectorAll("[data-story-section]").forEach(button=>button.addEventListener("click",()=>{const key=button.dataset.storySection;document.querySelectorAll("[data-story-section]").forEach(x=>x.setAttribute("aria-selected",String(x===button)));$("storyAboutPanel").hidden=key!=="about";$("storyCharactersPanel").hidden=key!=="characters";$("storyPlaylistPanel").hidden=key!=="playlist";}));
+document.querySelectorAll("[data-story-section]").forEach(button=>button.addEventListener("click",()=>{const key=button.dataset.storySection;document.querySelectorAll("[data-story-section]").forEach(x=>x.setAttribute("aria-selected",String(x===button)));$("storyAboutPanel").hidden=key!=="about";$("storyCharactersPanel").hidden=key!=="characters";$("storyPlaylistPanel").hidden=key!=="playlist";$("storyRewritePanel").hidden=key!=="rewrite";}));
 $("readerToolsShortcut").addEventListener("click",()=>{$("readerTools").open=true;$("readerTools").scrollIntoView({behavior:"smooth",block:"center"});});
 $("readerBackButton").addEventListener("click",()=>{$("reader").hidden=true;$("readerBottomBar").hidden=true;$("bookCard").scrollIntoView({behavior:"smooth",block:"start"});});
 $("readerPrevFixed").addEventListener("click",()=>changeReaderChapter(currentChapter-1));
