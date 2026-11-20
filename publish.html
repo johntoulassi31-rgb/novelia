@@ -1103,10 +1103,6 @@ $("removeChapterAudio").addEventListener("click", async () => {
   button.disabled = true;
   try {
     const path = chapterAudioStoragePath(chapter.audio_url);
-    if(path) {
-      const {error:removeError} = await supabase.storage.from(CHAPTER_AUDIO_BUCKET).remove([path]);
-      if(removeError) throw removeError;
-    }
     const {error:updateError} = await supabase.from("chapters")
       .update({audio_url:null,audio_title:null,audio_duration_seconds:null})
       .eq("id",chapter.id).eq("story_id",selectedStory.id);
@@ -1115,6 +1111,13 @@ $("removeChapterAudio").addEventListener("click", async () => {
     $("chapterAudioTitle").value = "";
     $("removeChapterAudio").hidden = true;
     $("chapterAudioStatus").textContent = "Narration retirée du chapitre.";
+    if(path) {
+      const {error:removeError} = await supabase.storage.from(CHAPTER_AUDIO_BUCKET).remove([path]);
+      if(removeError) {
+        console.warn("Ancienne narration conservée dans le stockage :",removeError.message);
+        $("chapterAudioStatus").textContent += " Le fichier ancien n’a pas pu être nettoyé du stockage.";
+      }
+    }
   } catch(error) {
     $("chapterAudioStatus").textContent = "Suppression impossible : " + (error?.message || String(error));
   } finally {
