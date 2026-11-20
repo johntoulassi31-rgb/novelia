@@ -62,12 +62,12 @@
     #avatarPreview{border-radius:50%;object-fit:cover}
     #avatarPreview[hidden]{display:none}
     .hint{font-size:13px;opacity:.8;margin:6px 0 0}
-  </style>
+  .stats-panel{margin:18px 0;padding:18px;background:#fffdf8;border:1px solid #ede0c1;border-radius:14px}.stats-panel h2{margin:0 0 5px;color:#7d5f12;font-size:19px}.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.stat{padding:12px;border-radius:10px;background:#f8f3e6;display:flex;flex-direction:column;gap:4px}.stat strong{font-size:23px;color:#7d5f12}.stat span{font-size:12px;color:#675937}@media(min-width:560px){.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
   <main class="container">
-    <h1>Mon profil</h1>
+    <h1>Mon profil</h1><section class="stats-panel" aria-labelledby="statsTitle"><h2 id="statsTitle">Mon activité sur Novelia</h2><p class="hint">Tes statistiques communautaires, visibles uniquement depuis ton espace personnel.</p><div id="communityStats" class="stats-grid"><div class="stat"><strong>—</strong><span>Œuvres</span></div><div class="stat"><strong>—</strong><span>Abonnés</span></div><div class="stat"><strong>—</strong><span>Abonnements</span></div><div class="stat"><strong>—</strong><span>Clubs</span></div><div class="stat"><strong>—</strong><span>Messages de club</span></div><div class="stat"><strong>—</strong><span>Chapitres lus en groupe</span></div></div></section>
     <p>Personnalise ton identité sur Novelia.</p>
 
     <p class="email">
@@ -176,6 +176,40 @@
       return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
     }
 
+    async function loadCommunityStats() {
+      const box = document.getElementById("communityStats");
+      if (!currentUser || !box) return;
+      const uid = currentUser.id;
+      const count = async (table, column, value, extra) => {
+        let q = supabase.from(table).select("*", { count: "exact", head: true }).eq(column, value);
+        if (extra) q = q.eq(extra[0], extra[1]);
+        const r = await q;
+        return r.error ? null : (r.count || 0);
+      };
+      const [works, followers, following, clubs, posts, progress] = await Promise.all([
+        count("stories", "author_id", uid, ["moderation_hidden", false]),
+        count("follows", "followed_id", uid),
+        count("follows", "follower_id", uid),
+        count("novelia_club_members", "user_id", uid),
+        count("novelia_club_posts", "author_id", uid),
+        supabase.from("novelia_club_reading_progress").select("chapters_read").eq("user_id", uid)
+      ]);
+      const chapters = progress.error ? null : (progress.data || []).reduce((sum, row) => sum + (Number(row.chapters_read) || 0), 0);
+      const values = [works, followers, following, clubs, posts, chapters];
+      const labels = ["Œuvres", "Abonnés", "Abonnements", "Clubs", "Messages de club", "Chapitres lus en groupe"];
+      box.replaceChildren();
+      values.forEach((value, index) => {
+        const card = document.createElement("div");
+        card.className = "stat";
+        const number = document.createElement("strong");
+        number.textContent = value === null ? "—" : Number(value).toLocaleString("fr-FR");
+        const label = document.createElement("span");
+        label.textContent = labels[index];
+        card.append(number, label);
+        box.append(card);
+      });
+    }
+
     async function loadProfile() {
       statusEl.textContent = "Chargement du profil...";
 
@@ -217,6 +251,7 @@
       } catch (e) { /* colonnes pas encore activées */ }
 
       statusEl.textContent = "Profil chargé.";
+      loadCommunityStats();
     }
 
     document.getElementById("profileForm")
