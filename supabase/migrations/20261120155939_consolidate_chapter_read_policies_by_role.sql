@@ -1,0 +1,34 @@
+drop policy if exists "Public readers access free or purchased chapters" on public.chapters;
+drop policy if exists "Authors and admins access their chapters" on public.chapters;
+
+create policy "Public readers access free or purchased chapters"
+on public.chapters for select to anon
+using (
+  moderation_hidden=false
+  and exists (
+    select 1 from public.stories s
+    where s.id=chapters.story_id and s.status='published' and s.moderation_hidden=false
+  )
+  and coalesce(is_premium,false)=false
+);
+
+create policy "Authenticated readers authors and admins access chapters"
+on public.chapters for select to authenticated
+using (
+  (
+    moderation_hidden=false
+    and exists (
+      select 1 from public.stories s
+      where s.id=chapters.story_id and s.status='published' and s.moderation_hidden=false
+    )
+    and (
+      coalesce(is_premium,false)=false
+      or exists (
+        select 1 from public.novelia_chapter_purchases p
+        where p.chapter_id=chapters.id and p.buyer_id=(select auth.uid()) and p.status='paid'
+      )
+    )
+  )
+  or exists (select 1 from public.stories s where s.id=chapters.story_id and s.author_id=(select auth.uid()))
+  or public.novelia_is_admin()
+);
