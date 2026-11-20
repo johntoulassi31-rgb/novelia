@@ -19,6 +19,11 @@
 <h3>Classement de mes œuvres</h3><ol id="analyticsRanking" class="analytics-ranking"></ol>
 <h3>Détail par œuvre</h3><div id="analyticsStories"><p class="muted">Les statistiques apparaîtront ici.</p></div>
 <p class="muted small">Une impression correspond à une œuvre affichée à un lecteur connecté (une fois par jour et par œuvre). Le taux de clics est calculé sur les impressions. Les données sont agrégées et seul l’auteur de l’œuvre peut les consulter.</p>
+</section>
+<section class="panel" id="authorRecommendations">
+<h2>Conseils pour améliorer la visibilité</h2>
+<p class="muted small">Des pistes personnalisées à partir des informations de tes œuvres et des statistiques disponibles. Elles ne garantissent pas une hausse de lectures.</p>
+<div id="recommendationList"><p class="muted">Analyse en cours…</p></div>
 </section></section>
 <section class="panel"><div class="top"><h2>Mes histoires</h2><a class="btn secondary" href="publish.html">Gérer les publications</a></div><div id="storyGrid" class="grid"><p class="muted">Chargement…</p></div></section>
 <section class="panel"><div class="top"><h2>Commentaires récents</h2><button id="refreshButton" class="secondary">Actualiser</button></div><div id="commentsList"><p class="muted">Chargement…</p></div></section>
@@ -67,6 +72,39 @@ function renderAuthorRanking(rows){
   li.append(el("strong",(i+1)+". "+(r.story_title||"Sans titre")),el("span",numberFmt(r.clicks_30d)+" clic(s) · "+numberFmt(r.impressions_30d)+" impressions · "+ctr.toFixed(1)+" % de clics sur 30 jours"));box.append(li);
  });
 }
+function renderAuthorRecommendations(analyticsRows){
+ const box=$("recommendationList");box.replaceChildren();
+ const published=stories.filter(s=>s.status==="published"&&!s.moderation_hidden);
+ if(!published.length){box.append(el("p","Publie une première œuvre pour recevoir des conseils de visibilité.","muted"));return}
+ const metrics=new Map((analyticsRows||[]).map(r=>[r.story_id,r]));
+ const cards=[];
+ published.forEach(s=>{
+  const m=metrics.get(s.id)||{};
+  const title=s.title||"Cette œuvre";
+  const description=(s.description||"").trim();
+  const impressions=Number(m.impressions_30d||0),clicks=Number(m.clicks_30d||0);
+  if(!s.cover_url)cards.push({title,priority:1,heading:"Ajouter une couverture",detail:"Cette œuvre n’a pas de couverture renseignée. Choisis une image lisible en petit format et cohérente avec son genre."});
+  if(!s.genre||!s.genre.trim())cards.push({title,priority:2,heading:"Préciser le genre",detail:"Renseigne le genre principal pour aider les lecteurs à comprendre à quel type d’histoire s’attendre."});
+  if(description.length<120)cards.push({title,priority:3,heading:"Enrichir le résumé",detail:"Le résumé est très court ou absent. Présente le personnage principal, son enjeu et ce qui rend l’histoire singulière, sans dévoiler toute l’intrigue."});
+  if(!(s.chapterCount>0))cards.push({title,priority:4,heading:"Publier le premier chapitre",detail:"Aucun chapitre visible n’est associé à cette œuvre. Un premier chapitre permet aux lecteurs de commencer leur découverte."});
+  if(impressions>=20&&clicks/impressions<0.02)cards.push({title,priority:5,heading:"Retravailler la présentation",detail:"Le taux de clics observé est inférieur à 2 % sur au moins 20 impressions. Tu peux tester un titre, une couverture ou un résumé plus explicite, puis comparer les prochaines statistiques."});
+  else if(impressions>0&&impressions<5)cards.push({title,priority:6,heading:"Renforcer la découverte",detail:"Cette œuvre a encore peu d’impressions mesurées. Vérifie son genre et sa présentation, puis partage-la auprès de lecteurs susceptibles d’aimer ce type d’histoire."});
+ });
+ if(!cards.length){
+  box.append(el("p","Aucun point prioritaire détecté avec les informations disponibles. Continue à publier régulièrement et consulte tes statistiques après de nouvelles interactions.","muted"));
+  return;
+ }
+ cards.sort((a,b)=>a.priority-b.priority);
+ const wrap=el("div",undefined,"analytics-list");
+ cards.slice(0,12).forEach(r=>{
+  const card=el("article",undefined,"analytics-item");
+  const head=el("div",undefined,"analytics-head");
+  head.append(el("strong",r.heading),el("span",r.title,"pill"));
+  card.append(head,el("p",r.detail,"muted small"));
+  wrap.append(card);
+ });
+ box.append(wrap);
+}
 async function loadDiscoveryAnalytics(){
  const summary=$("analyticsSummary"),list=$("analyticsStories");
  summary.replaceChildren();list.replaceChildren();
@@ -80,6 +118,7 @@ async function loadDiscoveryAnalytics(){
  const addKpi=(label,value)=>{const box=el("div",undefined,"stat");box.append(el("span",label),el("strong",numberFmt(value)));summary.append(box)};
  addKpi("Impressions · 7 jours",totals.i7);addKpi("Clics · 7 jours",totals.c7);addKpi("Impressions · 30 jours",totals.i30);addKpi("Clics · 30 jours",totals.c30);
  renderAuthorRanking(rows);
+ renderAuthorRecommendations(rows);
  if(!rows.length){list.append(el("p","Aucune œuvre publiée et visible à mesurer pour le moment.","muted"));return}
  const wrap=el("div",undefined,"analytics-list");
  rows.forEach(r=>{
@@ -95,7 +134,7 @@ async function loadDiscoveryAnalytics(){
 }
 async function loadDashboard(){const {data:a,error:ae}=await supabase.auth.getUser();if(ae)throw ae;user=a.user;if(!user){status("Connecte-toi pour gérer tes histoires.","error");$("storyGrid").replaceChildren(el("p","Connexion requise.","muted"));const link=el("a","Se connecter","btn");link.href="login.html";$("storyGrid").append(link);$("draftList").textContent="Connexion requise.";return}
 const {data:p,error:pe}=await supabase.from("profiles").select("username,display_name").eq("id",user.id).maybeSingle();if(!pe)$("authorHandle").textContent=p?.username?"@"+p.username:(p?.display_name||user.email||"Auteur Novelia");
-const {data:rows,error}=await supabase.from("stories").select("id,title,cover_url,genre,status,moderation_hidden,created_at,author_id").eq("author_id",user.id).order("created_at",{ascending:false});if(error)throw error;stories=rows||[];const ids=stories.map(s=>s.id);
+const {data:rows,error}=await supabase.from("stories").select("id,title,description,cover_url,genre,status,moderation_hidden,created_at,author_id").eq("author_id",user.id).order("created_at",{ascending:false});if(error)throw error;stories=rows||[];const ids=stories.map(s=>s.id);
 $("storyCount").textContent=stories.length;$("publishedCount").textContent=stories.filter(s=>s.status==="published"&&!s.moderation_hidden).length;$("draftCount").textContent=stories.filter(s=>["draft","drafts"].includes((s.status||"").toLowerCase())).length;
 let chapters=[];if(ids.length){const r=await supabase.from("chapters").select("id,story_id,moderation_hidden").in("story_id",ids);if(r.error)throw r.error;chapters=(r.data||[]).filter(c=>!c.moderation_hidden);const byStory=new Map();chapters.forEach(c=>byStory.set(c.story_id,(byStory.get(c.story_id)||0)+1));stories.forEach(s=>s.chapterCount=byStory.get(s.id)||0)}
 $("chapterCount").textContent=chapters.length;
