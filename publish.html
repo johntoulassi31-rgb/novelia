@@ -1103,10 +1103,12 @@ $("removeChapterAudio").addEventListener("click", async () => {
   button.disabled = true;
   try {
     const path = chapterAudioStoragePath(chapter.audio_url);
-    const {error:updateError} = await supabase.from("chapters")
+    const {data:updatedChapter,error:updateError} = await supabase.from("chapters")
       .update({audio_url:null,audio_title:null,audio_duration_seconds:null})
-      .eq("id",chapter.id).eq("story_id",selectedStory.id);
+      .eq("id",chapter.id).eq("story_id",selectedStory.id)
+      .select("id").maybeSingle();
     if(updateError) throw updateError;
+    if(!updatedChapter) throw new Error("La narration n’a pas été retirée de la base de données.");
     chaptersForSelectedStory = chaptersForSelectedStory.map(ch => ch.id === chapter.id ? {...ch,audio_url:null,audio_title:null,audio_duration_seconds:null} : ch);
     $("chapterAudioTitle").value = "";
     $("removeChapterAudio").hidden = true;
