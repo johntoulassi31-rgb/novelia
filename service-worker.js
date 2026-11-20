@@ -8,6 +8,7 @@ const APP_FILES = [
   "./",
   "./index.html",
   "./reader.html",
+  "./downloads.html",
   "./offline.html",
   "./bottom-nav.js",
   "./theme-gold.css",
