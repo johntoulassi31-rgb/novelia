@@ -40,8 +40,7 @@ h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .progress-fill{height:100%;width:0;background:var(--purple);transition:width .2s}
 .novel-text{font-family:Georgia,"Times New Roman",serif;font-size:var(--novel-font-size);line-height:var(--novel-line-height);overflow-wrap:anywhere}
 .novel-text p{margin:0 0 22px;white-space:pre-wrap}
-.webtoon-content{margin:0 -16px;background:#fdfcf9}
-.webtoon-content img{display:block;width:100%;height:auto;object-fit:contain}
+.webtoon-content{margin:0 -16px;background:#fdfcf9}.webtoon-panel{margin:0}.webtoon-content img{display:block;width:100%;height:auto;object-fit:contain}.webtoon-caption{margin:0;padding:12px 20px 16px;background:#fdfcf9;color:var(--text);font:15px/1.65 Georgia,"Times New Roman",serif;white-space:pre-wrap}
 .reader-tools{margin:12px 0 18px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--bg)}
 .reader-tools summary{cursor:pointer;font-weight:bold;color:var(--heading)}
 .reader-tools-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
@@ -844,51 +843,39 @@ function renderNovel(chapter) {
 
 function renderWebtoon(chapter) {
   const container = $("content");
-  container.className = "";
+  container.className = "webtoon-content";
   container.replaceChildren();
-
   const text = typeof chapter.content === "string" ? chapter.content.trim() : "";
   const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
-  const imageUrls = lines.filter(line =>
-    /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(line)
-  );
-
-  if (imageUrls.length) {
-    const panels = document.createElement("div");
-    panels.className = "webtoon-content";
-
-    imageUrls.forEach((url, index) => {
+  const isPanelUrl = value => /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(value);
+  if (!lines.some(isPanelUrl)) { renderNovel(chapter); return; }
+  let panelNumber = 0;
+  lines.forEach(line => {
+    if (isPanelUrl(line)) {
+      panelNumber++;
+      const figure = document.createElement("figure");
+      figure.className = "webtoon-panel";
       const img = document.createElement("img");
-      img.src = offlineMediaMap[url] || url;
-      img.alt = story.title + " — image " + (index + 1);
-      img.loading = "lazy";
+      img.src = offlineMediaMap[line] || line;
+      img.alt = story.title + " — planche " + panelNumber;
+      img.loading = panelNumber === 1 ? "eager" : "lazy";
+      img.decoding = "async";
       img.onerror = () => {
         const notice = document.createElement("p");
         notice.className = "notice";
-        notice.textContent = "Impossible de charger cette image : " + url;
-        img.replaceWith(notice);
+        notice.textContent = "Cette planche n’a pas pu être chargée.";
+        figure.replaceWith(notice);
       };
-      panels.appendChild(img);
-    });
-
-    container.appendChild(panels);
-    const remaining = lines.filter(line => !imageUrls.includes(line));
-
-    if (remaining.length) {
-      const caption = document.createElement("div");
-      caption.className = "novel-text";
-      remaining.forEach(line => {
-        const p = document.createElement("p");
-        p.textContent = line;
-        caption.appendChild(p);
-      });
+      figure.appendChild(img);
+      container.appendChild(figure);
+    } else {
+      const caption = document.createElement("p");
+      caption.className = "webtoon-caption";
+      caption.textContent = line;
       container.appendChild(caption);
     }
-  } else {
-    renderNovel(chapter);
-  }
+  });
 }
-
 function renderChapter() {
   const chapter = chapters[currentChapter];
   if (!chapter) return;
