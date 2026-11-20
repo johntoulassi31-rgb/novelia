@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fbf8f1">
+<meta name="description" content="Gère les histoires enregistrées pour la lecture hors connexion sur Novelia.">
+<title>Téléchargements — Novelia</title>
+<link rel="stylesheet" href="theme-gold.css">
+<style>
+:root{--bg:#fbf8f1;--panel:#f8f3e6;--border:#f0e6cd;--text:#392b08;--muted:#675937;--accent:#7d5f12;--gold:#c3941c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;line-height:1.55;padding-bottom:84px}
+header{padding:14px 18px;background:#f9f4eaf5;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header a{color:var(--accent);text-decoration:none;font-weight:bold}.logo{font-size:22px}
+main{width:min(900px,100%);margin:auto;padding:22px 14px 36px}
+h1{font-size:clamp(26px,5vw,36px);margin:4px 0}.muted,.hint{color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:16px;margin:15px 0}
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:15px}
+.metric{padding:12px;background:#f4ecd9;border:1px solid var(--border);border-radius:11px;min-width:0}
+.metric strong{display:block;font-size:19px;overflow-wrap:anywhere}.metric span{font-size:11px;color:var(--muted)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:20px 0 12px}
+button,.btn{border:1px solid #d9cfb5;border-radius:9px;padding:10px 12px;background:#f4ebd8;color:#513e0c;font:inherit;font-size:13px;font-weight:bold;text-decoration:none;cursor:pointer}
+button.primary,.btn.primary{background:var(--gold);border-color:var(--gold);color:#2a2011}
+button.danger{background:#f2e8d1;color:#704313}
+button:disabled{opacity:.55;cursor:wait}
+.download-list{display:grid;gap:12px}
+.download-card{display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px;padding:13px;background:var(--panel);border:1px solid var(--border);border-radius:13px;min-width:0}
+.cover{width:88px;height:124px;object-fit:cover;border-radius:7px;background:linear-gradient(145deg,#f1e6cd,#efe0b9,#fbf8f1)}
+.cover-fallback{width:88px;height:124px;border-radius:7px;background:linear-gradient(145deg,#f1e6cd,#efe0b9,#fbf8f1);display:flex;align-items:end;padding:8px;font:bold 13px Georgia,serif;overflow-wrap:anywhere}
+.card-body{min-width:0}.card-body h2{font-size:17px;line-height:1.3;margin:1px 0 5px;overflow-wrap:anywhere}
+.meta{font-size:12px;color:var(--muted);margin:4px 0;overflow-wrap:anywhere}
+.card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.empty{padding:24px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--muted)}
+#status{min-height:1.5em;overflow-wrap:anywhere}.error{color:#8a2020}.success{color:#276b35}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:8px 4px max(8px,env(safe-area-inset-bottom));background:#fbf8f1f5;border-top:1px solid var(--border);backdrop-filter:blur(12px)}
+.bottom-nav a{color:var(--muted);text-decoration:none;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0}.bottom-nav a span:first-child{font-size:21px;line-height:1}.bottom-nav a[aria-current=page]{color:#926f15}
+@media(max-width:390px){.summary{grid-template-columns:repeat(3,minmax(0,1fr))}.metric{padding:9px 7px}.metric strong{font-size:16px}.download-card{grid-template-columns:72px minmax(0,1fr);gap:10px;padding:10px}.cover,.cover-fallback{width:72px;height:108px}}
+</style>
+</head>
+<body>
+<header><a class="logo" href="index.html">✦ NOVELIA</a><a href="library.html">← Bibliothèque</a></header>
+<main>
+<section class="panel">
+  <h1>Téléchargements</h1>
+  <p class="muted">Retrouve ici les romans et webtoons enregistrés sur cet appareil. Les copies restent disponibles hors connexion tant que les données du navigateur ne sont pas effacées.</p>
+  <div class="summary" aria-live="polite">
+    <div class="metric"><strong id="workCount">—</strong><span>Œuvres enregistrées</span></div>
+    <div class="metric"><strong id="chapterCount">—</strong><span>Chapitres / épisodes</span></div>
+    <div class="metric"><strong id="totalSize">—</strong><span>Taille estimée</span></div>
+  </div>
+  <p class="hint" id="quotaInfo"></p>
+  <p id="status" role="status" aria-live="polite">Lecture du stockage local…</p>
+</section>
+<div class="toolbar"><strong>Mes copies hors connexion</strong><button id="refreshButton" type="button">Actualiser</button></div>
+<section class="download-list" id="downloadList"><p class="empty">Chargement…</p></section>
+</main>
+<nav class="bottom-nav" aria-label="Navigation rapide">
+<a href="index.html"><span>⌂</span><span>Accueil</span></a>
+<a href="discovery.html"><span>⌕</span><span>Découvrir</span></a>
+<a href="library.html"><span>▤</span><span>Bibliothèque</span></a>
+<a href="downloads.html" aria-current="page"><span>↓</span><span>Hors ligne</span></a>
+<a href="publish.html"><span>✎</span><span>Écrire</span></a>
+</nav>
+<script>
+"use strict";
+const DB_NAME="novelia-reader-offline",STORE_NAME="stories";
+const $=id=>document.getElementById(id);
+function openDB(){return new Promise((resolve,reject)=>{if(!("indexedDB" in window)){reject(new Error("Ce navigateur ne prend pas en charge le stockage local."));return;}const request=indexedDB.open(DB_NAME,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(STORE_NAME))request.result.createObjectStore(STORE_NAME,{keyPath:"id"});};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("Impossible d’ouvrir le stockage local."));});}
+async function requestStore(mode,action){const db=await openDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,mode),store=tx.objectStore(STORE_NAME);let req;try{req=action(store);}catch(error){reject(error);return;}if(req){req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);}else{tx.oncomplete=()=>resolve(true);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);}});}finally{db.close();}}
+const getAll=()=>requestStore("readonly",store=>store.getAll());
+const removeOne=id=>requestStore("readwrite",store=>store.delete(id));
+function formatBytes(bytes){if(!Number.isFinite(bytes)||bytes<0)return"—";if(bytes<1024)return bytes+" o";const units=["Ko","Mo","Go"];let n=bytes/1024,i=0;while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toLocaleString("fr-FR",{maximumFractionDigits:1})+" "+units[i];}
+function formatDate(value){const date=new Date(value);return Number.isNaN(date.getTime())?"Date inconnue":date.toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"});}
+function node(tag,content,className){const el=document.createElement(tag);el.textContent=content??"";if(className)el.className=className;return el;}
+function createCard(record){
+ const story=record.story||{},chapters=Array.isArray(record.chapters)?record.chapters:[];
+ const card=node("article","","download-card"),cover=story.cover?document.createElement("img"):node("div",story.title||"Novelia","cover-fallback");
+ if(story.cover){cover.className="cover";cover.src=story.cover;cover.alt="Couverture de "+(story.title||"l’œuvre");cover.loading="lazy";cover.onerror=()=>cover.replaceWith(node("div",story.title||"Novelia","cover-fallback"));}
+ card.append(cover);const body=node("div","","card-body");
+ body.append(node("h2",story.title||"Œuvre sans titre"));
+ body.append(node("p",(story.type||"Roman")+" · "+(story.genre||"Autre"),"meta"));
+ body.append(node("p",chapters.length+" chapitre(s) ou épisode(s)","meta"));
+ body.append(node("p","Enregistrée le "+formatDate(record.savedAt),"meta"));
+ const actions=node("div","","card-actions"),open=node("a","Lire hors connexion","btn primary");
+ open.href="reader.html?db_story="+encodeURIComponent(record.id);actions.append(open);
+ const del=node("button","Supprimer la copie","danger");del.type="button";
+ del.addEventListener("click",async()=>{if(!confirm("Supprimer la copie hors connexion de « "+(story.title||"cette œuvre")+" » sur cet appareil ?"))return;del.disabled=true;try{await removeOne(record.id);await render();}catch(error){$("status").textContent="Suppression impossible : "+(error.message||String(error));$("status").className="error";del.disabled=false;}});
+ actions.append(del);body.append(actions);card.append(body);return card;
+}
+async function render(){
+ $("status").textContent="Lecture du stockage local…";$("status").className="";
+ try{
+  const records=await getAll();records.sort((a,b)=>Date.parse(b.savedAt||0)-Date.parse(a.savedAt||0));
+  const totalChapters=records.reduce((sum,r)=>sum+(Array.isArray(r.chapters)?r.chapters.length:0),0);
+  const bytes=records.reduce((sum,r)=>sum+new Blob([JSON.stringify(r)]).size,0);
+  $("workCount").textContent=String(records.length);$("chapterCount").textContent=String(totalChapters);$("totalSize").textContent=formatBytes(bytes);
+  $("downloadList").replaceChildren();
+  if(!records.length){$("downloadList").append(node("p","Aucune œuvre enregistrée pour le moment. Ouvre une histoire lorsque tu es connecté, puis utilise « Enregistrer pour hors connexion ».","empty"));}
+  else records.forEach(record=>$("downloadList").append(createCard(record)));
+  $("status").textContent=records.length+" œuvre(s) disponible(s) sur cet appareil.";$("status").className="success";
+  if(navigator.storage&&navigator.storage.estimate){try{const estimate=await navigator.storage.estimate();if(Number.isFinite(estimate.quota)&&estimate.quota>0){$("quotaInfo").textContent="Espace navigateur utilisé : "+formatBytes(estimate.usage||0)+" sur environ "+formatBytes(estimate.quota)+" (toutes les données du site).";}}catch{}}
+ }catch(error){$("status").textContent=error.message||"Impossible de lire les téléchargements."; $("status").className="error";$("downloadList").replaceChildren(node("p","Le stockage hors connexion est inaccessible sur cet appareil.","empty"));}
+}
+$("refreshButton").addEventListener("click",render);render();
+</script>
+</body>
+</html>
