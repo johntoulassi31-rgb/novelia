@@ -164,7 +164,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 </section>
 
 <section class="reader" id="reader" hidden>
-  <div class="reader-topbar"><a class="back-link" href="#bookCard">←</a><strong id="readerBarTitle">Lecture</strong><button class="button secondary" type="button" id="readerToolsShortcut">Aa</button></div>
+  <div class="reader-topbar"><button class="button secondary" type="button" id="readerBackButton">←</button><strong id="readerBarTitle">Lecture</strong><button class="button secondary" type="button" id="readerToolsShortcut">Aa</button></div>
   <div class="chapter">
     <div class="eyebrow" id="readingType">Lecture</div>
     <h2 id="chapterTitle"></h2>
@@ -1390,6 +1390,7 @@ function showStory() {
 $("libraryButton").addEventListener("click",toggleLibrary);
 document.querySelectorAll("[data-story-section]").forEach(button=>button.addEventListener("click",()=>{const key=button.dataset.storySection;document.querySelectorAll("[data-story-section]").forEach(x=>x.setAttribute("aria-selected",String(x===button)));$("storyAboutPanel").hidden=key!=="about";$("storyCharactersPanel").hidden=key!=="characters";$("storyPlaylistPanel").hidden=key!=="playlist";}));
 $("readerToolsShortcut").addEventListener("click",()=>{$("readerTools").open=true;$("readerTools").scrollIntoView({behavior:"smooth",block:"center"});});
+$("readerBackButton").addEventListener("click",()=>{$("reader").hidden=true;$("readerBottomBar").hidden=true;$("bookCard").scrollIntoView({behavior:"smooth",block:"start"});});
 $("readerPrevFixed").addEventListener("click",()=>changeReaderChapter(currentChapter-1));
 $("readerNextFixed").addEventListener("click",()=>changeReaderChapter(currentChapter+1));
 $("readerCommentsFixed").addEventListener("click",()=>$("commentsPanel").scrollIntoView({behavior:"smooth",block:"start"}));
