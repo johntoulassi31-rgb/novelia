@@ -9,9 +9,9 @@ const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==u
 async function init(){
  const user=(await db.auth.getUser()).data?.user;
  if(!user){$("status").textContent="Connecte-toi pour consulter tes achats.";return;}
- const r=await db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,stories(title,cover_url),chapters(title,chapter_number)").eq("buyer_id",user.id).order("created_at",{ascending:false}).limit(100);
+ const r=await db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,stories(title,cover_url)").eq("buyer_id",user.id).order("created_at",{ascending:false}).limit(100);
  if(r.error){$("status").textContent="Impossible de charger tes achats : "+r.error.message;return;}
- const rows=r.data||[];$("status").textContent=rows.length?rows.length+" transaction(s).":"Aucun achat pour le moment.";
+ const rows=r.data||[];const chapterIds=[...new Set(rows.map(x=>x.chapter_id))];const metaResult=chapterIds.length?await db.from("novelia_chapter_catalog").select("id,title,chapter_number").in("id",chapterIds):{data:[]};const chapterMap=new Map((metaResult.data||[]).map(x=>[x.id,x]));$("status").textContent=rows.length?rows.length+" transaction(s).":"Aucun achat pour le moment.";
  const paid=$("paid"),pending=$("pending");paid.replaceChildren();pending.replaceChildren();
  const paidRows=rows.filter(x=>x.status==="paid"),pendingRows=rows.filter(x=>x.status==="pending");
  function cardFor(x,isPending){
