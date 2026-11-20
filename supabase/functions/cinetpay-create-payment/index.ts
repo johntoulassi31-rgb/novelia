@@ -64,12 +64,16 @@ Deno.serve(async (req: Request) => {
 
     const { data: existing } = await admin
       .from("novelia_chapter_purchases")
-      .select("id,status")
+      .select("id,status,checkout_url")
       .eq("buyer_id", user.id)
       .eq("chapter_id", chapter.id)
-      .eq("status", "paid")
+      .in("status", ["pending", "paid"])
       .maybeSingle();
-    if (existing) return json({ error: "Tu possèdes déjà ce chapitre." }, 409);
+    if (existing?.status === "paid") return json({ error: "Tu possèdes déjà ce chapitre." }, 409);
+    if (existing?.status === "pending") {
+      if (existing.checkout_url) return json({ purchase_id: existing.id, payment_url: existing.checkout_url, resumed: true });
+      return json({ error: "Un paiement pour ce chapitre est déjà en préparation. Réessaie dans quelques instants." }, 409);
+    }
 
     const merchantTransactionId = "NV" + crypto.randomUUID().replaceAll("-", "").slice(0, 22);
     const { data: purchase, error: purchaseError } = await admin
