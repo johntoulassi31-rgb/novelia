@@ -9,7 +9,7 @@ const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==u
 async function init(){
  const user=(await db.auth.getUser()).data?.user;
  if(!user){$("status").textContent="Connecte-toi pour consulter tes achats.";return;}
- const r=await db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,stories(title,cover_url)").eq("buyer_id",user.id).order("created_at",{ascending:false}).limit(100);
+ const r=await db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,client_transaction_id,provider_transaction_id,stories(title,cover_url)").eq("buyer_id",user.id).order("created_at",{ascending:false}).limit(100);
  if(r.error){$("status").textContent="Impossible de charger tes achats : "+r.error.message;return;}
  const rows=r.data||[];const chapterIds=[...new Set(rows.map(x=>x.chapter_id))];const metaResult=chapterIds.length?await db.from("novelia_chapter_catalog").select("id,title,chapter_number").in("id",chapterIds):{data:[]};const chapterMap=new Map((metaResult.data||[]).map(x=>[x.id,x]));$("status").textContent=rows.length?rows.length+" transaction(s).":"Aucun achat pour le moment.";
  const paid=$("paid"),pending=$("pending"),refunded=$("refunded");paid.replaceChildren();pending.replaceChildren();refunded.replaceChildren();
@@ -17,7 +17,7 @@ async function init(){
  function cardFor(x,isPending){
   const card=el("article","card"),story=x.stories||{},chapter=x.chapters||{};
   if(story.cover_url){const img=el("img","cover");img.src=story.cover_url;img.alt="Couverture";card.append(img);}
-  const d=el("div","details");d.append(el("strong","",story.title||"Œuvre"),el("p","",chapter.title||("Chapitre "+(chapter.chapter_number||""))),el("span","tag",isPending?"Paiement en attente":x.status==="refunded"?"Remboursé":"Achat confirmé"),el("p","muted",fmt(x.gross_amount_xof)+" · "+date(isPending?x.created_at:x.paid_at)));
+  const d=el("div","details");d.append(el("strong","",story.title||"Œuvre"),el("p","",chapter.title||("Chapitre "+(chapter.chapter_number||""))),el("span","tag",isPending?"Paiement en attente":x.status==="refunded"?"Remboursé":"Achat confirmé"),el("p","muted",fmt(x.gross_amount_xof)+" · "+date(isPending?x.created_at:x.paid_at)),el("small","muted","Référence : "+(x.provider_transaction_id||x.client_transaction_id||"En attente")));
   if(x.status!=="refunded"){const link=el("a","button",isPending?"Vérifier le paiement":"Lire le chapitre");link.href=isPending?"payment-result.html?purchase_id="+encodeURIComponent(x.id):"reader.html?db_story="+encodeURIComponent(x.story_id)+"&chapter_id="+encodeURIComponent(x.chapter_id);d.append(link);}card.append(d);return card;
  }
  if(!paidRows.length)paid.append(el("p","empty","Aucun chapitre acheté."));
