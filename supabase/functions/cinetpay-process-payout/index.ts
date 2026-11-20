@@ -3,7 +3,7 @@ import { CinetPayClient } from "npm:cinetpay-js@0.1.0";
 
 const cors={"Access-Control-Allow-Origin":"https://johntoulassi31-rgb.github.io","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
-const samePhone=(a:string,b:string)=>String(a||"").replace(/\\D/g,"").slice(-8)===String(b||"").replace(/\\D/g,"").slice(-8);
+const samePhone=(a:string,b:string)=>String(a||"").replace(/\D/g,"").slice(-8)===String(b||"").replace(/\D/g,"").slice(-8);
 
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
