@@ -229,7 +229,7 @@
 
   function buildTargetLink(item) {
     if (["chapter_sale","payout_update","sale_refund"].includes(item.type)) return { label: "Voir mes revenus", href: "earnings.html", kind: "earnings" };
-    if (item.type === "purchase_refund") return { label: "Voir mes achats", href: "purchases.html", kind: "purchase" };
+    if (["purchase_refund","purchase_update"].includes(item.type)) return { label: "Voir mes achats", href: "purchases.html", kind: "purchase" };
     if (["contest_update","contest_results"].includes(item.type)) return { label: item.type === "contest_results" ? "Voir les résultats" : "Voir le concours", href: "contests.html" + (item.contest_id ? "?contest=" + encodeURIComponent(item.contest_id) : ""), kind: "contest" };
     if (item.type === "new_message") {
       return { label: "Ouvrir la conversation", href: "messages.html" + (item.conversation_id ? "?conversation=" + encodeURIComponent(item.conversation_id) : ""), kind: "message" };
@@ -284,6 +284,7 @@
         item.type === "chapter_sale" ? "Nouvelle vente sur ton œuvre" :
         item.type === "payout_update" ? "Mise à jour de ton retrait" :
         item.type === "purchase_refund" ? "Achat remboursé" :
+        item.type === "purchase_update" ? "Achat confirmé" :
         item.type === "sale_refund" ? "Vente remboursée" :
         item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
