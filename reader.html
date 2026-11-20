@@ -53,6 +53,18 @@ h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .chapter-nav{display:flex;justify-content:space-between;gap:12px;margin-top:20px}
 button:disabled{opacity:.4;cursor:not-allowed}
 .comments-panel{margin-top:24px;padding:20px}
+ .reviews-panel{margin-top:24px;padding:20px;background:var(--panel);border:1px solid var(--border);border-radius:16px}
+ .reviews-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 16px}
+ .reviews-average{font-size:30px;font-weight:800;color:var(--heading)}
+ .review-form{display:grid;gap:10px;margin:14px 0 20px}
+ .review-form input,.review-form textarea{width:100%;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font:inherit}
+ .review-form textarea{min-height:100px}
+ .review-stars{display:flex;gap:7px;align-items:center}
+ .review-stars button{border:0;background:transparent;color:var(--heading);font-size:26px;padding:2px;cursor:pointer}
+ .review-card{padding:14px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+ .review-card:last-child{border-bottom:0}
+ .review-card h3{margin:4px 0;font-size:17px}
+ .review-meta{font-size:13px;color:var(--muted)}
 .comments-panel h2{font-size:21px}
 .comments-panel textarea{width:100%;min-height:110px;padding:12px;background:#fbf9f3;color:#2a2011;border:1px solid #ede0c2;border-radius:9px;font:inherit}
 .comment{padding:14px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
@@ -128,6 +140,26 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 <button class="button secondary" id="offlineSelectButton" type="button" hidden>Choisir les chapitres à télécharger</button>
 <div id="offlineChapterPicker" hidden style="margin-top:10px;padding:12px;border:1px solid #eadfca;border-radius:10px"><p class="reading-info">Sélectionne les chapitres ou épisodes à conserver sur cet appareil.</p><label style="display:block;margin:8px 0"><input id="offlineSelectAll" type="checkbox" checked> Tout sélectionner</label><div id="offlineChapterList"></div><button class="button secondary" id="offlineDownloadSelected" type="button">Télécharger la sélection</button><p id="offlineSelectionStatus" class="reading-info" role="status" aria-live="polite"></p></div>
 </div>
+</section>
+
+<section class="reviews-panel" id="reviewsPanel">
+  <h2>Avis des lecteurs</h2>
+  <div class="reviews-summary" id="reviewsSummary" aria-live="polite"><span class="reviews-average">—</span><span>Chargement des avis…</span></div>
+  <p id="reviewsStatus" role="status" aria-live="polite"></p>
+  <form class="review-form" id="reviewForm" hidden>
+    <h3 id="reviewFormHeading">Donner mon avis</h3>
+    <label for="reviewRating">Ta note</label>
+    <div class="review-stars" id="reviewRating" role="group" aria-label="Note sur cinq">
+      <button type="button" data-rating="1" aria-label="1 étoile">☆</button><button type="button" data-rating="2" aria-label="2 étoiles">☆</button><button type="button" data-rating="3" aria-label="3 étoiles">☆</button><button type="button" data-rating="4" aria-label="4 étoiles">☆</button><button type="button" data-rating="5" aria-label="5 étoiles">☆</button>
+    </div>
+    <label for="reviewTitle">Titre de ton avis (facultatif)</label>
+    <input id="reviewTitle" maxlength="100" placeholder="Résume ton impression">
+    <label for="reviewBody">Ton avis (20 à 2 000 caractères)</label>
+    <textarea id="reviewBody" minlength="20" maxlength="2000" required placeholder="Qu’as-tu pensé de cette œuvre ?"></textarea>
+    <button class="button primary" id="submitReview" type="submit">Publier mon avis</button>
+  </form>
+  <p id="loginReviewNotice" hidden>Connecte-toi pour noter et donner ton avis sur cette œuvre.</p>
+  <div id="reviewsList"></div>
 </section>
 
 <section class="reader" id="reader" hidden>
@@ -1244,6 +1276,76 @@ window.addEventListener('scroll', () => {
   }, 800);
 }, {passive:true});
 
+
+let selectedReviewRating = 0;
+let myStoryReviewId = null;
+function updateReviewStars() {
+  document.querySelectorAll("#reviewRating button").forEach(button => {
+    const value=Number(button.dataset.rating);
+    button.textContent=value<=selectedReviewRating?"★":"☆";
+    button.setAttribute("aria-pressed",String(value===selectedReviewRating));
+  });
+}
+document.querySelectorAll("#reviewRating button").forEach(button=>button.addEventListener("click",()=>{
+  selectedReviewRating=Number(button.dataset.rating);updateReviewStars();
+}));
+async function loadStoryReviews() {
+  if(!isDatabaseStory||!story?.id||isOfflineMode||!navigator.onLine){
+    $("reviewsPanel").hidden=!isDatabaseStory;
+    $("reviewsStatus").textContent=isDatabaseStory?"Les avis sont indisponibles hors connexion.":"";
+    return;
+  }
+  $("reviewsPanel").hidden=false;$("reviewsStatus").textContent="Chargement des avis…";
+  const {data,error}=await supabase.from("novelia_story_reviews")
+    .select("id,user_id,rating,title,body,created_at,profiles(username,display_name)")
+    .eq("story_id",story.id).eq("moderation_hidden",false).order("created_at",{ascending:false}).limit(100);
+  if(error){$("reviewsStatus").textContent="Impossible de charger les avis : "+error.message;return;}
+  const reviews=data||[],average=reviews.length?reviews.reduce((sum,r)=>sum+Number(r.rating||0),0)/reviews.length:0;
+  $("reviewsSummary").replaceChildren();
+  const avg=document.createElement("strong");avg.className="reviews-average";avg.textContent=reviews.length?average.toFixed(1)+"/5":"—";
+  const count=document.createElement("span");count.textContent=reviews.length+" avis · "+(reviews.length?"Moyenne des notes":"Pas encore de note");
+  $("reviewsSummary").append(avg,count);
+  const mine=reviews.find(r=>r.user_id===currentUser?.id);myStoryReviewId=mine?.id||null;
+  $("reviewForm").hidden=!currentUser||story.authorId===currentUser.id;
+  $("loginReviewNotice").hidden=Boolean(currentUser)||story.authorId===currentUser.id;
+  $("reviewFormHeading").textContent=mine?"Modifier mon avis":"Donner mon avis";
+  $("submitReview").textContent=mine?"Mettre à jour mon avis":"Publier mon avis";
+  if(mine){selectedReviewRating=Number(mine.rating);$("reviewTitle").value=mine.title||"";$("reviewBody").value=mine.body||"";}
+  else{selectedReviewRating=0;$("reviewTitle").value="";$("reviewBody").value="";}
+  updateReviewStars();
+  $("reviewsStatus").textContent=reviews.length?"":"Sois le premier à donner ton avis sur cette œuvre.";
+  $("reviewsList").replaceChildren();
+  reviews.forEach(review=>{
+    const profile=Array.isArray(review.profiles)?review.profiles[0]:review.profiles;
+    const card=document.createElement("article");card.className="review-card";
+    const author=document.createElement("strong");author.textContent=profile?.display_name||profile?.username||"Lecteur Novelia";
+    const meta=document.createElement("div");meta.className="review-meta";meta.textContent="★".repeat(review.rating)+"☆".repeat(5-review.rating)+" · "+safeDate(review.created_at);
+    card.append(author,meta);
+    if(review.title){const title=document.createElement("h3");title.textContent=review.title;card.append(title);}
+    const body=document.createElement("p");body.textContent=review.body;card.append(body);
+    if(currentUser?.id===review.user_id){const remove=document.createElement("button");remove.type="button";remove.className="button secondary";remove.textContent="Supprimer mon avis";remove.addEventListener("click",async()=>{
+      if(!confirm("Supprimer ton avis ?"))return;
+      const {error:deleteError}=await supabase.from("novelia_story_reviews").delete().eq("id",review.id);
+      if(deleteError){$("reviewsStatus").textContent="Suppression impossible : "+deleteError.message;return;}await loadStoryReviews();
+    });card.append(remove);}
+    $("reviewsList").append(card);
+  });
+}
+$("reviewForm").addEventListener("submit",async event=>{
+  event.preventDefault();if(!currentUser||!isDatabaseStory||!story?.id)return;
+  const body=$("reviewBody").value.trim();
+  if(selectedReviewRating<1||selectedReviewRating>5){$("reviewsStatus").textContent="Choisis une note entre 1 et 5 étoiles.";return;}
+  if(body.length<20){$("reviewsStatus").textContent="Ton avis doit contenir au moins 20 caractères.";return;}
+  const button=$("submitReview");button.disabled=true;
+  const payload={story_id:story.id,user_id:currentUser.id,rating:selectedReviewRating,title:$("reviewTitle").value.trim()||null,body};
+  const result=myStoryReviewId
+    ?await supabase.from("novelia_story_reviews").update({rating:payload.rating,title:payload.title,body:payload.body}).eq("id",myStoryReviewId)
+    :await supabase.from("novelia_story_reviews").insert(payload);
+  button.disabled=false;
+  if(result.error){$("reviewsStatus").textContent="Publication impossible : "+result.error.message;return;}
+  $("reviewsStatus").textContent="Ton avis a été enregistré.";await loadStoryReviews();
+});
+
 async function refreshUser() {
   const {data, error} = await supabase.auth.getUser();
   if (error) console.warn("Vérification du compte :", error.message);
@@ -1270,6 +1372,7 @@ async function refreshUser() {
     librarySyncReady = false;
   }
 
+  await loadStoryReviews();
   // Le total est public ; le statut du J’aime dépend du compte connecté.
   await refreshStoryLikes();
 }
