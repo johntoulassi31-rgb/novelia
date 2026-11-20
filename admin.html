@@ -90,7 +90,7 @@
    <p><strong>Explications :</strong></p><div class="bodytext">${safe(r.claim_details)}</div>
    ${r.original_work_url?'<p><strong>Œuvre originale :</strong> <a href="'+safe(r.original_work_url)+'" target="_blank" rel="noopener noreferrer">Consulter le lien</a></p>':''}
    ${r.evidence_url?'<p><strong>Élément justificatif :</strong> <a href="'+safe(r.evidence_url)+'" target="_blank" rel="noopener noreferrer">Consulter le lien</a></p>':''}
-   <label for="copyrightNote-${safe(r.id)}">Note interne / réponse au demandeur</label><textarea id="copyrightNote-${safe(r.id)}" maxlength="2000" style="width:100%;min-height:72px;padding:9px;border:1px solid var(--line);border-radius:9px;background:#fbf8f1;color:var(--text)">${safe(r.reviewer_note||'')}</textarea>
+   <label for="copyrightNote-${safe(r.id)}">Réponse visible au demandeur</label><textarea id="copyrightNote-${safe(r.id)}" maxlength="2000" style="width:100%;min-height:72px;padding:9px;border:1px solid var(--line);border-radius:9px;background:#fbf8f1;color:var(--text)">${safe(r.reviewer_note||'')}</textarea>
    <div class="actions"><select data-claim-status="${safe(r.id)}" aria-label="Statut de la réclamation"><option value="pending" ${r.status==='pending'?'selected':''}>Reçue</option><option value="under_review" ${r.status==='under_review'?'selected':''}>En cours d’examen</option><option value="need_info" ${r.status==='need_info'?'selected':''}>Informations demandées</option><option value="accepted" ${r.status==='accepted'?'selected':''}>Acceptée</option><option value="rejected" ${r.status==='rejected'?'selected':''}>Rejetée</option></select><button data-action="copyright-status" data-id="${safe(r.id)}">Enregistrer le dossier</button></div>
   </article>`).join('');
  }
