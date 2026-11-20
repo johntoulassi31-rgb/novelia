@@ -19,7 +19,7 @@ button.secondary{background:#e9dfc8}button:disabled{opacity:.5;cursor:not-allowe
 small{color:#756746}@media(max-width:540px){main{padding:15px 12px 45px}.balance{font-size:28px}}
 </style></head>
 <body>
-<header><a href="profile.html">← Mon profil</a><a href="publish.html">Studio d’écriture</a></header>
+<header><a href="profile.html">← Mon profil</a><nav><a href="publish.html">Studio d’écriture</a> · <a id="adminLink" href="earnings-admin.html" hidden>Administration des revenus</a></nav></header>
 <main>
 <h1>Mes revenus d’auteur</h1><p class="muted">Consulte tes gains, tes opérations et tes moyens de retrait.</p>
 <section class="card"><div class="muted">Solde disponible</div><div id="balance" class="balance">— XOF</div><p id="monetizationStatus" class="muted">Vérification du programme…</p></section>
@@ -60,6 +60,7 @@ let user=null,config=null,destinations=[];
 async function init(){
  const auth=await db.auth.getUser();user=auth.data?.user;
  if(!user){$("balance").textContent="Connexion requise";$("monetizationStatus").textContent="Connecte-toi depuis ton profil pour consulter ton portefeuille.";document.querySelectorAll("#destinationForm input,#destinationForm select,#destinationForm button,#payoutForm input,#payoutForm select,#payoutForm button").forEach(x=>x.disabled=true);return;}
+ const adminCheck=await db.rpc("novelia_is_admin");if(adminCheck.data===true)$("adminLink").hidden=false;
  const [cfg,bal,ledger,payouts,dests]=await Promise.all([
   db.from("novelia_public_monetization_config").select("enabled,author_share_bps,minimum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof").single(),
   db.from("novelia_author_wallet_balances").select("available_balance_xof").eq("author_id",user.id).maybeSingle(),
