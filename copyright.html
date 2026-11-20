@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#faf6ec">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://johntoulassi31-rgb.github.io/novelia/copyright.html">
+<title>Signaler une atteinte aux droits d’auteur — Novelia</title>
+<meta name="description" content="Déposer et suivre une réclamation concernant les droits d’auteur sur Novelia.">
+<link rel="stylesheet" href="theme-gold.css">
+<style>
+:root{--bg:#fbf9f2;--panel:#f9f4e9;--text:#362b0f;--muted:#7a6b44;--line:#f1e7d0;--accent:#856513;--gold:#c79d31}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:18px 16px;background:#faf6ee;border-bottom:1px solid var(--line)}header a{color:var(--text);font-weight:800;text-decoration:none}
+main{max-width:850px;margin:24px auto;padding:0 14px 48px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:18px}
+h1{font-size:1.55rem;margin:0 0 8px}h2{font-size:1.15rem;margin:0 0 12px}.muted,.note{color:var(--muted);font-size:.9rem}
+label{display:block;font-weight:650;margin:13px 0 5px}input,select,textarea{width:100%;padding:11px;border:1px solid #e6dbc2;border-radius:10px;background:#fffdf8;color:var(--text);font:inherit}
+textarea{min-height:120px;resize:vertical}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check{display:flex;gap:9px;align-items:flex-start;margin:14px 0;font-weight:400}.check input{width:auto;margin-top:5px}
+button,.button{border:0;border-radius:10px;padding:11px 16px;background:var(--gold);color:#241c0a;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}.message{display:none;padding:12px;border-radius:10px;margin:12px 0;overflow-wrap:anywhere}.message.show{display:block}.message.error{background:#f6e7e7;color:#7d1111}.message.success{background:#eaf3e9;color:#245c2d}.claim{padding:14px;border:1px solid var(--line);border-radius:12px;margin:10px 0;background:#fffdf8}.claim h3{margin:0 0 6px;font-size:1rem}.status{font-size:.8rem;font-weight:700;color:#72530d}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.panel{padding:15px}}
+</style>
+</head>
+<body>
+<header><a href="index.html">✦ NOVELIA</a></header>
+<main>
+<section class="panel">
+<h1>Réclamation relative aux droits d’auteur</h1>
+<p class="muted">Ce formulaire est réservé aux personnes qui estiment détenir des droits sur une œuvre publiée sur Novelia, ou être habilitées à agir pour leur titulaire. Fournis des informations exactes et suffisamment précises pour permettre un examen sérieux.</p>
+<p class="note">Une réclamation n’entraîne pas automatiquement le retrait d’une œuvre. L’équipe examine les éléments communiqués et peut demander des précisions aux parties concernées.</p>
+<div id="authMessage" class="message"></div>
+<form id="claimForm">
+<div class="grid">
+<div><label for="claimantName">Nom complet du demandeur *</label><input id="claimantName" maxlength="160" autocomplete="name" required></div>
+<div><label for="contactEmail">Adresse e-mail de contact *</label><input id="contactEmail" type="email" maxlength="254" autocomplete="email" required></div>
+</div>
+<label for="rightsBasis">En quelle qualité agis-tu ? *</label>
+<select id="rightsBasis" required>
+<option value="author">Je suis l’auteur ou l’autrice de l’œuvre originale</option>
+<option value="representative">Je représente le titulaire des droits</option>
+<option value="exclusive_licensee">Je détiens une licence exclusive</option>
+</select>
+<label for="targetType">Type de contenu concerné sur Novelia *</label>
+<select id="targetType" required><option value="story">Roman / Webtoon</option><option value="chapter">Chapitre</option></select>
+<label for="targetId">Identifiant du contenu Novelia (UUID) *</label>
+<input id="targetId" required maxlength="36" placeholder="Identifiant de l’œuvre ou du chapitre">
+<label for="targetTitle">Titre du contenu concerné *</label>
+<input id="targetTitle" required maxlength="300" placeholder="Titre visible sur Novelia">
+<label for="originalUrl">Lien vers l’œuvre originale (si disponible)</label>
+<input id="originalUrl" type="url" maxlength="2048" placeholder="https://…">
+<label for="evidenceUrl">Lien vers une preuve ou un document utile (facultatif)</label>
+<input id="evidenceUrl" type="url" maxlength="2048" placeholder="https://…">
+<label for="claimDetails">Explique précisément les droits concernés et les passages litigieux *</label>
+<textarea id="claimDetails" minlength="30" maxlength="5000" required placeholder="Décris l’œuvre originale, les éléments repris et les raisons pour lesquelles tu estimes que tes droits sont atteints."></textarea>
+<label class="check"><input id="authorized" type="checkbox" required><span>Je déclare être titulaire des droits concernés ou être autorisé(e) à agir pour leur titulaire.</span></label>
+<label class="check"><input id="goodFaith" type="checkbox" required><span>Je déclare que les informations fournies sont exactes et que ma réclamation est faite de bonne foi.</span></label>
+<p class="note">Les informations de contact et les pièces communiquées sont réservées au traitement de la réclamation et ne sont pas affichées publiquement.</p>
+<div class="actions"><button id="submitClaim" type="submit">Envoyer la réclamation</button><a class="button" href="index.html">Retour à Novelia</a></div>
+</form>
+<div id="formMessage" class="message" role="status" aria-live="polite"></div>
+</section>
+<section class="panel">
+<h2>Mes réclamations</h2>
+<p class="muted">Connecte-toi pour consulter l’état de tes dossiers.</p>
+<div id="myClaims"><p class="muted">Vérification du compte…</p></div>
+</section>
+</main>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const supabase=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
+const $=id=>document.getElementById(id);
+const params=new URLSearchParams(location.search);
+const statuses={pending:"Reçue",under_review:"En cours d’examen",need_info:"Informations complémentaires demandées",accepted:"Réclamation acceptée",rejected:"Réclamation rejetée"};
+let user=null;
+function show(id,text,kind){const el=$(id);el.textContent=text;el.className="message show "+kind;}
+function safe(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function validUuid(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);}
+function applyTarget(){
+ const type=params.get("type"),id=params.get("id"),title=params.get("title");
+ if(type==="story"||type==="chapter")$("targetType").value=type;
+ if(id&&validUuid(id))$("targetId").value=id;
+ if(title)$("targetTitle").value=title.slice(0,300);
+}
+async function loadClaims(){
+ const host=$("myClaims");
+ if(!user){host.innerHTML='<p class="muted">Connecte-toi pour suivre tes réclamations. <a href="login.html">Se connecter</a></p>';return;}
+ const {data,error}=await supabase.from("copyright_claims").select("id,target_type,target_title,status,created_at,reviewer_note").order("created_at",{ascending:false}).limit(50);
+ if(error){host.textContent="Impossible de charger tes dossiers : "+error.message;return;}
+ if(!data?.length){host.innerHTML='<p class="muted">Tu n’as encore déposé aucune réclamation.</p>';return;}
+ host.innerHTML=data.map(row=>'<article class="claim"><h3>'+safe(row.target_title)+'</h3><div class="status">'+safe(statuses[row.status]||row.status)+'</div><p class="muted">Déposée le '+safe(new Date(row.created_at).toLocaleString("fr-FR"))+'</p>'+(row.reviewer_note?'<p>'+safe(row.reviewer_note)+'</p>':'')+'<p class="muted">Référence : '+safe(row.id)+'</p></article>').join("");
+}
+const {data:sessionData,error:sessionError}=await supabase.auth.getSession();
+if(sessionError){show("authMessage","Impossible de vérifier la connexion : "+sessionError.message,"error");}
+user=sessionData?.session?.user||null;
+if(user){$("contactEmail").value=user.email||"";show("authMessage","Connecté : "+(user.email||"compte Novelia"),"success");}
+else{show("authMessage","Tu dois être connecté à Novelia pour envoyer et suivre une réclamation.","error");}
+applyTarget();await loadClaims();
+$("claimForm").addEventListener("submit",async event=>{
+ event.preventDefault();
+ if(!user){show("formMessage","Connecte-toi avant d’envoyer une réclamation.","error");return;}
+ const targetId=$("targetId").value.trim();
+ if(!validUuid(targetId)){show("formMessage","L’identifiant doit être un UUID valide. Ouvre la réclamation depuis l’œuvre concernée ou vérifie son identifiant.","error");return;}
+ const button=$("submitClaim");button.disabled=true;
+ try{
+  const payload={
+   claimant_user_id:user.id,
+   claimant_name:$("claimantName").value.trim(),
+   contact_email:$("contactEmail").value.trim(),
+   rights_basis:$("rightsBasis").value,
+   original_work_url:$("originalUrl").value.trim()||null,
+   target_type:$("targetType").value,
+   target_id:targetId,
+   target_title:$("targetTitle").value.trim(),
+   claim_details:$("claimDetails").value.trim(),
+   evidence_url:$("evidenceUrl").value.trim()||null,
+   declaration_authorized:$("authorized").checked,
+   declaration_good_faith:$("goodFaith").checked
+  };
+  const {data,error}=await supabase.from("copyright_claims").insert(payload).select("id").single();
+  if(error)throw error;
+  show("formMessage","Réclamation envoyée. Conserve cette référence : "+data.id,"success");
+  $("claimForm").reset();if(user.email)$("contactEmail").value=user.email;
+  applyTarget();await loadClaims();
+ }catch(error){show("formMessage","Envoi impossible : "+(error?.message||"erreur inconnue."),"error");}
+ finally{button.disabled=false;}
+});
+supabase.auth.onAuthStateChange((_event,session)=>{user=session?.user||null;loadClaims();});
+</script>
+<script src="bottom-nav.js" defer></script>
+</body>
+</html>
