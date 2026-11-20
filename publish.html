@@ -102,6 +102,10 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
       <div class="section-heading"><h2>Mes histoires</h2><button type="button" id="refreshStories" class="secondary small">Actualiser</button></div>
       <p class="note">Cette liste comprend tes histoires publiées et tes brouillons. Seul leur auteur peut les gérer.</p>
       <div id="storyList" class="story-list"><p class="muted">Chargement de tes histoires…</p></div>
+      <hr>
+      <h3>Brouillons de chapitres à reprendre</h3>
+      <p class="note">Retrouve ici les chapitres dont l’écriture a été sauvegardée automatiquement sans être encore enregistrée comme chapitre définitif.</p>
+      <div id="pendingDraftList" class="story-list"><p class="muted">Recherche des brouillons…</p></div>
     </div>
 
     <section id="editStoryPanel" class="panel hidden">
@@ -158,6 +162,7 @@ const loginArea = $("loginArea");
 const workspace = $("workspace");
 const message = $("message");
 const storyList = $("storyList");
+const pendingDraftList = $("pendingDraftList");
 const chapterList = $("chapterList");
 const createForm = $("createForm");
 const createButton = $("createButton");
@@ -430,6 +435,45 @@ async function loadOwnStories() {
   }
   ownedStories = data || [];
   renderOwnStories();
+  await loadPendingChapterDrafts();
+}
+
+async function loadPendingChapterDrafts() {
+  if (!currentUser || !pendingDraftList) return;
+  pendingDraftList.replaceChildren(make("p", "muted", "Recherche des brouillons…"));
+  const { data, error } = await supabase.from("novelia_author_drafts")
+    .select("id,story_id,chapter_id,title,updated_at")
+    .eq("author_id", currentUser.id).not("story_id", "is", null)
+    .order("updated_at", {ascending:false}).limit(30);
+  if (error) {
+    pendingDraftList.replaceChildren(make("p", "empty", "Impossible de charger les brouillons : " + error.message));
+    return;
+  }
+  pendingDraftList.replaceChildren();
+  const drafts = (data || []).filter(draft => ownedStories.some(story => story.id === draft.story_id));
+  if (!drafts.length) {
+    pendingDraftList.appendChild(make("p", "empty", "Aucun brouillon de chapitre en attente. Tes prochaines sauvegardes automatiques apparaîtront ici."));
+    return;
+  }
+  drafts.forEach(draft => {
+    const story = ownedStories.find(item => item.id === draft.story_id);
+    const row = make("article", "story-item");
+    row.appendChild(make("strong", "", (story?.title || "Histoire") + " — " + (draft.title || "Chapitre sans titre")));
+    row.appendChild(make("p", "story-meta", "Dernière sauvegarde : " + (draft.updated_at ? new Date(draft.updated_at).toLocaleString() : "date inconnue")));
+    const resume = make("button", "small", "Reprendre l’écriture");
+    resume.type = "button";
+    resume.addEventListener("click", async () => {
+      await openStoryEditor(draft.story_id);
+      const chapter = draft.chapter_id ? chaptersForSelectedStory.find(item => item.id === draft.chapter_id) : null;
+      if (draft.chapter_id && !chapter) {
+        showMessage("Le chapitre lié à ce brouillon n’existe plus. Le texte sauvegardé reste accessible depuis les brouillons tant que son enregistrement existe.", "error");
+        return;
+      }
+      await openChapterEditor(chapter || null);
+    });
+    row.appendChild(resume);
+    pendingDraftList.appendChild(row);
+  });
 }
 
 function renderOwnStories() {
