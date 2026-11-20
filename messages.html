@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fbf8f1">
+<meta name="robots" content="noindex,nofollow">
+<title>Messages — Novelia</title>
+<link rel="stylesheet" href="theme-gold.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fbf8f1;color:#392b08;font:15px/1.5 Arial,sans-serif}header{padding:14px 18px;background:#f9f4ea;border-bottom:1px solid #f0e6cd;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}header strong{color:#856513;font-size:20px}nav{display:flex;gap:14px;flex-wrap:wrap}a{color:#765b12}nav a{text-decoration:none}.layout{width:min(1000px,calc(100% - 24px));margin:22px auto;display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.5fr);gap:16px}.panel{background:#f8f3e6;border:1px solid #f0e6cd;border-radius:16px;padding:16px;min-width:0}h1,h2{color:#856513;margin:0 0 12px}h1{font-size:24px}h2{font-size:18px}.muted{color:#675937}.status{min-height:22px;overflow-wrap:anywhere}.error{color:#8b1717}.success{color:#28733a}.conversation{display:block;width:100%;text-align:left;background:#fbf8f1;border:1px solid #eadfbe;border-radius:12px;padding:12px;margin:8px 0;color:#392b08;cursor:pointer}.conversation.active{border-color:#b18a24;background:#f3ebd7}.conversation strong{display:block}.conversation small{display:block;color:#675937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.thread{height:min(60vh,620px);min-height:300px;overflow:auto;padding:10px;background:#fbf8f1;border:1px solid #eadfbe;border-radius:12px;display:flex;flex-direction:column;gap:9px}.bubble{max-width:84%;padding:10px 13px;border-radius:14px;background:#eee5d1;align-self:flex-start;overflow-wrap:anywhere;white-space:pre-wrap}.bubble.mine{background:#e6d5a9;align-self:flex-end}.bubble time{display:block;font-size:10px;color:#76643a;margin-top:5px}.composer{display:flex;gap:8px;margin-top:12px}.composer textarea{flex:1;min-width:0;resize:vertical;min-height:48px;max-height:140px;padding:12px;border:1px solid #d9c99d;border-radius:10px;background:white;color:#392b08;font:inherit}.btn{border:0;border-radius:10px;padding:11px 15px;background:#c3941c;color:#2a2011;font-weight:bold;cursor:pointer}.btn:disabled{opacity:.5;cursor:wait}.empty{text-align:center;padding:28px 8px;color:#675937}.thread-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.thread-head h2{margin:0}.small{font-size:12px}@media(max-width:700px){.layout{grid-template-columns:1fr}.thread{height:48vh;min-height:260px}.layout{margin:12px auto 30px}} 
+</style>
+</head>
+<body>
+<header><strong>✦ NOVELIA</strong><nav><a href="index.html">Accueil</a><a href="community.html">Communauté</a><a href="authors.html">Auteurs</a><a href="library.html">Bibliothèque</a></nav></header>
+<main class="layout">
+<section class="panel">
+<h1>Messages</h1>
+<p class="muted small">Échange en privé avec les lecteurs et auteurs que tu suis ou qui te suivent.</p>
+<p id="account" class="status muted">Vérification du compte…</p>
+<div id="inbox"><p class="empty">Chargement des conversations…</p></div>
+</section>
+<section class="panel">
+<div class="thread-head"><h2 id="threadTitle">Conversation</h2><a href="community.html" class="small">Fil communautaire</a></div>
+<p id="threadHint" class="muted small">Sélectionne une conversation ou ouvre le profil d’un auteur pour lui écrire.</p>
+<div id="thread" class="thread" aria-live="polite"><p class="empty">Tes messages apparaîtront ici.</p></div>
+<form id="composer" class="composer" hidden>
+<textarea id="messageInput" maxlength="3000" rows="2" placeholder="Écrire un message…" required></textarea>
+<button class="btn" id="sendButton" type="submit">Envoyer</button>
+</form>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+</section>
+</main>
+<script type="module">
+import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const supabase=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
+const $=id=>document.getElementById(id);
+let user=null, activeConversation=null, activeOther=null, refreshTimer=null;
+const params=new URLSearchParams(location.search);
+function say(t,k=""){ $("status").textContent=t; $("status").className="status "+k; }
+function escapeText(v){return String(v||"");}
+function niceDate(v){const d=new Date(v);return Number.isNaN(d.getTime())?"":new Intl.DateTimeFormat("fr-FR",{dateStyle:"short",timeStyle:"short"}).format(d);}
+function pair(a,b){return a<b?[a,b]:[b,a];}
+async function profileMap(ids){const clean=[...new Set(ids.filter(Boolean))];if(!clean.length)return new Map();const {data,error}=await supabase.from("profiles").select("id,username,display_name,avatar_url").in("id",clean);if(error)throw error;return new Map((data||[]).map(p=>[p.id,p]));}
+function otherId(c){return c.participant_low===user.id?c.participant_high:c.participant_low;}
+async function loadInbox(){
+ const {data,error}=await supabase.from("novelia_conversations").select("id,participant_low,participant_high,created_at").or("participant_low.eq."+user.id+",participant_high.eq."+user.id).order("created_at",{ascending:false}).limit(50);
+ if(error)throw error;
+ const list=data||[];const ids=list.map(otherId);const profiles=await profileMap(ids);
+ const latest=await Promise.all(list.map(async c=>{const {data:m}=await supabase.from("novelia_messages").select("content,created_at,sender_id").eq("conversation_id",c.id).order("created_at",{ascending:false}).limit(1).maybeSingle();return [c.id,m||null];}));
+ const lastMap=new Map(latest);const box=$("inbox");box.replaceChildren();
+ if(!list.length){const p=document.createElement("p");p.className="empty";p.textContent="Aucune conversation pour le moment. Pour commencer, ouvre le profil d’un auteur avec lequel tu as un lien d’abonnement.";box.append(p);return;}
+ list.forEach(c=>{const p=profiles.get(otherId(c));const b=document.createElement("button");b.type="button";b.className="conversation"+(c.id===activeConversation?" active":"");const title=document.createElement("strong");title.textContent=p?(p.display_name||p.username||"Membre Novelia"):"Membre Novelia";const m=lastMap.get(c.id);const preview=document.createElement("small");preview.textContent=m?((m.sender_id===user.id?"Vous : ":"")+m.content):"Aucun message";b.append(title,preview);b.addEventListener("click",()=>openConversation(c,p));box.append(b);});
+}
+async function openConversation(c,p){
+ activeConversation=c.id;activeOther=p||null;
+ $("threadTitle").textContent=p?(p.display_name||p.username||"Conversation"):"Conversation";
+ $("threadHint").textContent=p&&p.username?"@"+p.username:"Messages privés";
+ $("composer").hidden=false;say("");await loadMessages();await loadInbox();
+}
+async function loadMessages(){
+ if(!activeConversation)return;
+ const {data,error}=await supabase.from("novelia_messages").select("id,sender_id,content,created_at").eq("conversation_id",activeConversation).order("created_at",{ascending:true}).limit(200);
+ if(error)throw error;
+ const box=$("thread");box.replaceChildren();
+ if(!data?.length){const p=document.createElement("p");p.className="empty";p.textContent="Commence la conversation en envoyant le premier message.";box.append(p);return;}
+ data.forEach(m=>{const b=document.createElement("div");b.className="bubble"+(m.sender_id===user.id?" mine":"");b.textContent=escapeText(m.content);const t=document.createElement("time");t.textContent=niceDate(m.created_at);b.append(t);box.append(b);});
+ box.scrollTop=box.scrollHeight;
+}
+async function findOrCreateConversation(profile){
+ const [low,high]=pair(user.id,profile.id);
+ let {data,error}=await supabase.from("novelia_conversations").select("id,participant_low,participant_high,created_at").eq("participant_low",low).eq("participant_high",high).maybeSingle();
+ if(error)throw error;if(data)return data;
+ const inserted=await supabase.from("novelia_conversations").insert({participant_low:low,participant_high:high}).select("id,participant_low,participant_high,created_at").single();
+ if(!inserted.error)return inserted.data;
+ if(inserted.error.code==="23505"){const retry=await supabase.from("novelia_conversations").select("id,participant_low,participant_high,created_at").eq("participant_low",low).eq("participant_high",high).single();if(!retry.error)return retry.data;}
+ throw inserted.error;
+}
+$("composer").addEventListener("submit",async e=>{
+ e.preventDefault();const content=$("messageInput").value.trim();if(!content||!activeConversation)return;
+ $("sendButton").disabled=true;
+ try{const {error}=await supabase.from("novelia_messages").insert({conversation_id:activeConversation,sender_id:user.id,content});if(error)throw error;$("messageInput").value="";await loadMessages();await loadInbox();say("Message envoyé.","success");}
+ catch(error){say("Envoi impossible : "+(error.message||"erreur inconnue."),"error");}
+ finally{$("sendButton").disabled=false;}
+});
+async function start(){
+ try{
+  const {data,error}=await supabase.auth.getUser();if(error)throw error;user=data.user;
+  if(!user){$("account").textContent="Connecte-toi pour accéder à tes messages.";$("inbox").innerHTML='<p class="empty"><a href="login.html">Se connecter</a></p>';return;}
+  $("account").textContent="Connecté · tes conversations sont privées.";
+  await loadInbox();
+  const username=(params.get("with")||"").trim().replace(/^@/,"");
+  if(username){
+   const {data:p,error:pe}=await supabase.from("profiles").select("id,username,display_name").ilike("username",username).maybeSingle();
+   if(pe)throw pe;if(!p)throw new Error("Ce profil est introuvable.");
+   if(p.id===user.id)throw new Error("Tu ne peux pas t’envoyer de message.");
+   const {data:relation,error:re}=await supabase.from("follows").select("follower_id").or("and(follower_id.eq."+user.id+",followed_id.eq."+p.id+"),and(follower_id.eq."+p.id+",followed_id.eq."+user.id+")").limit(1);
+   if(re)throw re;if(!relation?.length)throw new Error("Pour limiter les messages indésirables, un abonnement dans l’un ou l’autre sens est nécessaire avant de démarrer une conversation.");
+   const c=await findOrCreateConversation(p);await openConversation(c,p);
+  }
+  refreshTimer=setInterval(()=>{if(activeConversation&&!document.hidden)loadMessages().catch(()=>{});},12000);
+ }catch(error){say(error.message||"Impossible de charger les messages.","error");}
+}
+start();
+window.addEventListener("beforeunload",()=>{if(refreshTimer)clearInterval(refreshTimer);});
+</script>
+<script src="bottom-nav.js" defer></script>
+</body></html>
