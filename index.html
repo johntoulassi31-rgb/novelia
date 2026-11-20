@@ -235,30 +235,7 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
     <button class="filter" data-filter="Favoris">♡ Mes favoris</button>
   </div>
   <div class="stories" id="storiesGrid">
-    <article class="story" data-id="roses" data-type="Roman">
-      <img class="cover-image" src="images/roses.png" alt="Couverture de Les Roses de minuit" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
-      <div class="cover" hidden>Les Roses<br>de minuit</div>
-      <button type="button" class="favorite favorite-card" data-favorite="roses" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info"><h3>Les Roses de minuit</h3><p>Dark romance · Roman</p><button class="button read" data-story="roses">Découvrir</button></div>
-    </article>
-    <article class="story" data-id="lune" data-type="Webtoon">
-      <img class="cover-image" src="images/lune.png" alt="Couverture de La Lune des oubliés" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
-      <div class="cover" hidden>La Lune<br>des oubliés</div>
-      <button type="button" class="favorite favorite-card" data-favorite="lune" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info"><h3>La Lune des oubliés</h3><p>Fantasy · Webtoon</p><button class="button read" data-story="lune">Découvrir</button></div>
-    </article>
-    <article class="story" data-id="automne" data-type="Roman">
-      <img class="cover-image" src="images/automne.png" alt="Couverture de Un automne pour nous" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
-      <div class="cover" hidden>Un automne<br>pour nous</div>
-      <button type="button" class="favorite favorite-card" data-favorite="automne" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info"><h3>Un automne pour nous</h3><p>Romance · Roman</p><button class="button read" data-story="automne">Découvrir</button></div>
-    </article>
-    <article class="story" data-id="ville" data-type="Webtoon">
-      <img class="cover-image" src="images/ville.png" alt="Couverture de La Ville sans ombre" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
-      <div class="cover" hidden>La Ville<br>sans ombre</div>
-      <button type="button" class="favorite favorite-card" data-favorite="ville" aria-label="Ajouter aux favoris" aria-pressed="false">♡</button>
-      <div class="info"><h3>La Ville sans ombre</h3><p>Mystère · Webtoon</p><button class="button read" data-story="ville">Découvrir</button></div>
-    </article>
+    <!-- Les œuvres publiées sont chargées depuis Supabase. -->
   </div>
   <p id="message" aria-live="polite"></p>
 </main>
