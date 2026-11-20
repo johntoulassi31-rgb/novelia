@@ -97,7 +97,27 @@ async function loadMessages(){
  if(error)throw error;
  const box=$("thread");box.replaceChildren();
  if(!data?.length){const p=document.createElement("p");p.className="empty";p.textContent="Commence la conversation en envoyant le premier message.";box.append(p);return;}
- data.forEach(m=>{const b=document.createElement("div");b.className="bubble"+(m.sender_id===user.id?" mine":"");b.textContent=escapeText(m.content);const t=document.createElement("time");t.textContent=niceDate(m.created_at);b.append(t);box.append(b);});
+ data.forEach(m=>{
+  const b=document.createElement("div");b.className="bubble"+(m.sender_id===user.id?" mine":"");b.textContent=escapeText(m.content);
+  const t=document.createElement("time");t.textContent=niceDate(m.created_at);b.append(t);
+  if(m.sender_id!==user.id){
+   const report=document.createElement("button");report.type="button";report.className="btn danger";report.style.cssText="font-size:11px;padding:6px 9px;margin-top:6px";report.textContent="Signaler";
+   report.addEventListener("click",async()=>{
+    const details=window.prompt("Pourquoi souhaites-tu signaler ce message ? (contexte facultatif)","");
+    if(details===null)return;
+    report.disabled=true;
+    const {error:reportError}=await supabase.from("content_reports").insert({
+      reporter_id:user.id,target_type:"message",target_id:m.id,reason:"other",
+      details:details.trim()||"Message privé signalé depuis la messagerie.",status:"pending"
+    });
+    report.disabled=false;
+    if(reportError){say(reportError.code==="23505"?"Tu as déjà signalé ce message.":"Signalement impossible : "+reportError.message,"error");return;}
+    say("Message signalé à l’équipe de modération.","success");
+   });
+   b.append(report);
+  }
+  box.append(b);
+ });
  box.scrollTop=box.scrollHeight;
 }
 async function findOrCreateConversation(profile){
