@@ -1124,6 +1124,8 @@ function openReader(index, restorePosition = true) {
     const progress = getProgress();
     if (progress[storyKey]?.chapter === currentChapter) {
       progress[storyKey].scrollPercent = 0;
+      progress[storyKey].panelIndex = null;
+      progress[storyKey].panelOffset = null;
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
     }
   }
