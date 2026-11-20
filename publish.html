@@ -29,6 +29,16 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#f3ebd7;border:1px 
 .chapter-item{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #f0e5cc;padding:12px 0}.chapter-item:last-child{border-bottom:0}.chapter-name{min-width:0;overflow-wrap:anywhere}.chapter-name strong{display:block;margin-bottom:5px}.empty{padding:16px;background:#f9f5ec;border:1px dashed #dad2bd;border-radius:10px;color:var(--muted);line-height:1.5}.cover-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px;background:#f9f5ec;border:1px solid var(--line);border-radius:10px}.cover-preview img{width:76px;height:108px;object-fit:cover;border-radius:6px}.cover-preview .note{overflow-wrap:anywhere}
 hr{border:0;border-top:1px solid var(--line);margin:24px 0}
 @media(max-width:540px){body{padding:12px}.panel{padding:15px}h1{font-size:24px}.field-row{grid-template-columns:1fr}.story-top{display:block}.story-top .status{margin-top:8px}.chapter-item{align-items:flex-start}.chapter-item button{flex-shrink:0}}
+
+.writing-metrics{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;color:var(--muted);font-size:13px}
+.writing-tools{border:1px solid var(--line);background:#fbf7ed;border-radius:12px;padding:12px;margin:12px 0}
+.goal-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.goal-row input{max-width:120px;padding:8px}
+.goal-track{height:8px;background:#e9dfc9;border-radius:99px;overflow:hidden;margin-top:8px}.goal-fill{height:100%;width:0;background:var(--purple);transition:width .2s}
+.focus-mode #managePanel>.panel,.focus-mode #workspace>.tabs,.focus-mode main>header{display:none!important}
+.focus-mode #chapterForm{position:fixed!important;inset:8px!important;z-index:10000!important;overflow:auto!important;margin:0!important;box-shadow:0 0 0 100vmax rgba(35,27,10,.72);max-width:none;background:var(--bg)}
+.focus-mode #chapterEditContent{min-height:55vh}
+.version-list{display:grid;gap:8px;margin-top:10px}.version-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fbf7ed}
+@media(max-width:540px){.version-item{align-items:flex-start;flex-direction:column}}
 </style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
@@ -88,7 +98,7 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
       <label for="chapterTitle">Titre du chapitre *</label>
       <input id="chapterTitle" maxlength="200" required placeholder="Ex. : Chapitre 1 — La rencontre">
       <label for="content">Contenu du chapitre *</label>
-      <textarea id="content" required placeholder="Commence à écrire ici…"></textarea>
+      <textarea id="content" required placeholder="Commence à écrire ici…"></textarea>\n      <div id="createWritingMetrics" class="writing-metrics" aria-live="polite">0 mot · environ 1 min de lecture</div>
       <p id="autosaveStatus" class="note" role="status" aria-live="polite">La sauvegarde automatique démarrera dès que tu écriras.</p>
       <p class="note">Pour un webtoon, tu peux pour le moment saisir du texte et des liens d’images dans le contenu.</p>
       <label for="status">Visibilité</label>
@@ -137,6 +147,14 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
         <input id="chapterId" type="hidden">
         <label for="chapterEditTitle">Titre du chapitre *</label><input id="chapterEditTitle" maxlength="200" required placeholder="Ex. : Chapitre 2 — Le secret">
         <label for="chapterEditContent">Contenu *</label><textarea id="chapterEditContent" required placeholder="Écris le contenu du chapitre…"></textarea>
+        <div id="chapterWritingMetrics" class="writing-metrics" aria-live="polite">0 mot · environ 1 min de lecture</div>
+        <div class="writing-tools">
+          <div class="goal-row"><label for="writingGoal" style="margin:0">Objectif de mots</label><input id="writingGoal" type="number" min="50" max="20000" step="50" value="500" inputmode="numeric"><span id="goalProgress" class="note">0 / 500 mots</span></div>
+          <div class="goal-track" role="progressbar" aria-label="Progression de l’objectif d’écriture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="goalFill" class="goal-fill"></div></div>
+          <p class="note">Objectif enregistré sur cet appareil. La progression suit le contenu du chapitre en cours.</p>
+        </div>
+        <div class="form-actions"><button type="button" id="focusModeButton" class="secondary small">Mode concentration</button><button type="button" id="refreshVersionsButton" class="secondary small">Actualiser l’historique</button></div>
+        <div><h3>Historique des versions</h3><p class="note">Jusqu’à 20 versions par chapitre. Création automatique au maximum toutes les 5 minutes lorsque le texte change.</p><div id="versionHistory" class="version-list"><p class="muted">Ouvre un chapitre pour consulter son historique.</p></div></div>
         <p id="chapterAutosaveStatus" class="note" role="status" aria-live="polite">La sauvegarde automatique démarrera dès que tu écriras.</p>
         <p id="chapterNumberHint" class="note"></p>
         <div class="form-actions"><button id="saveChapterButton" type="submit">Enregistrer le chapitre</button><button type="button" id="cancelChapter" class="secondary">Annuler</button></div>
@@ -691,7 +709,26 @@ function renderChapters() {
   });
 }
 
-function chapterDraftKey() {
+
+function countWords(value) { const t=String(value||"").trim(); return t ? (t.match(/\\S+/g)||[]).length : 0; }
+function renderWritingMetrics(textarea,targetId) {
+  const words=countWords(textarea.value), minutes=Math.max(1,Math.ceil(words/200)), node=$(targetId);
+  if(node) node.textContent=words+" mot"+(words>1?"s":"")+" · environ "+minutes+" min de lecture";
+  updateGoalProgress(words);
+}
+function writingGoalKey(){return "novelia_writing_goal_v1_"+(currentUser?.id||"guest");}
+function loadWritingGoal(){let goal=500;try{goal=Number(localStorage.getItem(writingGoalKey()))||500;}catch{} $("writingGoal").value=Math.min(20000,Math.max(50,goal));}
+function updateGoalProgress(words){
+ const goal=Math.min(20000,Math.max(50,Number($("writingGoal")?.value)||500)),percent=Math.min(100,Math.round(words/goal*100));
+ $("goalFill").style.width=percent+"%";$("goalProgress").textContent=words+" / "+goal+" mots ("+percent+"%)";
+ $("goalFill").parentElement.setAttribute("aria-valuenow",String(percent));
+}
+function toggleFocusMode(force){
+ const enabled=typeof force==="boolean"?force:!document.body.classList.contains("focus-mode");
+ document.body.classList.toggle("focus-mode",enabled);
+ $("focusModeButton").textContent=enabled?"Quitter le mode concentration":"Mode concentration";
+}
+\nfunction chapterDraftKey() {
   return "novelia_chapter_draft_v1_" + currentUser.id + "_" + selectedStory.id + "_" + ($("chapterId").value || "new");
 }
 function setChapterAutosaveStatus(text, kind = "") {
@@ -708,7 +745,52 @@ function queueChapterAutosave() {
   clearTimeout(chapterAutosaveTimer);
   chapterAutosaveTimer = setTimeout(() => { chapterAutosaveTimer = null; saveChapterDraftToCloud(); }, 1200);
 }
-async function saveChapterDraftToCloud() {
+
+async function preserveChapterVersion(previous){
+ if(!previous||!selectedStory||!currentUser||!$("chapterId").value)return;
+ const title=$("chapterEditTitle").value,content=$("chapterEditContent").value;
+ if(previous.title===title&&previous.content===content)return;
+ const chapterId=$("chapterId").value;
+ const {data:latest,error:latestError}=await supabase.from("novelia_author_draft_versions").select("id,created_at")
+  .eq("author_id",currentUser.id).eq("chapter_id",chapterId).order("created_at",{ascending:false}).limit(1).maybeSingle();
+ if(latestError)throw latestError;
+ if(!latest||Date.now()-new Date(latest.created_at).getTime()>=300000){
+  const {error}=await supabase.from("novelia_author_draft_versions").insert({
+   author_id:currentUser.id,story_id:selectedStory.id,chapter_id:chapterId,title:previous.title||"",content:previous.content||""
+  });
+  if(error)throw error;
+  const {data:old,error:listError}=await supabase.from("novelia_author_draft_versions").select("id")
+   .eq("author_id",currentUser.id).eq("chapter_id",chapterId).order("created_at",{ascending:false}).range(20,1000);
+  if(listError)throw listError;
+  const ids=(old||[]).map(x=>x.id);
+  if(ids.length){const {error:delError}=await supabase.from("novelia_author_draft_versions").delete().eq("author_id",currentUser.id).in("id",ids);if(delError)throw delError;}
+ }
+}
+async function loadChapterVersions(){
+ const list=$("versionHistory"),chapterId=$("chapterId").value;
+ if(!list||!currentUser||!selectedStory||!chapterId){if(list)list.replaceChildren(make("p","muted","L’historique sera disponible après l’enregistrement du chapitre."));return;}
+ list.replaceChildren(make("p","muted","Chargement de l’historique…"));
+ const {data,error}=await supabase.from("novelia_author_draft_versions").select("id,title,content,created_at")
+  .eq("author_id",currentUser.id).eq("story_id",selectedStory.id).eq("chapter_id",chapterId)
+  .order("created_at",{ascending:false}).limit(20);
+ list.replaceChildren();
+ if(error){list.appendChild(make("p","note","Historique indisponible : "+error.message));return;}
+ if(!data?.length){list.appendChild(make("p","muted","Aucune ancienne version pour le moment."));return;}
+ data.forEach(v=>{
+  const row=make("div","version-item"),info=make("div","");
+  info.append(make("strong","",new Date(v.created_at).toLocaleString([],{dateStyle:"medium",timeStyle:"short"})),
+   make("p","story-meta",countWords(v.content)+" mots · "+(v.title||"Sans titre")));
+  const btn=make("button","secondary small","Restaurer");btn.type="button";
+  btn.addEventListener("click",()=>{
+   if(!confirm("Restaurer cette ancienne version ? Le contenu actuel sera conservé par la sauvegarde automatique."))return;
+   $("chapterEditTitle").value=v.title||"";$("chapterEditContent").value=v.content||"";
+   renderWritingMetrics($("chapterEditContent"),"chapterWritingMetrics");queueChapterAutosave();
+   setChapterAutosaveStatus("Ancienne version restaurée. Sauvegarde automatique en cours.","success");
+  });
+  row.append(info,btn);list.appendChild(row);
+ });
+}
+\nasync function saveChapterDraftToCloud() {
   if (!currentUser || !selectedStory || chapterForm.classList.contains("hidden")) return;
   if (chapterAutosaveInProgress) { chapterAutosavePending = true; return; }
   const title = $("chapterEditTitle").value;
@@ -728,6 +810,10 @@ async function saveChapterDraftToCloud() {
     };
     let result;
     if (chapterRemoteDraftId) {
+      const {data:previous,error:previousError}=await supabase.from("novelia_author_drafts")
+        .select("title,content").eq("id",chapterRemoteDraftId).eq("author_id",currentUser.id).maybeSingle();
+      if(previousError)throw previousError;
+      if(previous)await preserveChapterVersion(previous);
       result = await supabase.from("novelia_author_drafts").update(payload)
         .eq("id", chapterRemoteDraftId).eq("author_id", currentUser.id).select("id").maybeSingle();
     } else {
@@ -737,7 +823,7 @@ async function saveChapterDraftToCloud() {
     if (!result.data?.id) throw new Error("La sauvegarde n’a pas été confirmée.");
     chapterRemoteDraftId = result.data.id;
     try { localStorage.setItem(chapterDraftKey(), JSON.stringify({title,content,remoteDraftId:chapterRemoteDraftId,savedAt:new Date().toISOString()})); } catch {}
-    setChapterAutosaveStatus("Chapitre sauvegardé automatiquement à " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + ".", "success");
+    setChapterAutosaveStatus("Chapitre sauvegardé automatiquement à " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + ".", "success");\n    await loadChapterVersions();
   } catch (error) {
     setChapterAutosaveStatus("Sauvegarde en ligne impossible. Le texte reste conservé sur cet appareil. " + (error?.message || ""), "error");
   } finally {
@@ -801,12 +887,22 @@ async function openChapterEditor(chapter = null) {
   setBusy(saveChapterButton, false, "Enregistrement…", chapter ? "Enregistrer les modifications" : "Enregistrer le chapitre");
   chapterForm.classList.remove("hidden");
   setChapterAutosaveStatus("Recherche d’un brouillon…");
-  await restoreChapterDraft(chapter);
+  await restoreChapterDraft(chapter);\n  renderWritingMetrics($("chapterEditContent"),"chapterWritingMetrics");\n  await loadChapterVersions();
   chapterForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 $("showAddChapter").addEventListener("click", () => openChapterEditor());
 $("chapterEditTitle").addEventListener("input", queueChapterAutosave);
+$("content").addEventListener("input",()=>renderWritingMetrics($("content"),"createWritingMetrics"));
+$("chapterEditContent").addEventListener("input",()=>renderWritingMetrics($("chapterEditContent"),"chapterWritingMetrics"));
+$("writingGoal").addEventListener("change",()=>{
+ const goal=Math.min(20000,Math.max(50,Number($("writingGoal").value)||500));$("writingGoal").value=goal;
+ try{localStorage.setItem(writingGoalKey(),String(goal));}catch{}
+ updateGoalProgress(countWords($("chapterEditContent").value));
+});
+$("focusModeButton").addEventListener("click",()=>toggleFocusMode());
+$("refreshVersionsButton").addEventListener("click",loadChapterVersions);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("focus-mode"))toggleFocusMode(false);});
 $("chapterEditContent").addEventListener("input", queueChapterAutosave);
 $("cancelChapter").addEventListener("click", () => {
   chapterForm.reset();
@@ -886,7 +982,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
   }
 });
 
-await initialize();
+await initialize();\nrenderWritingMetrics($("content"),"createWritingMetrics");\nloadWritingGoal();
 </script>
 <script src="bottom-nav.js" defer></script>
 <script src="suspension-banner.js" defer></script>
