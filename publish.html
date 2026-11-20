@@ -404,7 +404,7 @@ document.querySelectorAll("[data-tab]").forEach(button => {
 });
 
 
-function isWebtoonEditor(){return selectedStory?.story_type==="webtoon";}
+function isWebtoonEditor(){return !!selectedStory && ($("editType")?.value || selectedStory.story_type)==="webtoon";}
 function refreshWebtoonComposer(){
  const box=$("webtoonComposer");
  if(!box)return;
@@ -774,6 +774,7 @@ editStoryForm.addEventListener("submit", async event => {
     if (error) throw error;
     if (!data) throw new Error("Aucune histoire n’a été modifiée. Vérifie que tu es connecté au compte auteur et que les autorisations Supabase permettent la modification.");
     selectedStory = data;
+    refreshWebtoonComposer();
     $("editCover").value = data.cover_url || "";
     $("editCoverFile").value = "";
     showCoverPreview(null, "edit");
