@@ -987,24 +987,27 @@ async function saveChapterDraftToCloud() {
 async function restoreChapterDraft(chapter) {
   chapterRemoteDraftId = null;
   const key = chapterDraftKey();
-  let snapshot = null;
-  try { snapshot = JSON.parse(localStorage.getItem(key) || "null"); } catch {}
-  if (snapshot?.remoteDraftId) chapterRemoteDraftId = snapshot.remoteDraftId;
-  if (!snapshot) {
-    const query = supabase.from("novelia_author_drafts").select("id,title,content,updated_at")
-      .eq("author_id", currentUser.id).eq("story_id", selectedStory.id);
-    const { data, error } = chapter
-      ? await query.eq("chapter_id", chapter.id).order("updated_at", {ascending:false}).limit(1).maybeSingle()
-      : await query.is("chapter_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
-    if (!error && data) {
-      chapterRemoteDraftId = data.id;
-      snapshot = {title:data.title || "",content:data.content || ""};
-    }
-  }
+  let localSnapshot = null;
+  try { localSnapshot = JSON.parse(localStorage.getItem(key) || "null"); } catch {}
+  const query = supabase.from("novelia_author_drafts").select("id,title,content,updated_at")
+    .eq("author_id", currentUser.id).eq("story_id", selectedStory.id);
+  const { data: remoteDraft, error } = chapter
+    ? await query.eq("chapter_id", chapter.id).order("updated_at", {ascending:false}).limit(1).maybeSingle()
+    : await query.is("chapter_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
+  if (error) console.warn("Comparaison des brouillons en ligne impossible :", error.message);
+  if (remoteDraft) chapterRemoteDraftId = remoteDraft.id;
+  const localTime = Date.parse(localSnapshot?.savedAt || "") || 0;
+  const remoteTime = Date.parse(remoteDraft?.updated_at || "") || 0;
+  const useRemote = Boolean(remoteDraft && (!localSnapshot || remoteTime > localTime));
+  const snapshot = useRemote
+    ? {title:remoteDraft.title || "",content:remoteDraft.content || "",remoteDraftId:remoteDraft.id,savedAt:remoteDraft.updated_at}
+    : localSnapshot;
   if (snapshot) {
-    if (snapshot.title) $("chapterEditTitle").value = snapshot.title;
-    if (snapshot.content) $("chapterEditContent").value = snapshot.content;
-    setChapterAutosaveStatus("Brouillon récupéré. Tu peux reprendre ton écriture.");
+    if (snapshot.title !== undefined) $("chapterEditTitle").value = snapshot.title || "";
+    if (snapshot.content !== undefined) $("chapterEditContent").value = snapshot.content || "";
+    if (snapshot.remoteDraftId) chapterRemoteDraftId = snapshot.remoteDraftId;
+    try { localStorage.setItem(key, JSON.stringify({...snapshot,remoteDraftId:chapterRemoteDraftId})); } catch {}
+    setChapterAutosaveStatus(useRemote ? "Version en ligne plus récente récupérée." : "Brouillon local récupéré. Vérification de la synchronisation effectuée.");
   } else {
     setChapterAutosaveStatus("La sauvegarde automatique démarrera dès que tu écriras.");
   }
@@ -1220,6 +1223,23 @@ $("refreshStories").addEventListener("click", async () => {
   showMessage("Liste des histoires actualisée.", "success");
 });
 
+async function flushPendingDrafts() {
+  if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
+  if (chapterAutosaveTimer) { clearTimeout(chapterAutosaveTimer); chapterAutosaveTimer = null; }
+  const tasks = [];
+  if (currentUser && !autosaveInProgress) tasks.push(saveCreateDraftToCloud());
+  if (currentUser && selectedStory && !chapterForm.classList.contains("hidden") && !chapterAutosaveInProgress) {
+    tasks.push(saveChapterDraftToCloud());
+  }
+  await Promise.allSettled(tasks);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushPendingDrafts();
+});
+window.addEventListener("pagehide", () => { flushPendingDrafts(); });
+window.addEventListener("online", () => {
+  if (currentUser) flushPendingDrafts();
+});
 window.addEventListener("beforeunload", event => {
   if (autosaveTimer || autosaveInProgress || chapterAutosaveTimer || chapterAutosaveInProgress) {
     event.preventDefault();
