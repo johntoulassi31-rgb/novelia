@@ -36,6 +36,28 @@
   var SHOW_ON = ["index.html", "discovery.html", "authors.html", "community.html", "contests.html", "palmares.html", "library.html", "publish.html",
     "author-dashboard.html", "notifications.html", "profile.html", "public-profile.html", "novelia-plus.html"];
 
+  // Thème global jour/nuit, mémorisé sur cet appareil.
+  var THEME_KEY = "novelia_site_theme_v1";
+  function applyNoveliaTheme(theme) {
+    var night = theme === "night";
+    document.documentElement.classList.toggle("novelia-night", night);
+    document.documentElement.setAttribute("data-novelia-theme", night ? "night" : "day");
+    var btn = document.getElementById("noveliaThemeToggle");
+    if (btn) { btn.textContent = night ? "☀ Mode jour" : "☾ Mode nuit"; btn.setAttribute("aria-pressed", night ? "true" : "false"); }
+  }
+  var savedTheme = "day"; try { savedTheme = localStorage.getItem(THEME_KEY) === "night" ? "night" : "day"; } catch (e) {}
+  applyNoveliaTheme(savedTheme);
+  function addThemeToggle() {
+    if (document.getElementById("noveliaThemeToggle")) return;
+    var header = document.querySelector("header"); if (!header) return;
+    var btn = document.createElement("button"); btn.id = "noveliaThemeToggle"; btn.type = "button"; btn.className = "novelia-theme-toggle";
+    btn.addEventListener("click", function () { var next = document.documentElement.classList.contains("novelia-night") ? "day" : "night"; try { localStorage.setItem(THEME_KEY, next); } catch (e) {} applyNoveliaTheme(next); });
+    header.appendChild(btn); applyNoveliaTheme(savedTheme);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addThemeToggle); else addThemeToggle();
+  var themeStyle = document.createElement("style");
+  themeStyle.textContent = ".novelia-theme-toggle{border:1px solid #b99b50;border-radius:999px;padding:8px 11px;background:#f2e8cf;color:#49370d;font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap}.novelia-night body{background:#171321!important;color:#eee8f7!important}.novelia-night header,.novelia-night footer,.novelia-night .card,.novelia-night .story,.novelia-night .shelf-card,.novelia-night .report-dialog,.novelia-night .nav-menu-panel{background:#211b2d!important;color:#eee8f7!important;border-color:#40364f!important}.novelia-night main,.novelia-night section,.novelia-night article{color:#eee8f7}.novelia-night h1,.novelia-night h2,.novelia-night h3,.novelia-night p,.novelia-night label,.novelia-night .logo,.novelia-night .account-area,.novelia-night .info,.novelia-night .shelf-title,.novelia-night .shelf-meta,.novelia-night .shelf-note{color:#eee8f7!important}.novelia-night a{color:#e4c56d}.novelia-night input,.novelia-night select,.novelia-night textarea{background:#171321!important;color:#f7f1ff!important;border-color:#514562!important}.novelia-night .filter,.novelia-night .account-button,.novelia-night .nav-menu summary{background:#30263d!important;color:#f2d98b!important;border-color:#514562!important}.novelia-night .hero{background:#282036!important}.novelia-night .nb{background:#211b2d!important;border-color:#40364f!important}.novelia-night .nb a{color:#c9bdd8!important}.novelia-night .nb a[aria-current=page]{color:#f0d47e!important}.novelia-night .novelia-theme-toggle{background:#3a3048;color:#f4dc91;border-color:#79643a}";
+  document.head.appendChild(themeStyle);
   var page = location.pathname.split("/").pop() || "index.html";
   if (SHOW_ON.indexOf(page) === -1) return;
   var current = ACTIVE[page] || "";
