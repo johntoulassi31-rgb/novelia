@@ -18,7 +18,13 @@ async function check(){
  if(!purchaseId){$("status").textContent="Référence d’achat manquante.";return;}
  const r=await db.from("novelia_chapter_purchases").select("id,status,story_id,chapter_id,gross_amount_xof,paid_at").eq("id",purchaseId).maybeSingle();
  if(r.error||!r.data){$("status").textContent="Impossible de retrouver cet achat sur ce compte.";return;}
- const p=r.data;storyId=p.story_id;
+ let p=r.data;
+ if(p.status==="pending"){
+  await db.functions.invoke("cinetpay-check-payment",{body:{purchase_id:p.id}});
+  const refreshed=await db.from("novelia_chapter_purchases").select("id,status,story_id,chapter_id,gross_amount_xof,paid_at").eq("id",purchaseId).maybeSingle();
+  if(!refreshed.error&&refreshed.data)p=refreshed.data;
+ }
+ storyId=p.story_id;
  if(p.status==="paid"){
   $("status").textContent="Paiement confirmé. Le chapitre est maintenant accessible.";
   $("details").textContent="Montant : "+new Intl.NumberFormat("fr-FR").format(p.gross_amount_xof)+" XOF · "+(p.paid_at?new Date(p.paid_at).toLocaleString("fr-FR"):"");
