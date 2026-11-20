@@ -45,8 +45,7 @@ public class NoveliaPlaybackService extends Service {
             .setOngoing(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC);
         if (token != null && Build.VERSION.SDK_INT >= 21) {
-            builder.setStyle(new Notification.MediaStyle().setMediaSession(token)
-                .setShowActionsInCompactView(0));
+            builder.setStyle(new Notification.MediaStyle().setMediaSession(token));
         }
         startForeground(NOTIFICATION_ID, builder.build());
         return START_NOT_STICKY;
