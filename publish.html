@@ -478,7 +478,7 @@ async function uploadWebtoonPanel(optimized,index,originalName){
  const {error}=await supabase.storage.from(WEBTOON_BUCKET).upload(path,optimized,{
   cacheControl:"31536000",contentType:"image/webp",upsert:false
  });
- if(error)throw new Error("Échec de l’envoi de "+file.name+" : "+error.message);
+ if(error)throw new Error("Échec de l’envoi de "+originalName+" : "+error.message);
  const {data}=supabase.storage.from(WEBTOON_BUCKET).getPublicUrl(path);
  if(!data?.publicUrl)throw new Error("Adresse publique introuvable pour "+file.name);
  return {url:data.publicUrl,size:optimized.size,name:originalName};
