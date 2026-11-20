@@ -9,12 +9,16 @@ button{padding:9px 12px;margin:4px;border:0;border-radius:8px;background:#c3941c
 .row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid #e7dbc2}.row:last-child{border-bottom:0}.muted{color:#756746}.warning{padding:12px;background:#fff9ed;border:1px solid #e8dcc2;border-radius:9px}
 </style></head><body><header><a href="earnings.html">← Portefeuille auteur</a></header><main><h1>Administration des revenus</h1><p id="status" class="muted">Vérification des droits…</p><section id="panel" hidden>
 <h2>Paramètres de rémunération</h2><form id="settings" class="card">
-<p class="warning">Le programme doit rester désactivé tant que le compte marchand CinetPay, les secrets serveur et l’autorisation Mass Payout ne sont pas configurés et testés. Le contrôle vérifie les identifiants et le solde, mais pas l’activation des transferts. Les frais sont modifiables selon ton contrat.</p>
+<p class="warning">Les conditions CinetPay pour les personnes physiques indiquent un délai de règlement de 7 jours et des plafonds journaliers, hebdomadaires et mensuels. Les valeurs initiales sont prudentes. Ne les augmente qu’après confirmation écrite du niveau de compte et des limites accordées par CinetPay. Le contrôle vérifie les identifiants et le solde, mais pas l’activation Mass Payout.</p>
 <div class="field"><label><input id="enabled" type="checkbox" style="width:auto"> Activer les achats et retraits réels</label></div>
 <div class="grid">
 <div class="field"><label for="share">Part auteur (%)</label><input id="share" type="number" min="1" max="99" step="0.01" required></div>
 <div class="field"><label for="minPayout">Retrait minimum (XOF)</label><input id="minPayout" type="number" min="1" step="1" required></div>
 <div class="field"><label for="maxPayout">Retrait maximum (XOF)</label><input id="maxPayout" type="number" min="1" max="1500000" step="1" required></div>
+<div class="field"><label for="holdDays">Délai de règlement avant disponibilité (jours)</label><input id="holdDays" type="number" min="0" max="30" step="1" required></div>
+<div class="field"><label for="dailyLimit">Plafond de retrait par jour (XOF)</label><input id="dailyLimit" type="number" min="1" max="10000000" required></div>
+<div class="field"><label for="weeklyLimit">Plafond de retrait par semaine (XOF)</label><input id="weeklyLimit" type="number" min="1" max="50000000" required></div>
+<div class="field"><label for="monthlyLimit">Plafond de retrait par mois (XOF)</label><input id="monthlyLimit" type="number" min="1" max="100000000" required></div>
 <div class="field"><label for="minPrice">Prix minimum d’un chapitre (XOF)</label><input id="minPrice" type="number" min="1" step="1" required></div>
 <div class="field"><label for="maxPrice">Prix maximum d’un chapitre (XOF)</label><input id="maxPrice" type="number" min="1" step="1" required></div>
 <div class="field"><label for="moovFee">Frais Moov estimés (%)</label><input id="moovFee" type="number" min="0" max="20" step="0.01" required></div>
@@ -36,12 +40,12 @@ async function init(){
 }
 async function load(){
  const [s,p]=await Promise.all([
-  db.from("novelia_monetization_settings").select("enabled,author_share_bps,minimum_payout_xof,maximum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof,moov_fee_bps,tmoney_fee_bps").eq("id",true).single(),
+  db.from("novelia_monetization_settings").select("enabled,author_share_bps,minimum_payout_xof,maximum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof,moov_fee_bps,tmoney_fee_bps,settlement_hold_days,daily_payout_limit_xof,weekly_payout_limit_xof,monthly_payout_limit_xof").eq("id",true).single(),
   db.from("novelia_payout_requests").select("id,author_id,destination_operator,destination_phone_number,destination_account_holder,amount_xof,provider_fee_xof,status,provider_transaction_id,admin_note,created_at").order("created_at",{ascending:false}).limit(100)
  ]);
  if(s.error){$("settingsMessage").textContent="Impossible de charger les paramètres : "+s.error.message;return;}
  $("enabled").checked=s.data.enabled;$("share").value=(Number(s.data.author_share_bps)/100).toFixed(2);
- $("minPayout").value=s.data.minimum_payout_xof;$("maxPayout").value=s.data.maximum_payout_xof;$("minPrice").value=s.data.minimum_chapter_price_xof;$("maxPrice").value=s.data.maximum_chapter_price_xof;
+ $("minPayout").value=s.data.minimum_payout_xof;$("maxPayout").value=s.data.maximum_payout_xof;$("holdDays").value=s.data.settlement_hold_days;$("dailyLimit").value=s.data.daily_payout_limit_xof;$("weeklyLimit").value=s.data.weekly_payout_limit_xof;$("monthlyLimit").value=s.data.monthly_payout_limit_xof;$("minPrice").value=s.data.minimum_chapter_price_xof;$("maxPrice").value=s.data.maximum_chapter_price_xof;
  $("moovFee").value=(Number(s.data.moov_fee_bps)/100).toFixed(2);$("tmoneyFee").value=(Number(s.data.tmoney_fee_bps)/100).toFixed(2);
  const root=$("requests");root.replaceChildren();
  if(p.error){root.append(el("p","muted","Impossible de charger les demandes : "+p.error.message));return;}
@@ -81,9 +85,9 @@ async function updateRequest(req,status){
 }
 $("settings").onsubmit=async e=>{
  e.preventDefault();const msg=$("settingsMessage");
- const share=Number($("share").value),minPayout=Number($("minPayout").value),maxPayout=Number($("maxPayout").value),minPrice=Number($("minPrice").value),maxPrice=Number($("maxPrice").value);
+ const share=Number($("share").value),minPayout=Number($("minPayout").value),maxPayout=Number($("maxPayout").value),holdDays=Number($("holdDays").value),dailyLimit=Number($("dailyLimit").value),weeklyLimit=Number($("weeklyLimit").value),monthlyLimit=Number($("monthlyLimit").value),minPrice=Number($("minPrice").value),maxPrice=Number($("maxPrice").value);
  const moov=Number($("moovFee").value),tmoney=Number($("tmoneyFee").value);
- if(!(share>0&&share<100&&minPayout>0&&maxPayout>=minPayout&&maxPayout<=1500000&&minPrice>0&&maxPrice>=minPrice&&moov>=0&&tmoney>=0)){msg.textContent="Vérifie les valeurs saisies.";return;}
+ if(!(share>0&&share<100&&minPayout>0&&maxPayout>=minPayout&&maxPayout<=1500000&&holdDays>=0&&holdDays<=30&&Number.isInteger(holdDays)&&dailyLimit>=maxPayout&&dailyLimit<=10000000&&weeklyLimit>=dailyLimit&&weeklyLimit<=50000000&&monthlyLimit>=weeklyLimit&&monthlyLimit<=100000000&&minPrice>0&&maxPrice>=minPrice&&moov>=0&&tmoney>=0)){msg.textContent="Vérifie les valeurs saisies.";return;}
  if($("enabled").checked){msg.textContent="Vérification du compte CinetPay…";const health=await db.functions.invoke("cinetpay-health-check");if(health.error||!health.data?.verified||health.data?.environment!=="production"){msg.textContent="Activation refusée : configure des identifiants CinetPay de production valides dans les secrets Supabase.";return;}if(!confirm("Les identifiants CinetPay de production répondent. Activer les paiements et retraits réels ? Vérifie les tarifs et l’autorisation des transferts."))return;}
  const r=await db.from("novelia_monetization_settings").update({
   enabled:$("enabled").checked,author_share_bps:Math.round(share*100),minimum_payout_xof:minPayout,
