@@ -912,15 +912,26 @@ function renderWebtoon(chapter) {
 }
 
 function updateMediaSession(chapter,audio){
+ const title=chapter.audio_title||chapter.title||"Novelia";
+ const author=story?.author_name||"Novelia";
+ if(window.NoveliaNativeMedia){try{window.NoveliaNativeMedia.update(title,author);}catch(error){console.debug("Pont audio natif indisponible",error);}}
  if(!("mediaSession" in navigator))return;
- try{
-  if("MediaMetadata" in window)navigator.mediaSession.metadata=new MediaMetadata({title:chapter.audio_title||chapter.title||"Novelia",artist:story?.author_name||"Novelia",album:story?.title||"Lecture audio"});
-  navigator.mediaSession.setActionHandler("play",()=>audio.play().catch(()=>{}));
-  navigator.mediaSession.setActionHandler("pause",()=>audio.pause());
-  navigator.mediaSession.setActionHandler("previoustrack",()=>{if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
-  navigator.mediaSession.setActionHandler("nexttrack",()=>{if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
- }catch(error){console.debug("Commandes multimédias non disponibles",error);}
+ if("MediaMetadata" in window)navigator.mediaSession.metadata=new MediaMetadata({title,artist:author,album:story?.title||"Lecture audio"});
+ const handlers={
+  play:()=>audio.play().catch(()=>{}),
+  pause:()=>audio.pause(),
+  previoustrack:()=>{if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}},
+  nexttrack:()=>{if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
+ };
+ Object.entries(handlers).forEach(([action,handler])=>{try{navigator.mediaSession.setActionHandler(action,handler);}catch(error){console.debug("Action multimédia indisponible",action);}});
 }
+window.NoveliaHandleNativeMediaAction=function(action){
+ const audio=activeChapterAudio;
+ if(action==="play"){if(audio)audio.play().catch(()=>{});}
+ else if(action==="pause"){if(audio)audio.pause();}
+ else if(action==="next"){if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
+ else if(action==="previous"){if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
+};
 function renderChapterAudio(chapter) {
  const panel=$("chapterAudioPlayer");panel.replaceChildren();
  if(currentAudioObjectUrl){URL.revokeObjectURL(currentAudioObjectUrl);currentAudioObjectUrl=null;}
@@ -931,6 +942,9 @@ function renderChapterAudio(chapter) {
  if(cachedBlob instanceof Blob){currentAudioObjectUrl=URL.createObjectURL(cachedBlob);audio.src=currentAudioObjectUrl;}else audio.src=chapter.audio_url;
  updateMediaSession(chapter,audio);
  audio.addEventListener("ended",()=>{if(currentChapter<chapters.length-1&&chapters[currentChapter+1]?.audio_url){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
+ audio.addEventListener("play",()=>{if(window.NoveliaNativeMedia){try{window.NoveliaNativeMedia.playing(chapter.audio_title||chapter.title||"Novelia",story?.author_name||"Novelia");}catch(error){}}});
+ audio.addEventListener("pause",()=>{if(window.NoveliaNativeMedia&&!audio.ended){try{window.NoveliaNativeMedia.paused();}catch(error){}}});
+ audio.addEventListener("ended",()=>{if(window.NoveliaNativeMedia){try{window.NoveliaNativeMedia.stopped();}catch(error){}}});
  const speedRow=document.createElement("div");speedRow.className="audio-speed-row";
  const label=document.createElement("label");label.textContent="Vitesse";
  const select=document.createElement("select");select.setAttribute("aria-label","Vitesse de lecture audio");
