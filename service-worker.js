@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "novelia-shell-v35";
+const CACHE_NAME = "novelia-shell-v36";
 const CACHE_PREFIX = "novelia-shell-";
 const CDN_CACHE = "novelia-cdn-v1";
 const CDN_ORIGIN = "https://cdn.jsdelivr.net";
@@ -13,6 +13,8 @@ const APP_FILES = [
   "./contest-jury.html",
   "./notifications.html",
   "./reader.html",
+  "./earnings.html",
+  "./payment-result.html",
   "./downloads.html",
   "./copyright.html",
   "./offline.html",
