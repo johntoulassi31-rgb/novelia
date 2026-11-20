@@ -98,7 +98,8 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
       <label for="chapterTitle">Titre du chapitre *</label>
       <input id="chapterTitle" maxlength="200" required placeholder="Ex. : Chapitre 1 — La rencontre">
       <label for="content">Contenu du chapitre *</label>
-      <textarea id="content" required placeholder="Commence à écrire ici…"></textarea>\n      <div id="createWritingMetrics" class="writing-metrics" aria-live="polite">0 mot · environ 1 min de lecture</div>
+      <textarea id="content" required placeholder="Commence à écrire ici…"></textarea>
+      <div id="createWritingMetrics" class="writing-metrics" aria-live="polite">0 mot · environ 1 min de lecture</div>
       <p id="autosaveStatus" class="note" role="status" aria-live="polite">La sauvegarde automatique démarrera dès que tu écriras.</p>
       <p class="note">Pour un webtoon, tu peux pour le moment saisir du texte et des liens d’images dans le contenu.</p>
       <label for="status">Visibilité</label>
@@ -728,7 +729,8 @@ function toggleFocusMode(force){
  document.body.classList.toggle("focus-mode",enabled);
  $("focusModeButton").textContent=enabled?"Quitter le mode concentration":"Mode concentration";
 }
-\nfunction chapterDraftKey() {
+
+function chapterDraftKey() {
   return "novelia_chapter_draft_v1_" + currentUser.id + "_" + selectedStory.id + "_" + ($("chapterId").value || "new");
 }
 function setChapterAutosaveStatus(text, kind = "") {
@@ -790,7 +792,8 @@ async function loadChapterVersions(){
   row.append(info,btn);list.appendChild(row);
  });
 }
-\nasync function saveChapterDraftToCloud() {
+
+async function saveChapterDraftToCloud() {
   if (!currentUser || !selectedStory || chapterForm.classList.contains("hidden")) return;
   if (chapterAutosaveInProgress) { chapterAutosavePending = true; return; }
   const title = $("chapterEditTitle").value;
@@ -823,7 +826,8 @@ async function loadChapterVersions(){
     if (!result.data?.id) throw new Error("La sauvegarde n’a pas été confirmée.");
     chapterRemoteDraftId = result.data.id;
     try { localStorage.setItem(chapterDraftKey(), JSON.stringify({title,content,remoteDraftId:chapterRemoteDraftId,savedAt:new Date().toISOString()})); } catch {}
-    setChapterAutosaveStatus("Chapitre sauvegardé automatiquement à " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + ".", "success");\n    await loadChapterVersions();
+    setChapterAutosaveStatus("Chapitre sauvegardé automatiquement à " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + ".", "success");
+    await loadChapterVersions();
   } catch (error) {
     setChapterAutosaveStatus("Sauvegarde en ligne impossible. Le texte reste conservé sur cet appareil. " + (error?.message || ""), "error");
   } finally {
@@ -887,7 +891,8 @@ async function openChapterEditor(chapter = null) {
   setBusy(saveChapterButton, false, "Enregistrement…", chapter ? "Enregistrer les modifications" : "Enregistrer le chapitre");
   chapterForm.classList.remove("hidden");
   setChapterAutosaveStatus("Recherche d’un brouillon…");
-  await restoreChapterDraft(chapter);\n  renderWritingMetrics($("chapterEditContent"),"chapterWritingMetrics");\n  await loadChapterVersions();
+  await restoreChapterDraft(chapter);
+  renderWritingMetrics($("chapterEditContent"),"chapterWritingMetrics");\n  await loadChapterVersions();
   chapterForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -982,7 +987,9 @@ supabase.auth.onAuthStateChange((_event, session) => {
   }
 });
 
-await initialize();\nrenderWritingMetrics($("content"),"createWritingMetrics");\nloadWritingGoal();\nupdateGoalProgress(countWords($("chapterEditContent").value));
+await initialize();
+renderWritingMetrics($("content"),"createWritingMetrics");
+loadWritingGoal();\nupdateGoalProgress(countWords($("chapterEditContent").value));
 </script>
 <script src="bottom-nav.js" defer></script>
 <script src="suspension-banner.js" defer></script>
