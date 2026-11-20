@@ -142,7 +142,7 @@ async function loadPublicationReceipts(){
   .eq("author_id",user.id).order("recorded_at",{ascending:false}).limit(100);
  if(error){box.append(el("p","Impossible de charger les empreintes : "+error.message,"error"));return}
  if(!data?.length){box.append(el("p","Aucune empreinte pour le moment. Les prochaines publications et mises à jour seront enregistrées automatiquement.","muted"));return}
- const labels={story_published:"Publication de l’œuvre",story_updated:"Mise à jour de l’œuvre",chapter_published:"Publication d’un chapitre",chapter_updated:"Mise à jour d’un chapitre"};
+ const labels={baseline_snapshot:"Première empreinte enregistrée · état actuel",story_published:"Publication de l’œuvre",story_updated:"Mise à jour de l’œuvre",chapter_published:"Publication d’un chapitre",chapter_updated:"Mise à jour d’un chapitre"};
  data.forEach(r=>{
   const card=el("article",undefined,"receipt");
   card.style.cssText="border:1px solid var(--line);border-radius:12px;padding:13px;margin:10px 0;background:var(--panel)";
