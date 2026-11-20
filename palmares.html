@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fbf8f1"><meta name="description" content="Retrouve les concours littéraires terminés, les classements officiels et les auteurs récompensés sur Novelia."><link rel="canonical" href="https://johntoulassi31-rgb.github.io/novelia/palmares.html"><title>Palmarès des concours | Novelia</title><link rel="stylesheet" href="theme-gold.css"><style>
+*{box-sizing:border-box}body{margin:0;background:#fbf8f1;color:#392b08;font:15px/1.55 Arial,sans-serif}header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;background:#f9f4ea;border-bottom:1px solid #eee3c9}.logo{font-size:22px;font-weight:bold;color:#76570c;text-decoration:none}nav{display:flex;gap:12px;flex-wrap:wrap}nav a{color:#76570c;text-decoration:none;font-size:14px}main{max-width:1000px;margin:auto;padding:22px 16px 50px}.hero,.card,.stat{padding:18px;border:1px solid #eee3c9;border-radius:15px;background:#f8f3e6}.hero{background:linear-gradient(130deg,#f1e6cd,#faf6ec)}h1{font-size:clamp(28px,5vw,40px);line-height:1.15;margin:0 0 8px}h2{font-size:22px;margin:28px 0 12px}.muted{color:#756746}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:16px 0}.stat strong{display:block;font-size:25px;color:#76570c}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}.entry{display:flex;gap:12px;padding:12px 0;border-top:1px solid #eee3c9}.cover{width:64px;height:88px;object-fit:cover;border-radius:7px}.rank{font-weight:bold;color:#9b7415;min-width:28px}.award{display:inline-block;margin:3px 4px 3px 0;padding:3px 8px;border:1px solid #d8c99f;border-radius:99px;font-size:12px}.empty{padding:16px;border:1px dashed #d8c99f;border-radius:12px;color:#756746}footer{text-align:center;padding:22px;color:#756746;border-top:1px solid #eee3c9}@media(max-width:540px){header{padding:12px}nav{gap:8px}nav a{font-size:12px}main{padding:14px 12px 35px}}
+</style></head><body>
+<header><a class="logo" href="index.html">✦ NOVELIA</a><nav><a href="index.html">Accueil</a><a href="discovery.html">Découverte</a><a href="community.html">Communauté</a><a href="contests.html">Concours</a><a href="palmares.html" aria-current="page">Palmarès</a><a href="profile.html">Mon profil</a></nav></header>
+<main><section class="hero"><h1>Le palmarès Novelia</h1><p class="muted">Les classements officiels, les distinctions et les auteurs qui ont marqué les concours littéraires de la communauté.</p><p id="status" role="status">Chargement du palmarès…</p></section>
+<section class="stats" aria-label="Statistiques du palmarès"><div class="stat"><strong id="contestCount">—</strong>Concours publiés</div><div class="stat"><strong id="authorCount">—</strong>Auteurs récompensés</div><div class="stat"><strong id="entryCount">—</strong>Œuvres classées</div><div class="stat"><strong id="awardCount">—</strong>Distinctions attribuées</div></section>
+<h2>Concours et classements officiels</h2><div id="archive" class="grid"><p class="empty">Chargement…</p></div></main><footer>© Novelia — Les histoires méritent d’être célébrées.</footer>
+<script type="module">
+import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const db=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"),$=id=>document.getElementById(id);
+const el=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;};
+const labels={grand_prix:"🏆 Grand Prix Novelia",prix_jury:"⚖️ Prix du jury",prix_public:"❤️ Prix du public",coup_de_coeur:"✨ Coup de cœur du jury"};
+const fmt=v=>v?new Intl.DateTimeFormat("fr-FR",{year:"numeric",month:"long",day:"numeric"}).format(new Date(v)):"Date non précisée";
+async function load(){
+ const archive=$("archive");
+ const cr=await db.from("novelia_contests").select("id,title,theme,category,results_published_at").not("results_published_at","is",null).order("results_published_at",{ascending:false});
+ if(cr.error){$("status").textContent="Impossible de charger le palmarès pour le moment.";archive.replaceChildren(el("p","empty","Réessaie un peu plus tard."));return;}
+ const contests=cr.data||[];let allResults=[],allAwards=[];
+ for(const c of contests){
+  const rr=await db.from("novelia_contest_results").select("entry_id,contest_id,jury_score,jury_reviews_count,vote_count,final_score,published_at,novelia_contest_entries!inner(id,author_id,stories(title,cover_url,genre,story_type))").eq("contest_id",c.id).order("final_score",{ascending:false}).order("published_at",{ascending:true});
+  if(rr.error)continue;
+  const rows=rr.data||[];allResults.push(...rows);
+  if(rows.length){const ids=rows.map(x=>x.entry_id);const ar=await db.from("novelia_contest_awards").select("entry_id,author_id,award_type,prize_description").in("entry_id",ids);if(!ar.error)allAwards.push(...(ar.data||[]));}
+ }
+ const authorIds=[...new Set([...allResults.map(x=>x.novelia_contest_entries?.author_id),...allAwards.map(x=>x.author_id)].filter(Boolean))];
+ let profiles=new Map();if(authorIds.length){const pr=await db.from("profiles").select("id,username,display_name").in("id",authorIds);if(!pr.error)(pr.data||[]).forEach(p=>profiles.set(p.id,p));}
+ const awardByEntry=new Map();for(const a of allAwards){if(!awardByEntry.has(a.entry_id))awardByEntry.set(a.entry_id,[]);awardByEntry.get(a.entry_id).push(a);}
+ const awardedAuthors=new Set(allAwards.map(a=>a.author_id));
+ $("contestCount").textContent=String(contests.length);$("authorCount").textContent=String(awardedAuthors.size);$("entryCount").textContent=String(allResults.length);$("awardCount").textContent=String(allAwards.length);
+ $("status").textContent=contests.length?contests.length+" concours avec résultats officiels publiés.":"Aucun résultat officiel n’a encore été publié.";
+ archive.replaceChildren();
+ if(!contests.length){archive.append(el("p","empty","Le palmarès apparaîtra ici dès la publication du premier classement officiel."));return;}
+ for(const c of contests){
+  const card=el("section","card");card.append(el("h2","",c.title),el("p","muted",(c.theme||"Thème non précisé")+" · Résultats publiés le "+fmt(c.results_published_at)));
+  const rows=allResults.filter(x=>x.contest_id===c.id);
+  if(!rows.length){card.append(el("p","muted","Aucune œuvre classée pour ce concours."));archive.append(card);continue;}
+  rows.forEach((r,i)=>{
+   const entry=r.novelia_contest_entries||{},story=entry.stories||{},profile=profiles.get(entry.author_id)||{},row=el("article","entry");
+   row.append(el("span","rank","#"+(i+1)));
+   if(story.cover_url){const img=el("img","cover");img.src=story.cover_url;img.alt="Couverture de "+(story.title||"l’œuvre");img.loading="lazy";row.append(img);}
+   const body=el("div","");body.append(el("strong","",story.title||"Œuvre participante"),el("p","muted",(profile.display_name||profile.username||"Auteur Novelia")+(profile.username?" · @"+profile.username:"")),el("p","muted","Score final : "+Number(r.final_score||0).toFixed(2)+"/10 · Jury : "+Number(r.jury_score||0).toFixed(2)+"/10 · Votes : "+Number(r.vote_count||0)));
+   const awards=awardByEntry.get(r.entry_id)||[];for(const a of awards){const badge=el("span","award",labels[a.award_type]||"Distinction");badge.title=a.prize_description||"";body.append(badge);}
+   row.append(body);card.append(row);
+  });
+  archive.append(card);
+ }
+}
+load();
+</script></body></html>
