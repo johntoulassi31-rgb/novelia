@@ -1372,6 +1372,16 @@ function showStory() {
   $("format").textContent = story.type === "Roman" ? "Lecture textuelle" : "Lecture illustrée";
   $("description").textContent = story.description;
   $("chapterCount").textContent = chapters.length + (story.type === "Roman" ? " chapitre(s)" : " épisode(s)");
+  const authorLink = $("authorProfileLink");
+  if (authorLink) {
+    if (story.authorUsername) {
+      authorLink.href = "public-profile.html?username=" + encodeURIComponent(story.authorUsername);
+      authorLink.textContent = "Par @" + story.authorUsername;
+    } else {
+      authorLink.href = "members.html";
+      authorLink.textContent = "Profil de l’auteur";
+    }
+  }
 
   setCover(story.cover, story.title);
   $("storyAboutText").textContent=story.description||"Aucune présentation n’a encore été ajoutée.";
