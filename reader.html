@@ -1300,7 +1300,7 @@ async function loadDatabaseStory() {
     if(error)throw error;
     if(!row)throw new Error("Cette histoire n'existe pas ou n'est pas publiée.");
     const [catalogResult,contentResult]=await Promise.all([
-      supabase.from("novelia_chapter_catalog").select("id,story_id,title,chapter_number,created_at,is_premium,price_xof,audio_url,audio_title,audio_duration_seconds").eq("story_id",row.id).order("chapter_number",{ascending:true}),
+      supabase.from("novelia_chapter_catalog").select("id,story_id,title,chapter_number,created_at,is_premium,price_xof").eq("story_id",row.id).order("chapter_number",{ascending:true}),
       supabase.from("chapters").select("id,title,content,chapter_number,created_at,moderation_hidden,audio_url,audio_title,audio_duration_seconds").eq("story_id",row.id).eq("moderation_hidden",false).order("chapter_number",{ascending:true})
     ]);
     if(catalogResult.error)throw catalogResult.error;
@@ -1310,8 +1310,8 @@ async function loadDatabaseStory() {
     const nextChapters=(catalogResult.data||[]).map(meta=>{
       const unlocked=contentById.get(meta.id);
       return {id:meta.id,title:meta.title,content:unlocked?.content||"",chapter_number:meta.chapter_number,
-        audio_url:unlocked?.audio_url||meta.audio_url||null,audio_title:unlocked?.audio_title||meta.audio_title||null,
-        audio_duration_seconds:unlocked?.audio_duration_seconds||meta.audio_duration_seconds||null,
+        audio_url:unlocked?.audio_url||null,audio_title:unlocked?.audio_title||null,
+        audio_duration_seconds:unlocked?.audio_duration_seconds||null,
         is_premium:Boolean(meta.is_premium),price_xof:meta.price_xof||null,is_locked:Boolean(meta.is_premium&&!unlocked)};
     });
     if(!nextChapters.length)throw new Error("Cette histoire ne possède pas encore de chapitre.");
