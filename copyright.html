@@ -77,10 +77,10 @@ function show(id,text,kind){const el=$(id);el.textContent=text;el.className="mes
 function safe(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function validUuid(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);}
 function applyTarget(){
- const type=params.get("type"),id=params.get("id"),title=params.get("title");
+ const type=params.get("type"),id=params.get("id"),title=params.get("title"),details=params.get("details");
  if(type==="story"||type==="chapter")$("targetType").value=type;
  if(id&&validUuid(id))$("targetId").value=id;
- if(title)$("targetTitle").value=title.slice(0,300);
+ if(title)$("targetTitle").value=title.slice(0,300);if(details)$("claimDetails").value=details.slice(0,5000);
 }
 async function loadClaims(){
  const host=$("myClaims");
