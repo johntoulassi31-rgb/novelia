@@ -1296,14 +1296,19 @@ async function loadStoryReviews() {
     return;
   }
   $("reviewsPanel").hidden=false;$("reviewsStatus").textContent="Chargement des avis…";
-  const {data,error}=await supabase.from("novelia_story_reviews")
-    .select("id,user_id,rating,title,body,created_at,profiles(username,display_name)")
-    .eq("story_id",story.id).eq("moderation_hidden",false).order("created_at",{ascending:false}).limit(100);
-  if(error){$("reviewsStatus").textContent="Impossible de charger les avis : "+error.message;return;}
-  const reviews=data||[],average=reviews.length?reviews.reduce((sum,r)=>sum+Number(r.rating||0),0)/reviews.length:0;
+  const [reviewResult,statsResult]=await Promise.all([
+    supabase.from("novelia_story_reviews")
+      .select("id,user_id,rating,title,body,created_at,profiles(username,display_name)")
+      .eq("story_id",story.id).eq("moderation_hidden",false).order("created_at",{ascending:false}).limit(100),
+    supabase.from("novelia_story_review_stats").select("review_count,average_rating").eq("story_id",story.id).maybeSingle()
+  ]);
+  if(reviewResult.error){$("reviewsStatus").textContent="Impossible de charger les avis : "+reviewResult.error.message;return;}
+  const reviews=reviewResult.data||[];
+  const total=Number(statsResult.data?.review_count??reviews.length);
+  const average=Number(statsResult.data?.average_rating??(reviews.length?reviews.reduce((sum,r)=>sum+Number(r.rating||0),0)/reviews.length:0));
   $("reviewsSummary").replaceChildren();
-  const avg=document.createElement("strong");avg.className="reviews-average";avg.textContent=reviews.length?average.toFixed(1)+"/5":"—";
-  const count=document.createElement("span");count.textContent=reviews.length+" avis · "+(reviews.length?"Moyenne des notes":"Pas encore de note");
+  const avg=document.createElement("strong");avg.className="reviews-average";avg.textContent=total?average.toFixed(1)+"/5":"—";
+  const count=document.createElement("span");count.textContent=total+" avis · "+(total?"Moyenne de toutes les notes":"Pas encore de note");
   $("reviewsSummary").append(avg,count);
   const mine=reviews.find(r=>r.user_id===currentUser?.id);myStoryReviewId=mine?.id||null;
   $("reviewForm").hidden=!currentUser||story.authorId===currentUser.id;
