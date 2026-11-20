@@ -31,6 +31,7 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
 @media(max-width:540px){body{padding:12px}.panel{padding:15px}h1{font-size:24px}.field-row{grid-template-columns:1fr}.story-top{display:block}.story-top .status{margin-top:8px}.chapter-item{align-items:flex-start}.chapter-item button{flex-shrink:0}}
 
 .webtoon-composer{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.webtoon-composer h3{margin-top:0}.webtoon-panel-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:12px}.webtoon-panel-preview figure{margin:0;min-width:0}.webtoon-panel-preview img{display:block;width:100%;height:120px;object-fit:contain;background:#eee8dc;border-radius:8px}.webtoon-panel-preview figcaption{font-size:11px;overflow-wrap:anywhere;color:var(--muted);margin-top:4px}.webtoon-composer input[type=file]{max-width:100%}
+.chapter-audio-composer{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.chapter-audio-composer h3{margin-top:0}.chapter-audio-composer input{max-width:100%}
 .writing-metrics{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;color:var(--muted);font-size:13px}
 .writing-tools{border:1px solid var(--line);background:#fbf7ed;border-radius:12px;padding:12px;margin:12px 0}
 .goal-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.goal-row input{max-width:120px;padding:8px}
@@ -159,6 +160,19 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
           <p id="webtoonUploadStatus" class="note" role="status" aria-live="polite">Les images seront ajoutées à la fin du contenu, dans l’ordre sélectionné.</p>
           <div id="webtoonPanelPreview" class="webtoon-panel-preview"></div>
         </section>
+        <section id="chapterAudioComposer" class="chapter-audio-composer">
+          <h3>Narration audio du chapitre</h3>
+          <p class="note">Enregistre d’abord le chapitre, puis joins un fichier audio. Formats acceptés : MP3, M4A, AAC, OGG ou WAV · 15 Mo maximum.</p>
+          <label for="chapterAudioFile">Fichier audio</label>
+          <input id="chapterAudioFile" type="file" accept="audio/mpeg,audio/mp3,audio/mp4,audio/aac,audio/ogg,audio/wav,audio/x-wav">
+          <label for="chapterAudioTitle">Titre affiché (facultatif)</label>
+          <input id="chapterAudioTitle" type="text" maxlength="160" placeholder="Ex. : Narration du chapitre">
+          <div class="form-actions">
+            <button type="button" id="uploadChapterAudio">Importer la narration</button>
+            <button type="button" id="removeChapterAudio" class="secondary" hidden>Retirer l’audio</button>
+          </div>
+          <p id="chapterAudioStatus" class="note" role="status" aria-live="polite">Disponible après le premier enregistrement du chapitre.</p>
+        </section>
         <div id="chapterWritingMetrics" class="writing-metrics" aria-live="polite">0 mot · environ 1 min de lecture</div>
         <div class="writing-tools">
           <div class="goal-row"><label for="writingGoal" style="margin:0">Objectif de mots</label><input id="writingGoal" type="number" min="50" max="20000" step="50" value="500" inputmode="numeric"><span id="goalProgress" class="note">0 / 500 mots</span></div>
@@ -220,6 +234,9 @@ const COVER_BUCKET = "covers";
 const MAX_COVER_SIZE = 5 * 1024 * 1024;
 const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const WEBTOON_BUCKET = "webtoon-panels";
+const CHAPTER_AUDIO_BUCKET = "chapter-audio";
+const MAX_CHAPTER_AUDIO_BYTES = 15 * 1024 * 1024;
+const ALLOWED_CHAPTER_AUDIO_TYPES = ["audio/mpeg","audio/mp3","audio/mp4","audio/aac","audio/ogg","audio/wav","audio/x-wav"];
 const MAX_WEBTOON_SOURCE_BYTES = 20 * 1024 * 1024;
 const MAX_WEBTOON_UPLOAD_BYTES = 30 * 1024 * 1024;
 const MAX_WEBTOON_FILES = 20;
@@ -792,7 +809,7 @@ editStoryForm.addEventListener("submit", async event => {
 async function loadChapters(storyId) {
   chapterList.replaceChildren(make("p", "muted", "Chargement des chapitres…"));
   const { data, error } = await supabase.from("chapters")
-    .select("id,story_id,title,content,chapter_number")
+    .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds")
     .eq("story_id", storyId)
     .order("chapter_number", { ascending: true });
   if (error) {
@@ -985,6 +1002,96 @@ async function clearChapterDraft() {
     if (error) console.warn("Suppression du brouillon de chapitre impossible :", error.message);
   }
 }
+
+function refreshChapterAudioComposer(chapter) {
+  const hasSavedChapter = Boolean(chapter?.id);
+  $("chapterAudioFile").value = "";
+  $("chapterAudioTitle").value = chapter?.audio_title || "";
+  $("chapterAudioFile").disabled = !hasSavedChapter;
+  $("uploadChapterAudio").disabled = !hasSavedChapter;
+  $("removeChapterAudio").hidden = !chapter?.audio_url;
+  $("chapterAudioStatus").textContent = chapter?.audio_url
+    ? "Une narration est déjà associée à ce chapitre."
+    : hasSavedChapter
+      ? "Aucune narration pour le moment. Tu peux en importer une."
+      : "Enregistre d’abord le chapitre pour pouvoir lui associer une narration.";
+}
+function audioExtension(type) {
+  return ({ "audio/mpeg":"mp3", "audio/mp3":"mp3", "audio/mp4":"m4a", "audio/aac":"aac", "audio/ogg":"ogg", "audio/wav":"wav", "audio/x-wav":"wav" })[type] || "mp3";
+}
+function chapterAudioStoragePath(url) {
+  const marker = "/storage/v1/object/public/" + CHAPTER_AUDIO_BUCKET + "/";
+  const index = String(url || "").indexOf(marker);
+  return index < 0 ? null : decodeURIComponent(String(url).slice(index + marker.length));
+}
+$("uploadChapterAudio").addEventListener("click", async () => {
+  const chapterId = $("chapterId").value;
+  const file = $("chapterAudioFile").files?.[0];
+  if (!currentUser || !selectedStory || !chapterId) {
+    $("chapterAudioStatus").textContent = "Enregistre d’abord ce chapitre.";
+    return;
+  }
+  if (!file) {
+    $("chapterAudioStatus").textContent = "Choisis un fichier audio.";
+    return;
+  }
+  if (!ALLOWED_CHAPTER_AUDIO_TYPES.includes(file.type) || file.size > MAX_CHAPTER_AUDIO_BYTES) {
+    $("chapterAudioStatus").textContent = "Format non accepté ou fichier supérieur à 15 Mo.";
+    return;
+  }
+  const button = $("uploadChapterAudio");
+  button.disabled = true;
+  $("chapterAudioStatus").textContent = "Import de la narration…";
+  try {
+    const path = currentUser.id + "/" + selectedStory.id + "/" + chapterId + "/" + Date.now() + "." + audioExtension(file.type);
+    const {error:uploadError} = await supabase.storage.from(CHAPTER_AUDIO_BUCKET).upload(path,file,{
+      contentType:file.type,cacheControl:"31536000",upsert:false
+    });
+    if(uploadError) throw uploadError;
+    const {data:publicData} = supabase.storage.from(CHAPTER_AUDIO_BUCKET).getPublicUrl(path);
+    const audioTitle = $("chapterAudioTitle").value.trim() || file.name.replace(/\.[^.]+$/,"").slice(0,160);
+    const {data,error:updateError} = await supabase.from("chapters")
+      .update({audio_url:publicData.publicUrl,audio_title:audioTitle})
+      .eq("id",chapterId).eq("story_id",selectedStory.id)
+      .select("id,audio_url,audio_title,audio_duration_seconds").maybeSingle();
+    if(updateError) throw updateError;
+    if(!data) throw new Error("La narration a été importée, mais son association au chapitre n’a pas été confirmée.");
+    chaptersForSelectedStory = chaptersForSelectedStory.map(ch => ch.id === chapterId ? {...ch,...data} : ch);
+    $("removeChapterAudio").hidden = false;
+    $("chapterAudioStatus").textContent = "Narration importée et associée au chapitre.";
+    $("chapterAudioFile").value = "";
+  } catch(error) {
+    $("chapterAudioStatus").textContent = "Import impossible : " + (error?.message || String(error));
+  } finally {
+    button.disabled = false;
+  }
+});
+$("removeChapterAudio").addEventListener("click", async () => {
+  const chapter = chaptersForSelectedStory.find(ch => ch.id === $("chapterId").value);
+  if(!currentUser || !chapter?.audio_url) return;
+  const button = $("removeChapterAudio");
+  button.disabled = true;
+  try {
+    const path = chapterAudioStoragePath(chapter.audio_url);
+    if(path) {
+      const {error:removeError} = await supabase.storage.from(CHAPTER_AUDIO_BUCKET).remove([path]);
+      if(removeError) throw removeError;
+    }
+    const {error:updateError} = await supabase.from("chapters")
+      .update({audio_url:null,audio_title:null,audio_duration_seconds:null})
+      .eq("id",chapter.id).eq("story_id",selectedStory.id);
+    if(updateError) throw updateError;
+    chaptersForSelectedStory = chaptersForSelectedStory.map(ch => ch.id === chapter.id ? {...ch,audio_url:null,audio_title:null,audio_duration_seconds:null} : ch);
+    $("chapterAudioTitle").value = "";
+    $("removeChapterAudio").hidden = true;
+    $("chapterAudioStatus").textContent = "Narration retirée du chapitre.";
+  } catch(error) {
+    $("chapterAudioStatus").textContent = "Suppression impossible : " + (error?.message || String(error));
+  } finally {
+    button.disabled = false;
+  }
+});
+
 async function openChapterEditor(chapter = null) {
   if (!selectedStory) return showMessage("Sélectionne d’abord une histoire.", "error");
   if (chapterAutosaveTimer) {
@@ -997,6 +1104,7 @@ async function openChapterEditor(chapter = null) {
   $("chapterId").value = chapter?.id || "";
   $("chapterFormTitle").textContent = chapter ? "Modifier le chapitre" : "Ajouter un chapitre";
   refreshWebtoonComposer();
+  refreshChapterAudioComposer(chapter);
   $("chapterEditTitle").value = chapter?.title || "";
   $("chapterEditContent").value = chapter?.content || "";
   const nextNumber = chaptersForSelectedStory.reduce((max, item) => Math.max(max, Number(item.chapter_number) || 0), 0) + 1;
@@ -1046,7 +1154,7 @@ chapterForm.addEventListener("submit", async event => {
         .update({ title, content })
         .eq("id", chapterId)
         .eq("story_id", selectedStory.id)
-        .select("id,story_id,title,content,chapter_number")
+        .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds")
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Le chapitre n’a pas été modifié. Vérifie les autorisations de la base de données.");
@@ -1056,7 +1164,7 @@ chapterForm.addEventListener("submit", async event => {
       const nextNumber = chaptersForSelectedStory.reduce((max, item) => Math.max(max, Number(item.chapter_number) || 0), 0) + 1;
       const { data, error } = await supabase.from("chapters")
         .insert({ story_id: selectedStory.id, title, content, chapter_number: nextNumber })
-        .select("id,story_id,title,content,chapter_number")
+        .select("id,story_id,title,content,chapter_number,audio_url,audio_title,audio_duration_seconds")
         .single();
       if (error) throw error;
       chaptersForSelectedStory.push(data);
