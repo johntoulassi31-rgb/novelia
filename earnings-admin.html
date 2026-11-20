@@ -48,7 +48,7 @@ async function load(){
  const [s,p,buy]=await Promise.all([
   db.from("novelia_monetization_settings").select("enabled,author_share_bps,minimum_payout_xof,maximum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof,moov_fee_bps,tmoney_fee_bps,settlement_hold_days,daily_payout_limit_xof,weekly_payout_limit_xof,monthly_payout_limit_xof,daily_collection_limit_xof,weekly_collection_limit_xof,monthly_collection_limit_xof").eq("id",true).single(),
   db.from("novelia_payout_requests").select("id,author_id,destination_operator,destination_phone_number,destination_account_holder,amount_xof,provider_fee_xof,status,provider_transaction_id,admin_note,created_at").order("created_at",{ascending:false}).limit(100),
-  db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,stories(title),chapters(title)").eq("status","paid").order("paid_at",{ascending:false}).limit(100)
+  db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,client_transaction_id,provider_transaction_id,stories(title),chapters(title)").eq("status","paid").order("paid_at",{ascending:false}).limit(100)
  ]);
  if(s.error){$("settingsMessage").textContent="Impossible de charger les paramètres : "+s.error.message;return;}
  $("enabled").checked=s.data.enabled;$("share").value=(Number(s.data.author_share_bps)/100).toFixed(2);
@@ -61,7 +61,7 @@ async function load(){
  else for(const item of buy.data){
   const row=el("div","row"),info=el("div","");
   info.append(el("strong","",(item.stories?.title||"Œuvre")+" · "+(item.chapters?.title||"Chapitre")+" · "+fmt(item.gross_amount_xof)));
-  info.append(el("small","muted","Paiement confirmé le "+new Date(item.paid_at||item.created_at).toLocaleString("fr-FR")));
+  info.append(el("small","muted","Paiement confirmé le "+new Date(item.paid_at||item.created_at).toLocaleString("fr-FR")),el("small","muted","Référence CinetPay : "+(item.provider_transaction_id||item.client_transaction_id)));
   const button=el("button","secondary","Enregistrer un remboursement déjà effectué");
   button.onclick=async()=>{
    if(!confirm("As-tu déjà remboursé ce lecteur hors de Novelia ? Cette action retirera son accès au chapitre et ajustera le solde de l’auteur."))return;
