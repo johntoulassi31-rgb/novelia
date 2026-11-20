@@ -1,100 +1,21 @@
-/* Édition saisonnière de Noël — Novelia */
-:root{
-  --noel-red:#9d3d36;
-  --noel-green:#315b43;
-  --noel-cream:#fbf5e8;
-}
-/* Quelques flocons discrets dans le fond, sans couvrir le contenu. */
-body{
-  background-color:#fbf8f1;
-  background-image:
-    radial-gradient(circle at 12% 18%,rgba(255,255,255,.9) 0 1px,transparent 1.8px),
-    radial-gradient(circle at 76% 32%,rgba(255,255,255,.75) 0 1px,transparent 1.8px),
-    radial-gradient(circle at 42% 72%,rgba(255,255,255,.7) 0 1px,transparent 1.8px),
-    radial-gradient(circle at 88% 86%,rgba(255,255,255,.8) 0 1px,transparent 1.8px);
-  background-size:150px 170px,190px 210px,220px 240px,170px 190px;
-}
-/* Guirlande fine au sommet de l'en-tête. */
-header{
-  border-top:4px solid transparent;
-  border-image:linear-gradient(90deg,var(--noel-green) 0 24%,#d6b34a 24% 48%,var(--noel-red) 48% 72%,#d6b34a 72% 100%) 1;
-}
-header .logo{position:relative}
-header .logo::after{
-  content:"  ✦";
-  color:var(--noel-red);
-  font-size:.62em;
-  vertical-align:top;
-}
-header nav a:hover{color:var(--noel-red)}
-/* Les bannières gardent le doré Novelia, avec une touche sapin et rubis. */
+/* Décor saisonnier Novelia — actif jusqu'au 19 janvier 2027 inclus.
+   Le chargement de cette feuille est contrôlé par bottom-nav.js. */
+:root{--noel-red:#a43b35;--noel-green:#28583f;--noel-gold:#d8b64d}
+body{background-image:radial-gradient(circle at 8% 15%,rgba(255,255,255,.95) 0 2px,transparent 3px),radial-gradient(circle at 88% 22%,rgba(255,255,255,.85) 0 2px,transparent 3px),radial-gradient(circle at 35% 82%,rgba(255,255,255,.8) 0 1.5px,transparent 2.5px),radial-gradient(circle at 72% 68%,rgba(255,255,255,.85) 0 1.5px,transparent 2.5px);background-size:145px 155px,185px 195px,220px 230px,170px 180px}
+header{border-top:5px solid transparent;border-image:linear-gradient(90deg,var(--noel-green) 0 18%,var(--noel-gold) 18% 36%,var(--noel-red) 36% 54%,var(--noel-gold) 54% 72%,var(--noel-green) 72% 100%) 1;box-shadow:0 3px 0 rgba(164,59,53,.08)}
+header .logo{position:relative}header .logo::after{content:"  ✦";color:var(--noel-red);font-size:.65em;vertical-align:top}header nav a:hover{color:var(--noel-red)}
 .hero-carousel{position:relative}
-.hero-carousel::before{
-  content:"✦  ÉDITION DE NOËL  ✦";
-  display:block;
-  width:max-content;
-  max-width:100%;
-  margin:0 auto 9px;
-  padding:5px 12px;
-  border:1px solid #dfd0a8;
-  border-radius:999px;
-  background:#fffaf0;
-  color:var(--noel-green);
-  font-size:10px;
-  font-weight:bold;
-  letter-spacing:1.2px;
-}
-.hc-1{
-  background:
-    radial-gradient(circle at 92% 12%,rgba(157,61,54,.14),transparent 28%),
-    radial-gradient(circle at 8% 100%,rgba(49,91,67,.13),transparent 32%),
-    linear-gradient(135deg,#f4e9cf,#fffaf0 72%);
-}
-.hc-2{
-  background:
-    radial-gradient(circle at 90% 10%,rgba(49,91,67,.16),transparent 30%),
-    linear-gradient(135deg,#f2e4c8,#fbf4e6);
-}
-.hc-3{
-  background:
-    radial-gradient(circle at 90% 10%,rgba(157,61,54,.12),transparent 30%),
-    linear-gradient(135deg,#f2e8d2,#fff8ec);
-}
-.hc-4{
-  background:
-    radial-gradient(circle at 88% 12%,rgba(49,91,67,.16),transparent 30%),
-    linear-gradient(135deg,#f7eab7,#fff7e2);
-}
-.hc-slide{border:1px solid rgba(190,157,83,.24);box-shadow:0 10px 28px rgba(91,67,24,.07)}
-.hc-slide::after{
-  content:"❄";
-  position:absolute;
-  right:18px;
-  top:10px;
-  color:rgba(157,61,54,.22);
-  font-size:34px;
-  pointer-events:none;
-}
-.hc-slide .button{
-  background-image:linear-gradient(135deg,#e6c862 0%,#c9a227 55%,#a97f12 100%);
-}
-.shelf-heading h2::before{
-  content:"✦ ";
-  color:var(--noel-red);
-  font-size:.72em;
-}
-.shelf-card{border-color:#e9dfc8}
-.shelf-card:hover{border-color:#b18b48}
-.shelf-badge{color:var(--noel-green)}
-footer{border-top-color:#e7dcc5}
-@media(max-width:699px){
-  .hero-carousel::before{font-size:9px;margin-bottom:7px}
-  .hc-slide::after{right:12px;top:8px;font-size:27px}
-}
-@media(prefers-reduced-motion:no-preference){
-  .hc-slide::after{animation:noel-twinkle 4s ease-in-out infinite}
-  @keyframes noel-twinkle{0%,100%{opacity:.45;transform:rotate(0)}50%{opacity:1;transform:rotate(18deg)}}
-}
-@media(prefers-reduced-motion:reduce){
-  .hc-slide::after{animation:none}
-}
+.hero-carousel::before{content:"✦  SPÉCIAL FÊTES · NOËL CHEZ NOVELIA  ✦";display:block;width:max-content;max-width:100%;margin:0 auto 10px;padding:7px 15px;border:1px solid #d9c27d;border-radius:999px;background:linear-gradient(90deg,#28583f,#39704d);color:#fff8df;font-size:10px;font-weight:800;letter-spacing:1px;text-align:center;box-shadow:0 3px 10px rgba(40,88,63,.18)}
+.hc-slide{border:1px solid rgba(190,157,83,.4);box-shadow:inset 0 7px 0 var(--noel-green),0 10px 28px rgba(91,67,24,.09)}
+.hc-1{background:radial-gradient(circle at 94% 12%,rgba(164,59,53,.23),transparent 27%),radial-gradient(circle at 7% 95%,rgba(40,88,63,.2),transparent 33%),linear-gradient(135deg,#f1e4c7,#fff9e9 72%)}
+.hc-2{background:radial-gradient(circle at 92% 12%,rgba(40,88,63,.22),transparent 30%),linear-gradient(135deg,#f2e3c4,#fff8e9)}
+.hc-3{background:radial-gradient(circle at 92% 12%,rgba(164,59,53,.2),transparent 30%),linear-gradient(135deg,#f2e8d2,#fff8ec)}
+.hc-4{background:radial-gradient(circle at 92% 12%,rgba(40,88,63,.22),transparent 30%),linear-gradient(135deg,#f5e6b2,#fff7df)}
+.hc-slide>p:first-child{display:inline-block;align-self:flex-start;padding:6px 10px;border-radius:999px;background:rgba(40,88,63,.1);border:1px solid rgba(40,88,63,.2);color:var(--noel-green);font-size:11px;font-weight:800;letter-spacing:.6px}
+.hc-slide::after{content:"❄  ✦  ❄";position:absolute;right:17px;bottom:12px;color:rgba(164,59,53,.48);font-size:23px;letter-spacing:4px;pointer-events:none}
+.hc-slide .button{background-image:linear-gradient(135deg,#e8cf75 0%,#c9a227 55%,#a97f12 100%);box-shadow:0 5px 14px rgba(169,127,18,.25)}
+.hc-dots button[aria-current=true]{background:var(--noel-red)}
+.shelf-heading h2::before{content:"✦ ";color:var(--noel-red);font-size:.72em}.shelf-card{border-color:#e9dfc8}.shelf-card:hover{border-color:#b18b48}.shelf-badge{color:var(--noel-green)}footer{border-top-color:#e7dcc5}
+.nb{border-top:3px solid transparent!important;border-image:linear-gradient(90deg,var(--noel-green),var(--noel-gold),var(--noel-red),var(--noel-gold),var(--noel-green)) 1!important}.nb a[aria-current=page]{color:var(--noel-red)!important}
+@media(max-width:699px){.hero-carousel::before{font-size:9px;margin-bottom:8px;padding:6px 10px}.hc-slide{box-shadow:inset 0 6px 0 var(--noel-green),0 8px 20px rgba(91,67,24,.08)}.hc-slide::after{right:11px;bottom:8px;font-size:18px}}
+@media(prefers-reduced-motion:reduce){.hc-slide::after{animation:none}}
