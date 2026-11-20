@@ -50,7 +50,7 @@
     .ambassador{display:inline-flex;align-items:center;gap:8px;margin:10px auto 0;padding:4px 16px 4px 6px;border-radius:999px;background:#fbf4de;border:1px solid #d4af37;font-weight:bold;color:#7a5c0e;font-size:14px}
     .ambassador img{width:44px;height:44px}
     [hidden]{display:none!important}
-  </style>
+  .profile-badges{padding:0 16px 8px}.profile-badges h2{font-size:18px;color:#7d5f12;margin:8px 0}.badge-list{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0 16px}.badge-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #eadbb7;border-radius:12px;background:#f8f3e6;max-width:100%}.badge-item .icon{font-size:22px}.badge-item strong{display:block;font-size:13px;color:#705411}.badge-item small{display:block;font-size:11px;color:#675937;margin-top:2px}.badge-none{color:#675937;font-size:13px;padding:8px 0}</style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
@@ -83,7 +83,9 @@
 </div>
 
 <main>
-  <div id="stories"><p class="empty">Chargement des histoires...</p></div>
+  <section class="profile-badges" aria-labelledby="badgesTitle"><h2 id="badgesTitle">Distinctions</h2><p class="muted">Les badges obtenus par cet auteur grâce à son activité sur Novelia.</p><div id="publicBadges" class="badge-list"><p class="empty">Chargement des distinctions…</p></div></section>
+
+<div id="stories"><p class="empty">Chargement des histoires...</p></div>
 </main>
 
 <script type="module">
@@ -257,6 +259,47 @@ async function refreshFollowButton() {
   message("");
 }
 
+async function loadPublicBadges(userId) {
+  const container = $("publicBadges");
+  container.replaceChildren();
+  const { data, error } = await supabase
+    .from("novelia_user_badges")
+    .select("earned_at, badge:novelia_badge_catalog(name,description,icon)")
+    .eq("user_id", userId)
+    .order("earned_at", { ascending: false });
+  if (error) {
+    const p = document.createElement("p");
+    p.className = "badge-none";
+    p.textContent = "Les distinctions sont momentanément indisponibles.";
+    container.append(p);
+    return;
+  }
+  if (!data || data.length === 0) {
+    const p = document.createElement("p");
+    p.className = "badge-none";
+    p.textContent = "Cet auteur n'a pas encore obtenu de badge.";
+    container.append(p);
+    return;
+  }
+  data.forEach(row => {
+    const badge = Array.isArray(row.badge) ? row.badge[0] : row.badge;
+    if (!badge) return;
+    const item = document.createElement("article");
+    item.className = "badge-item";
+    const icon = document.createElement("span");
+    icon.className = "icon";
+    icon.textContent = badge.icon || "🏅";
+    const text = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = badge.name;
+    const description = document.createElement("small");
+    description.textContent = badge.description;
+    text.append(title, description);
+    item.append(icon, text);
+    container.append(item);
+  });
+}
+
 async function loadPage() {
   $("followButton").hidden = true;
   message("Chargement du profil...");
@@ -296,6 +339,7 @@ async function loadPage() {
     }
 
     profile = data;
+    await loadPublicBadges(profile.id);
 
     $("name").textContent =
       profile.display_name || profile.username || "Lecteur Novelia";
