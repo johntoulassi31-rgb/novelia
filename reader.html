@@ -379,7 +379,12 @@ async function saveChapterAudioOffline(chapter){
  audio[chapter.audio_url]=blob;
  const savedChapters=new Map((previous?.chapters||[]).map(ch=>[String(ch.id),ch]));
  savedChapters.set(String(chapter.id),chapter);
- await putOfflineStory({id:dbStoryId,story:previous?.story||story,chapters:[...savedChapters.values()],media:previous?.media||{},mediaMissing:previous?.mediaMissing||[],audio,savedAt:new Date().toISOString()});
+ try {
+  await putOfflineStory({id:dbStoryId,story:previous?.story||story,chapters:[...savedChapters.values()],media:previous?.media||{},mediaMissing:previous?.mediaMissing||[],audio,savedAt:new Date().toISOString()});
+ } catch(error) {
+  if(error?.name==="QuotaExceededError"||/quota|storage/i.test(String(error?.message||"")))throw new Error("Espace de stockage insuffisant pour cette narration. Supprime un ancien audio ou libère de l’espace.");
+  throw error;
+ }
  offlineAudioMap=audio;
  return blob.size;
 }
@@ -1021,8 +1026,12 @@ function renderChapterAudio(chapter) {
  const heading=document.createElement("h3");heading.textContent=chapter.audio_title||"Écouter la narration";
  const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.setAttribute("aria-label","Narration audio du chapitre");activeChapterAudio=audio;
  const cachedBlob=offlineAudioMap?.[chapter.audio_url];
- if(cachedBlob instanceof Blob){currentAudioObjectUrl=URL.createObjectURL(cachedBlob);audio.src=currentAudioObjectUrl;}else audio.src=chapter.audio_url;
+ const audioUnavailableOffline=isOfflineMode&&!(cachedBlob instanceof Blob);
+ if(cachedBlob instanceof Blob){currentAudioObjectUrl=URL.createObjectURL(cachedBlob);audio.src=currentAudioObjectUrl;}
+ else if(!isOfflineMode)audio.src=chapter.audio_url;
+ else {audio.removeAttribute("src");audio.controls=false;audio.setAttribute("aria-disabled","true");}
  updateMediaSession(chapter,audio);
+ if(audioUnavailableOffline){const notice=document.createElement("p");notice.className="notice";notice.textContent="Cette narration n’a pas été téléchargée. Reconnecte-toi à Internet pour l’écouter ou la conserver hors connexion.";panel.appendChild(notice);}
  audio.addEventListener("ended",()=>{
   const hasNextAudio=currentChapter<chapters.length-1&&Boolean(chapters[currentChapter+1]?.audio_url);
   if(hasNextAudio){
@@ -1043,6 +1052,7 @@ function renderChapterAudio(chapter) {
  const offlineRow=document.createElement("div");offlineRow.className="audio-speed-row";
  const offlineButton=document.createElement("button");offlineButton.type="button";offlineButton.className="button secondary";
  offlineButton.textContent=cachedBlob?"Supprimer l’audio hors connexion":"Télécharger l’audio hors connexion";
+ if(isOfflineMode&&!cachedBlob){offlineButton.disabled=true;offlineButton.title="Connexion Internet nécessaire pour télécharger la narration.";}
  const offlineStatus=document.createElement("span");offlineStatus.className="reading-info";
  offlineStatus.textContent=cachedBlob?"Audio conservé sur cet appareil ("+Math.round(cachedBlob.size/1024)+" Ko).":"15 Mo maximum par narration · 60 Mo maximum au total.";
  offlineButton.addEventListener("click",async()=>{
