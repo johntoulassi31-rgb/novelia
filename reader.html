@@ -686,6 +686,8 @@ function saveProgress() {
       chapter: currentChapter,
       total: chapters.length,
       scrollPercent: sameChapter ? (Number(previous.scrollPercent) || 0) : 0,
+      panelIndex: sameChapter ? (Number.isInteger(previous.panelIndex) ? previous.panelIndex : null) : null,
+      panelOffset: sameChapter ? (Number.isFinite(Number(previous.panelOffset)) ? previous.panelOffset : null) : null,
       updatedAt: new Date().toISOString(),
       syncSource: 'local'
     };
@@ -1019,8 +1021,8 @@ window.NoveliaHandleNativeMediaAction=function(action){
  const audio=activeChapterAudio;
  if(action==="play"){if(audio)audio.play().catch(()=>{});}
  else if(action==="pause"){if(audio)audio.pause();}
- else if(action==="next"){if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
- else if(action==="previous"){if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
+ else if(action==="next"){changeReaderChapter(currentChapter+1,{playAudio:true});}
+ else if(action==="previous"){changeReaderChapter(currentChapter-1,{playAudio:true});}
 };
 function renderChapterAudio(chapter) {
  const panel=$("chapterAudioPlayer");
@@ -1042,9 +1044,7 @@ function renderChapterAudio(chapter) {
  audio.addEventListener("ended",()=>{
   const hasNextAudio=currentChapter<chapters.length-1&&Boolean(chapters[currentChapter+1]?.audio_url);
   if(hasNextAudio){
-   currentChapter++;
-   renderChapter();
-   activeChapterAudio?.play().catch(()=>{});
+   changeReaderChapter(currentChapter+1,{playAudio:true,scroll:false});
   }else if(window.NoveliaNativeMedia){
    try{window.NoveliaNativeMedia.stopped();}catch(error){}
   }
@@ -1081,9 +1081,9 @@ function renderChapterAudio(chapter) {
  });
  const transport=document.createElement("div");transport.className="audio-transport";
  const previous=document.createElement("button");previous.type="button";previous.className="button secondary";previous.textContent="← Chapitre précédent";previous.disabled=currentChapter===0;
- previous.addEventListener("click",()=>{if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
+ previous.addEventListener("click",()=>changeReaderChapter(currentChapter-1,{playAudio:true}));
  const next=document.createElement("button");next.type="button";next.className="button secondary";next.textContent="Chapitre suivant →";next.disabled=currentChapter>=chapters.length-1;
- next.addEventListener("click",()=>{if(currentChapter<chapters.length-1){currentChapter++;renderChapter();activeChapterAudio?.play().catch(()=>{});}});
+ next.addEventListener("click",()=>changeReaderChapter(currentChapter+1,{playAudio:true}));
  transport.append(previous,next);
  offlineRow.append(offlineButton,offlineStatus);panel.append(heading,audio,speedRow,transport,offlineRow);
  focusButton.hidden=false;focusButton.textContent=audioFocusMode?"Désactiver le mode écoute":"Activer le mode écoute";focusButton.setAttribute("aria-pressed",String(audioFocusMode));
@@ -1294,23 +1294,8 @@ $("favoriteButton").addEventListener("click", async () => {
 $("startReading").addEventListener("click", () => openReader(0, false));
 $("resumeReading").addEventListener("click", () => openReader(savedChapterIndex() ?? 0));
 
-$("previousChapter").addEventListener("click", () => {
-  if (currentChapter > 0) {
-    persistCurrentReadingPosition();
-    currentChapter--;
-    renderChapter();
-    $("reader").scrollIntoView({behavior:"smooth",block:"start"});
-  }
-});
-
-$("nextChapter").addEventListener("click", () => {
-  if (currentChapter < chapters.length - 1) {
-    persistCurrentReadingPosition();
-    currentChapter++;
-    renderChapter();
-    $("reader").scrollIntoView({behavior:"smooth",block:"start"});
-  }
-});
+$("previousChapter").addEventListener("click", () => changeReaderChapter(currentChapter-1));
+$("nextChapter").addEventListener("click", () => changeReaderChapter(currentChapter+1));
 
 $("audioFocusToggle").addEventListener("click",()=>{
  audioFocusMode=!audioFocusMode;document.body.classList.toggle("audio-focus-mode",audioFocusMode);
@@ -1408,6 +1393,18 @@ window.addEventListener("pagehide", () => {
   if (scrollSaveTimer) { window.clearTimeout(scrollSaveTimer); scrollSaveTimer = null; }
   persistCurrentReadingPosition();
 });
+
+function changeReaderChapter(index,{playAudio=false,scroll=true}={}) {
+  const target=Math.max(0,Math.min(index,chapters.length-1));
+  if(target===currentChapter||!chapters[target]) return false;
+  if(scrollSaveTimer){window.clearTimeout(scrollSaveTimer);scrollSaveTimer=null;}
+  persistCurrentReadingPosition();
+  currentChapter=target;
+  renderChapter();
+  if(scroll) $("reader").scrollIntoView({behavior:"smooth",block:"start"});
+  if(playAudio) activeChapterAudio?.play().catch(()=>{});
+  return true;
+}
 
 
 let selectedReviewRating = 0;
