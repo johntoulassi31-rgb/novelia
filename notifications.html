@@ -228,7 +228,7 @@
   }
 
   function buildTargetLink(item) {
-    if (item.type === "new_follower" && item.actor_id) {
+    if (item.type === "new_message") {\n      return { label: "Ouvrir la conversation", href: "messages.html" + (item.conversation_id ? "?conversation=" + encodeURIComponent(item.conversation_id) : ""), kind: "message" };\n    }\n    if (item.type === "new_follower" && item.actor_id) {
       const actor = profilesById.get(item.actor_id);
       if (actor?.username) {
         return {
@@ -269,7 +269,7 @@
         item.type === "new_chapter" ? "Nouveau chapitre" :
         item.type === "comment_reply" ? "Réponse à ton commentaire" :
         item.type === "new_comment" ? "Nouveau commentaire sur ton œuvre" :
-        item.type === "new_review" ? "Nouvel avis sur ton œuvre" :
+        item.type === "new_review" ? "Nouvel avis sur ton œuvre" :\n        item.type === "new_message" ? "Nouveau message privé" :
         item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
       top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
@@ -313,7 +313,7 @@
     try {
       const { data, error } = await supabase
         .from("notifications")
-        .select("id, recipient_id, actor_id, type, story_id, chapter_id, message, is_read, created_at")
+        .select("id, recipient_id, actor_id, type, story_id, chapter_id, conversation_id, message, is_read, created_at")
         .eq("recipient_id", currentUser.id)
         .order("created_at", { ascending: false })
         .limit(100);
