@@ -26,6 +26,7 @@ small{color:#756746}@media(max-width:540px){main{padding:15px 12px 45px}.balance
 <div class="grid">
 <section class="card"><strong id="totalEarned">— XOF</strong><p class="muted">Gains nets cumulés</p></section>
 <section class="card"><strong id="totalWithdrawn">— XOF</strong><p class="muted">Retraits effectués</p></section>
+<section class="card"><strong id="pendingBalance">— XOF</strong><p class="muted">Gains en attente de règlement</p><small id="pendingAvailability"></small></section>
 </div>
 <h2>Mes moyens de retrait</h2>
 <section class="card">
@@ -61,16 +62,17 @@ async function init(){
  const auth=await db.auth.getUser();user=auth.data?.user;
  if(!user){$("balance").textContent="Connexion requise";$("monetizationStatus").textContent="Connecte-toi depuis ton profil pour consulter ton portefeuille.";document.querySelectorAll("#destinationForm input,#destinationForm select,#destinationForm button,#payoutForm input,#payoutForm select,#payoutForm button").forEach(x=>x.disabled=true);return;}
  const adminCheck=await db.rpc("novelia_is_admin");if(adminCheck.data===true)$("adminLink").hidden=false;
- const [cfg,bal,ledger,payouts,dests]=await Promise.all([
-  db.from("novelia_public_monetization_config").select("enabled,author_share_bps,minimum_payout_xof,maximum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof").single(),
+ const [cfg,bal,pending,ledger,payouts,dests]=await Promise.all([
+  db.from("novelia_public_monetization_config").select("enabled,author_share_bps,minimum_payout_xof,maximum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof,settlement_hold_days,daily_payout_limit_xof,weekly_payout_limit_xof,monthly_payout_limit_xof").single(),
   db.from("novelia_author_wallet_balances").select("available_balance_xof").eq("author_id",user.id).maybeSingle(),
-  db.from("novelia_author_wallet_ledger").select("id,amount_xof,entry_type,description,created_at").eq("author_id",user.id).order("created_at",{ascending:false}).limit(100),
+  db.from("novelia_author_wallet_pending_balances").select("pending_balance_xof,next_available_at").eq("author_id",user.id).maybeSingle(),
+  db.from("novelia_author_wallet_ledger").select("id,amount_xof,entry_type,description,created_at,available_at").eq("author_id",user.id).order("created_at",{ascending:false}).limit(100),
   db.from("novelia_payout_requests").select("id,amount_xof,provider_fee_xof,status,created_at,processed_at,destination_operator,destination_phone_number").eq("author_id",user.id).order("created_at",{ascending:false}).limit(50),
   db.from("novelia_payout_destinations").select("id,operator,phone_number,account_holder,is_default").eq("author_id",user.id).order("created_at",{ascending:false})
  ]);
- config=cfg.data||{enabled:false,minimum_payout_xof:5000,maximum_payout_xof:1500000,author_share_bps:7000};
- const balance=Number(bal.data?.available_balance_xof||0);$("balance").textContent=fmt(balance);
- $("monetizationStatus").textContent=config.enabled?"Programme actif · Part auteur : "+(Number(config.author_share_bps)/100)+" % · Retrait minimum : "+fmt(config.minimum_payout_xof):"Programme de rémunération désactivé pour le moment. Aucun achat ni retrait réel ne peut être effectué.";
+ config=cfg.data||{enabled:false,minimum_payout_xof:5000,maximum_payout_xof:400000,author_share_bps:7000,settlement_hold_days:7,daily_payout_limit_xof:400000,weekly_payout_limit_xof:700000,monthly_payout_limit_xof:1000000};
+ const balance=Number(bal.data?.available_balance_xof||0);$("balance").textContent=fmt(balance);const pendingAmount=Number(pending.data?.pending_balance_xof||0);$("pendingBalance").textContent=fmt(pendingAmount);$("pendingAvailability").textContent=pendingAmount>0?"Prochaine disponibilité estimée : "+date(pending.data?.next_available_at):"Aucun gain en attente.";
+ $("monetizationStatus").textContent=config.enabled?"Programme actif · Part auteur : "+(Number(config.author_share_bps)/100)+" % · Retrait minimum : "+fmt(config.minimum_payout_xof)+" · Disponibilité des ventes après "+Number(config.settlement_hold_days||7)+" jour(s) · Plafonds de retrait : "+fmt(config.daily_payout_limit_xof)+"/jour, "+fmt(config.weekly_payout_limit_xof)+"/semaine, "+fmt(config.monthly_payout_limit_xof)+"/mois":"Programme de rémunération désactivé pour le moment. Aucun achat ni retrait réel ne peut être effectué.";
  const rows=ledger.data||[];
  const earned=rows.filter(x=>["chapter_sale","chapter_refund","manual_adjustment"].includes(x.entry_type)).reduce((a,x)=>a+Number(x.amount_xof),0);
  const withdrawn=(payouts.data||[]).filter(x=>x.status==="paid").reduce((a,x)=>a+Number(x.amount_xof),0);
@@ -78,7 +80,7 @@ async function init(){
  destinations=dests.data||[];renderDestinations();
  $("payoutButton").disabled=!config.enabled||destinations.length===0;
  $("amount").min=String(config.minimum_payout_xof||1);$("amount").max=String(config.maximum_payout_xof||1500000);
- $("amount").placeholder="Minimum "+fmt(config.minimum_payout_xof);
+ $("amount").placeholder="De "+fmt(config.minimum_payout_xof)+" à "+fmt(config.maximum_payout_xof);
  renderLedger(rows);renderPayouts(payouts.data||[]);
 }
 function renderDestinations(){
@@ -96,7 +98,7 @@ function renderLedger(rows){
  const root=$("ledger");root.replaceChildren();
  if(!rows.length){root.append(el("p","muted","Aucun gain pour le moment. Les revenus apparaîtront après les premières ventes confirmées."));return;}
  const labels={chapter_sale:"Vente de chapitre",chapter_refund:"Remboursement",payout_hold:"Retrait réservé",payout_release:"Solde libéré",manual_adjustment:"Ajustement"};
- rows.forEach(x=>{const row=el("div","row"),left=el("div","",x.description||labels[x.entry_type]||x.entry_type);left.append(el("small","",date(x.created_at)));const amount=el("span","amount "+(Number(x.amount_xof)>=0?"positive":"negative"),(Number(x.amount_xof)>0?"+":"")+fmt(x.amount_xof));row.append(left,amount);root.append(row);});
+ rows.forEach(x=>{const row=el("div","row"),left=el("div","",x.description||labels[x.entry_type]||x.entry_type);left.append(el("small","",date(x.created_at)+(x.available_at&&new Date(x.available_at)>new Date()?" · Disponible le "+date(x.available_at):"")));const amount=el("span","amount "+(Number(x.amount_xof)>=0?"positive":"negative"),(Number(x.amount_xof)>0?"+":"")+fmt(x.amount_xof));row.append(left,amount);root.append(row);});
 }
 function renderPayouts(rows){
  const root=$("payoutHistory");root.replaceChildren();
