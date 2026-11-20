@@ -139,15 +139,43 @@ function renderCards(targetId, stories, emptyText) {
     const title = document.createElement("h3"); title.textContent = safeText(story.title, "Histoire sans titre");
     const details = document.createElement("p"); details.textContent = (story.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + safeText(story.genre, "Autre");
     const like = document.createElement("span"); like.className = "pill"; like.textContent = "♥ " + (story.likesCount || 0) + " J’aime";
+    if (targetId === "recommended" && story.recommendationReason) {
+      const reason = document.createElement("span"); reason.className = "pill"; reason.textContent = story.recommendationReason;
+      info.append(title, details, reason, like);
+    } else info.append(title, details, like);
     const read = document.createElement("a"); read.className = "read"; read.href = readLink(story); read.textContent = "Lire l’histoire";
     read.addEventListener("click", () => trackDiscoveryEvent(story.id, "click", card.dataset.sourceSection));
-    info.append(title, details, like, read); card.append(info); container.append(card);
+    info.append(read); card.append(info); container.append(card);
   });
 }
-function recentScore(story) {
-  const created = Date.parse(story.created_at || "") || 0;
-  const ageDays = created ? Math.max(0, (dateNow - created) / 86400000) : 365;
-  return (story.likesCount || 0) * 5 + Math.max(0, 30 - Math.min(ageDays, 30));
+function selectDiverseRecommendations(scoredStories, limit = 12) {
+  const remaining = [...scoredStories].sort((a,b) => b.recommendationScore-a.recommendationScore);
+  const selected = [];
+  const authorCounts = new Map();
+  const genreCounts = new Map();
+  const formatCounts = new Map();
+  while (remaining.length && selected.length < limit) {
+    let bestIndex = 0, bestAdjusted = -Infinity;
+    remaining.forEach((story, index) => {
+      const author = String(story.author_id || "");
+      const genre = safeText(story.genre, "Autre");
+      const format = safeText(story.story_type, "roman");
+      const adjusted = story.recommendationScore
+        - (authorCounts.get(author) || 0) * 22
+        - Math.max(0, (genreCounts.get(genre) || 0) - 1) * 9
+        - (formatCounts.get(format) || 0) * 2;
+      if (adjusted > bestAdjusted) { bestAdjusted = adjusted; bestIndex = index; }
+    });
+    const [chosen] = remaining.splice(bestIndex, 1);
+    selected.push(chosen);
+    const author = String(chosen.author_id || "");
+    const genre = safeText(chosen.genre, "Autre");
+    const format = safeText(chosen.story_type, "roman");
+    authorCounts.set(author, (authorCounts.get(author) || 0) + 1);
+    genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1);
+    formatCounts.set(format, (formatCounts.get(format) || 0) + 1);
+  }
+  return selected;
 }
 function applyDiscoveryFilters() {
   const query=safeText($("storySearch").value).toLocaleLowerCase("fr"),genre=$("genreFilter").value,format=$("formatFilter").value;
@@ -194,11 +222,12 @@ async function loadDiscovery() {
     }));
     let likedIds = [], savedIds = [], followedAuthors = [], progressRows = [], favoriteRows = [];
     if (currentUser) {
-      const [likedResult, savedResult, followsResult, progressResult] = await Promise.all([
+      const [likedResult, savedResult, followsResult, progressResult, historyResult] = await Promise.all([
         supabase.from("story_likes").select("story_id").eq("user_id", currentUser.id).limit(1000),
         supabase.from("user_library").select("story_key,is_favorite,last_chapter").eq("user_id", currentUser.id).eq("is_archived", false).limit(1000),
         supabase.from("follows").select("followed_id").eq("follower_id", currentUser.id).limit(1000),
-        supabase.from("novelia_reading_progress").select("story_id,progress_percent,updated_at").eq("user_id", currentUser.id).order("updated_at", {ascending:false}).limit(1000)
+        supabase.from("novelia_reading_progress").select("story_id,progress_percent,updated_at").eq("user_id", currentUser.id).order("updated_at", {ascending:false}).limit(1000),
+        supabase.from("reading_history").select("story_key,last_chapter,last_read_at").eq("user_id", currentUser.id).order("last_read_at", {ascending:false}).limit(1000)
       ]);
       if (!likedResult.error) likedIds = (likedResult.data || []).map(row => String(row.story_id));
       if (!savedResult.error) {
@@ -207,6 +236,10 @@ async function loadDiscovery() {
       }
       if (!followsResult.error) followedAuthors = (followsResult.data || []).map(row => String(row.followed_id));
       if (!progressResult.error) progressRows = progressResult.data || [];
+      if (!historyResult.error) {
+        const historyIds = (historyResult.data || []).map(row => String(row.story_key || "").replace(/^db_/, ""));
+        historyIds.forEach(id => { if (id) savedIds.push(id); });
+      }
     }
     const likedSet = new Set(likedIds);
     const savedSet = new Set(savedIds);
@@ -217,6 +250,8 @@ async function loadDiscovery() {
       if (!previous || Date.parse(row.updated_at || "") > Date.parse(previous.updated_at || "")) progressByStory.set(key, row);
     });
     const tasteGenres = new Map();
+    const tasteFormats = new Map();
+    const historySet = new Set(savedIds);
     items.forEach(story => {
       const id = String(story.id);
       let weight = 0;
@@ -225,9 +260,12 @@ async function loadDiscovery() {
       if (favoriteRows.some(row => String(row.story_key || "").replace(/^db_/, "") === id)) weight += 2;
       const progress = Number(progressByStory.get(id)?.progress_percent || 0);
       if (progress > 0) weight += progress >= 80 ? 3 : progress >= 25 ? 2 : 1;
+      if (historySet.has(id)) weight += 1;
       if (weight && story.genre) tasteGenres.set(story.genre, (tasteGenres.get(story.genre) || 0) + weight);
+      if (weight && story.story_type) tasteFormats.set(story.story_type, (tasteFormats.get(story.story_type) || 0) + weight);
     });
     const maxGenre = [...tasteGenres.entries()].sort((a,b) => b[1]-a[1])[0]?.[0] || null;
+    const maxFormat = [...tasteFormats.entries()].sort((a,b) => b[1]-a[1])[0]?.[0] || null;
     const followedSet = new Set(followedAuthors);
     const authorStoryCounts = new Map();
     items.forEach(story => authorStoryCounts.set(String(story.author_id), (authorStoryCounts.get(String(story.author_id)) || 0) + 1));
@@ -250,16 +288,22 @@ async function loadDiscovery() {
       const clickRate = (metrics.clicks + 1) / (metrics.impressions + 20);
       const exposureBoost = metrics.impressions <= 2 ? 14 : metrics.impressions <= 8 ? 8 : 0;
       const responseScore = Math.min(18, clickRate * 100);
-      const score = genreAffinity * 9 + engagementScore + freshnessScore + explorationBoost
+      const formatAffinity = tasteFormats.get(s.story_type) || 0;
+      const score = genreAffinity * 7 + formatAffinity * 4 + engagementScore + freshnessScore + explorationBoost
         + exposureBoost + responseScore
         + (currentUser && followedSet.has(String(s.author_id)) ? 18 : 0);
-      return {...s, recommendationScore: score, explorationBoost, impressions:metrics.impressions, clicks:metrics.clicks, clickRate};
-    }).sort((a,b) => b.recommendationScore-a.recommendationScore).slice(0,12);
+      const recommendationReason = genreAffinity > 0 ? "Selon tes genres préférés"
+        : formatAffinity > 0 ? "Selon tes formats de lecture"
+        : ageDays <= 14 ? "Nouvelle découverte"
+        : s.likesCount <= 5 ? "À découvrir";
+      return {...s, recommendationScore: score, recommendationReason, explorationBoost, impressions:metrics.impressions, clicks:metrics.clicks, clickRate};
+    });
+    const personal = selectDiverseRecommendations(personal, 12);
     if (!currentUser) {
       $("personalNote").textContent = "Connecte-toi pour personnaliser les suggestions";
       $("status").textContent = "Voici les nouveautés et les œuvres aimées par la communauté.";
     } else if (maxGenre) {
-      $("personalNote").textContent = "Suggestions inspirées du genre « " + maxGenre + " »";
+      $("personalNote").textContent = "Inspirées de tes lectures" + (maxGenre ? " · " + maxGenre : "") + (maxFormat ? " · " + (maxFormat === "webtoon" ? "Webtoons" : "Romans") : "");
       $("status").textContent = "Suggestions calculées à partir de tes J’aime, de ta bibliothèque et des auteurs suivis.";
     } else {
       $("personalNote").textContent = "Aime ou enregistre des œuvres pour affiner les suggestions";
