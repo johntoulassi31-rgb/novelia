@@ -40,7 +40,7 @@ small{color:#756746}@media(max-width:540px){main{padding:15px 12px 45px}.balance
 </form>
 <div id="destinations"></div>
 </section>
-<h2>Demander un retrait</h2>
+<h2>Demander un retrait</h2><p class="muted">Les plafonds journaliers, hebdomadaires et mensuels sont communs à tous les auteurs de Novelia.</p>
 <section class="card">
 <form id="payoutForm"><div class="field"><label for="destination">Moyen de retrait</label><select id="destination" required><option value="">Choisir un numéro…</option></select></div>
 <div class="field"><label for="amount">Montant à retirer (XOF)</label><input id="amount" type="number" min="1" step="1" required></div>
@@ -72,7 +72,7 @@ async function init(){
  ]);
  config=cfg.data||{enabled:false,minimum_payout_xof:5000,maximum_payout_xof:400000,author_share_bps:7000,settlement_hold_days:7,daily_payout_limit_xof:400000,weekly_payout_limit_xof:700000,monthly_payout_limit_xof:1000000};
  const balance=Number(bal.data?.available_balance_xof||0);$("balance").textContent=fmt(balance);const pendingAmount=Number(pending.data?.pending_balance_xof||0);$("pendingBalance").textContent=fmt(pendingAmount);$("pendingAvailability").textContent=pendingAmount>0?"Prochaine disponibilité estimée : "+date(pending.data?.next_available_at):"Aucun gain en attente.";
- $("monetizationStatus").textContent=config.enabled?"Programme actif · Part auteur : "+(Number(config.author_share_bps)/100)+" % · Retrait minimum : "+fmt(config.minimum_payout_xof)+" · Disponibilité des ventes après "+Number(config.settlement_hold_days||7)+" jour(s) · Plafonds de retrait : "+fmt(config.daily_payout_limit_xof)+"/jour, "+fmt(config.weekly_payout_limit_xof)+"/semaine, "+fmt(config.monthly_payout_limit_xof)+"/mois":"Programme de rémunération désactivé pour le moment. Aucun achat ni retrait réel ne peut être effectué.";
+ $("monetizationStatus").textContent=config.enabled?"Programme actif · Part auteur : "+(Number(config.author_share_bps)/100)+" % · Retrait minimum : "+fmt(config.minimum_payout_xof)+" · Disponibilité des ventes après "+Number(config.settlement_hold_days||7)+" jour(s) · Plafonds globaux CinetPay : "+fmt(config.daily_payout_limit_xof)+"/jour, "+fmt(config.weekly_payout_limit_xof)+"/semaine, "+fmt(config.monthly_payout_limit_xof)+"/mois":"Programme de rémunération désactivé pour le moment. Aucun achat ni retrait réel ne peut être effectué.";
  const rows=ledger.data||[];
  const earned=rows.filter(x=>["chapter_sale","chapter_refund","manual_adjustment"].includes(x.entry_type)).reduce((a,x)=>a+Number(x.amount_xof),0);
  const withdrawn=(payouts.data||[]).filter(x=>x.status==="paid").reduce((a,x)=>a+Number(x.amount_xof),0);
