@@ -49,6 +49,7 @@ function renderAuthorDailyChart(days){
   imp.title=numberFmt(d.impressions)+" impressions";click.title=numberFmt(d.clicks)+" clics";
   bars.append(imp,click);col.append(bars,el("small",new Date(d.day+"T00:00:00Z").toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})));chart.append(col);
  });
+ const previousLegend=chart.nextElementSibling;if(previousLegend?.classList.contains("analytics-legend"))previousLegend.remove();
  const legend=el("p",undefined,"analytics-legend");legend.append(el("span"),document.createTextNode("Impressions"),el("span",undefined,"click"),document.createTextNode(" Clics"));chart.after(legend);
 }
 function renderAuthorRanking(rows){
