@@ -52,7 +52,7 @@ button:disabled{opacity:.55;cursor:wait}
   <p class="hint" id="quotaInfo"></p>
   <p id="status" role="status" aria-live="polite">Lecture du stockage local…</p>
 </section>
-<div class="toolbar"><strong>Mes copies hors connexion</strong><button id="refreshButton" type="button">Actualiser</button></div>
+<div class="toolbar"><strong>Mes copies hors connexion</strong><div class="card-actions"><button id="checkAllButton" type="button">Vérifier les mises à jour</button><button id="refreshButton" type="button">Actualiser</button></div></div>
 <section class="download-list" id="downloadList"><p class="empty">Chargement…</p></section>
 </main>
 <nav class="bottom-nav" aria-label="Navigation rapide">
@@ -62,17 +62,43 @@ button:disabled{opacity:.55;cursor:wait}
 <a href="downloads.html" aria-current="page"><span>↓</span><span>Hors ligne</span></a>
 <a href="publish.html"><span>✎</span><span>Écrire</span></a>
 </nav>
-<script>
-"use strict";
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const supabase=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
 const DB_NAME="novelia-reader-offline",STORE_NAME="stories";
+const recordCache=new Map();
 const $=id=>document.getElementById(id);
 function openDB(){return new Promise((resolve,reject)=>{if(!("indexedDB" in window)){reject(new Error("Ce navigateur ne prend pas en charge le stockage local."));return;}const request=indexedDB.open(DB_NAME,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(STORE_NAME))request.result.createObjectStore(STORE_NAME,{keyPath:"id"});};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("Impossible d’ouvrir le stockage local."));});}
 async function requestStore(mode,action){const db=await openDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,mode),store=tx.objectStore(STORE_NAME);let req;try{req=action(store);}catch(error){reject(error);return;}if(req){req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);}else{tx.oncomplete=()=>resolve(true);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);}});}finally{db.close();}}
 const getAll=()=>requestStore("readonly",store=>store.getAll());
+const putRecord=record=>requestStore("readwrite",store=>store.put(record));
 const removeOne=id=>requestStore("readwrite",store=>store.delete(id));
 function formatBytes(bytes){if(!Number.isFinite(bytes)||bytes<0)return"—";if(bytes<1024)return bytes+" o";const units=["Ko","Mo","Go"];let n=bytes/1024,i=0;while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toLocaleString("fr-FR",{maximumFractionDigits:1})+" "+units[i];}
 function formatDate(value){const date=new Date(value);return Number.isNaN(date.getTime())?"Date inconnue":date.toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"});}
 function node(tag,content,className){const el=document.createElement(tag);el.textContent=content??"";if(className)el.className=className;return el;}
+async function fetchLatest(id){
+ if(!navigator.onLine)throw new Error("Connecte-toi à Internet pour vérifier les mises à jour.");
+ const {data:row,error}=await supabase.from("stories").select("id,title,description,cover_url,story_type,genre,status,author_id,moderation_hidden").eq("id",id).eq("status","published").eq("moderation_hidden",false).maybeSingle();
+ if(error)throw error;if(!row)return null;
+ const {data:chapterRows,error:chapterError}=await supabase.from("chapters").select("id,title,content,chapter_number,created_at,moderation_hidden").eq("story_id",id).eq("moderation_hidden",false).order("chapter_number",{ascending:true});
+ if(chapterError)throw chapterError;
+ const latestStory={id:row.id,authorId:row.author_id,title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
+ const latestChapters=(chapterRows||[]).map(ch=>({id:ch.id,title:ch.title,content:ch.content||""}));
+ if(!latestChapters.length)return null;
+ const latestRecord={id,savedAt:new Date().toISOString(),story:latestStory,chapters:latestChapters};
+ const changed=JSON.stringify({story:recordCache.get(id)?.story,chapters:recordCache.get(id)?.chapters})!==JSON.stringify({story:latestRecord.story,chapters:latestRecord.chapters});
+ return {record:latestRecord,changed};
+}
+async function checkRecord(record,status,update,check){
+ check.disabled=true;update.hidden=true;status.textContent="Vérification en cours…";
+ try{
+  const latest=await fetchLatest(record.id);
+  if(!latest){status.textContent="Œuvre indisponible ou non publiée : aucune mise à jour proposée.";return;}
+  if(!latest.changed){status.textContent="Ta copie est déjà à jour.";}
+  else{status.textContent="Une nouvelle version est disponible.";update.hidden=false;}
+ }catch(error){status.textContent=error.message||"Vérification impossible.";}
+ finally{check.disabled=false;}
+}
 function createCard(record){
  const story=record.story||{},chapters=Array.isArray(record.chapters)?record.chapters:[];
  const card=node("article","","download-card"),cover=story.cover?document.createElement("img"):node("div",story.title||"Novelia","cover-fallback");
@@ -82,16 +108,21 @@ function createCard(record){
  body.append(node("p",(story.type||"Roman")+" · "+(story.genre||"Autre"),"meta"));
  body.append(node("p",chapters.length+" chapitre(s) ou épisode(s)","meta"));
  body.append(node("p","Enregistrée le "+formatDate(record.savedAt),"meta"));
+ const updateStatus=node("p","Mises à jour non vérifiées.","meta");updateStatus.setAttribute("role","status");body.append(updateStatus);
  const actions=node("div","","card-actions"),open=node("a","Lire hors connexion","btn primary");
  open.href="reader.html?db_story="+encodeURIComponent(record.id);actions.append(open);
+ const check=node("button","Vérifier","");check.type="button";
+ const update=node("button","Mettre à jour","primary");update.type="button";update.hidden=true;
+ check.addEventListener("click",()=>checkRecord(record,updateStatus,update,check));
+ update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");if(!latest.changed){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}await putRecord(latest.record);updateStatus.textContent="Copie mise à jour le "+formatDate(latest.record.savedAt)+".";update.hidden=true;await render();}catch(error){updateStatus.textContent=error.message||"Mise à jour impossible.";}finally{update.disabled=false;check.disabled=false;}});
  const del=node("button","Supprimer la copie","danger");del.type="button";
  del.addEventListener("click",async()=>{if(!confirm("Supprimer la copie hors connexion de « "+(story.title||"cette œuvre")+" » sur cet appareil ?"))return;del.disabled=true;try{await removeOne(record.id);await render();}catch(error){$("status").textContent="Suppression impossible : "+(error.message||String(error));$("status").className="error";del.disabled=false;}});
- actions.append(del);body.append(actions);card.append(body);return card;
+ actions.append(check,update,del);body.append(actions);card.append(body);return card;
 }
 async function render(){
  $("status").textContent="Lecture du stockage local…";$("status").className="";
  try{
-  const records=await getAll();records.sort((a,b)=>Date.parse(b.savedAt||0)-Date.parse(a.savedAt||0));
+  const records=await getAll();recordCache.clear();records.forEach(record=>recordCache.set(record.id,record));records.sort((a,b)=>Date.parse(b.savedAt||0)-Date.parse(a.savedAt||0));
   const totalChapters=records.reduce((sum,r)=>sum+(Array.isArray(r.chapters)?r.chapters.length:0),0);
   const bytes=records.reduce((sum,r)=>sum+new Blob([JSON.stringify(r)]).size,0);
   $("workCount").textContent=String(records.length);$("chapterCount").textContent=String(totalChapters);$("totalSize").textContent=formatBytes(bytes);
@@ -102,6 +133,7 @@ async function render(){
   if(navigator.storage&&navigator.storage.estimate){try{const estimate=await navigator.storage.estimate();if(Number.isFinite(estimate.quota)&&estimate.quota>0){$("quotaInfo").textContent="Espace navigateur utilisé : "+formatBytes(estimate.usage||0)+" sur environ "+formatBytes(estimate.quota)+" (toutes les données du site).";}}catch{}}
  }catch(error){$("status").textContent=error.message||"Impossible de lire les téléchargements."; $("status").className="error";$("downloadList").replaceChildren(node("p","Le stockage hors connexion est inaccessible sur cet appareil.","empty"));}
 }
+$("checkAllButton").addEventListener("click",async()=>{const button=$("checkAllButton");button.disabled=true;try{const records=await getAll();if(!navigator.onLine)throw new Error("Connecte-toi à Internet pour vérifier les mises à jour.");for(const record of records){const latest=await fetchLatest(record.id);if(latest&&!latest.changed)continue;/* Le contrôle individuel affiche les détails et propose la mise à jour. */}await render();$("status").textContent="Vérification terminée. Ouvre chaque œuvre pour voir si une mise à jour est disponible."; }catch(error){$("status").textContent=error.message||"Vérification impossible.";$("status").className="error";}finally{button.disabled=false;}});
 $("refreshButton").addEventListener("click",render);render();
 </script>
 </body>
