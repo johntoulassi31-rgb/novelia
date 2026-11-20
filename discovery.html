@@ -139,10 +139,12 @@ function renderCards(targetId, stories, emptyText) {
     const title = document.createElement("h3"); title.textContent = safeText(story.title, "Histoire sans titre");
     const details = document.createElement("p"); details.textContent = (story.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + safeText(story.genre, "Autre");
     const like = document.createElement("span"); like.className = "pill"; like.textContent = "♥ " + (story.likesCount || 0) + " J’aime";
+    const rating = document.createElement("span"); rating.className = "pill";
+    rating.textContent = story.reviewCount ? "★ " + Number(story.reviewAverage).toFixed(1) + "/5 · " + story.reviewCount + " avis" : "Pas encore d’avis";
     if (targetId === "recommended" && story.recommendationReason) {
       const reason = document.createElement("span"); reason.className = "pill"; reason.textContent = story.recommendationReason;
-      info.append(title, details, reason, like);
-    } else info.append(title, details, like);
+      info.append(title, details, reason, like, rating);
+    } else info.append(title, details, like, rating);
     const read = document.createElement("a"); read.className = "read"; read.href = readLink(story); read.textContent = "Lire l’histoire";
     read.addEventListener("click", () => trackDiscoveryEvent(story.id, "click", card.dataset.sourceSection));
     info.append(read); card.append(info); container.append(card);
@@ -216,6 +218,15 @@ async function loadDiscovery() {
     const likesCount = new Map();
     if (!likesError) (likesRows || []).forEach(row => likesCount.set(String(row.story_id), (likesCount.get(String(row.story_id)) || 0) + 1));
     items.forEach(s => s.likesCount = likesCount.get(String(s.id)) || 0);
+    const { data: reviewStatsRows, error: reviewStatsError } = await supabase.from("novelia_story_review_stats")
+      .select("story_id,review_count,average_rating").in("story_id", ids);
+    const reviewStats = new Map();
+    if (!reviewStatsError) (reviewStatsRows || []).forEach(row => reviewStats.set(String(row.story_id), row));
+    items.forEach(s => {
+      const stats = reviewStats.get(String(s.id));
+      s.reviewCount = Number(stats?.review_count || 0);
+      s.reviewAverage = Number(stats?.average_rating || 0);
+    });
     const { data: metricsRows, error: metricsError } = await supabase.rpc("novelia_discovery_metrics");
     if (!metricsError) (metricsRows || []).forEach(row => discoveryMetrics.set(String(row.story_id), {
       impressions: Number(row.impressions || 0), clicks: Number(row.clicks || 0)
