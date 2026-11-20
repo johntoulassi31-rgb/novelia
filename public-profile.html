@@ -50,7 +50,7 @@
     .ambassador{display:inline-flex;align-items:center;gap:8px;margin:10px auto 0;padding:4px 16px 4px 6px;border-radius:999px;background:#fbf4de;border:1px solid #d4af37;font-weight:bold;color:#7a5c0e;font-size:14px}
     .ambassador img{width:44px;height:44px}
     [hidden]{display:none!important}
-  .profile-badges{padding:0 16px 8px}.profile-badges h2{font-size:18px;color:#7d5f12;margin:8px 0}.badge-list{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0 16px}.badge-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #eadbb7;border-radius:12px;background:#f8f3e6;max-width:100%}.badge-item .icon{font-size:22px}.badge-item strong{display:block;font-size:13px;color:#705411}.badge-item small{display:block;font-size:11px;color:#675937;margin-top:2px}.badge-none{color:#675937;font-size:13px;padding:8px 0}</style>
+  .profile-badges{padding:0 16px 8px}.profile-badges h2{font-size:18px;color:#7d5f12;margin:8px 0}.badge-list{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0 16px}.badge-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #eadbb7;border-radius:12px;background:#f8f3e6;max-width:100%}.badge-item .icon{font-size:22px}.badge-item strong{display:block;font-size:13px;color:#705411}.badge-item small{display:block;font-size:11px;color:#675937;margin-top:2px}.badge-none{color:#675937;font-size:13px;padding:8px 0}.contest-history-item{display:block;width:100%;padding:12px 14px;border:1px solid #eadbb7;border-radius:12px;background:#f8f3e6}.contest-history-item strong{display:block;color:#705411;font-size:14px}.contest-history-item small{display:block;color:#675937;margin-top:4px}.contest-history-item .award{display:inline-block;margin:7px 5px 0 0;padding:3px 8px;border:1px solid #d8c99f;border-radius:99px;font-size:12px}</style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
@@ -84,6 +84,7 @@
 
 <main>
   <section class="profile-badges" aria-labelledby="badgesTitle"><h2 id="badgesTitle">Distinctions</h2><p class="muted">Les badges obtenus par cet auteur grâce à son activité sur Novelia.</p><div id="publicBadges" class="badge-list"><p class="empty">Chargement des distinctions…</p></div></section>
+  <section class="profile-badges" aria-labelledby="contestHistoryTitle"><h2 id="contestHistoryTitle">Parcours en concours</h2><p class="muted">Les participations approuvées et les prix officiellement attribués à cet auteur.</p><div id="publicContestHistory" class="badge-list"><p class="empty">Chargement du parcours…</p></div><p><a class="back" href="palmares.html">Consulter le palmarès des concours →</a></p></section>
 
 <div id="stories"><p class="empty">Chargement des histoires...</p></div>
 </main>
@@ -300,6 +301,63 @@ async function loadPublicBadges(userId) {
   });
 }
 
+async function loadPublicContestHistory(userId) {
+  const container = $("publicContestHistory");
+  container.replaceChildren();
+  const { data, error } = await supabase
+    .from("novelia_contest_entries")
+    .select("id, submitted_at, novelia_contests!inner(title, theme, status), stories(title), novelia_contest_awards(award_type, prize_description)")
+    .eq("author_id", userId)
+    .eq("status", "approved")
+    .order("submitted_at", { ascending: false });
+  if (error) {
+    const p = document.createElement("p");
+    p.className = "badge-none";
+    p.textContent = "Le parcours en concours est momentanément indisponible.";
+    container.append(p);
+    return;
+  }
+  const entries = data || [];
+  if (!entries.length) {
+    const p = document.createElement("p");
+    p.className = "badge-none";
+    p.textContent = "Aucune participation approuvée à afficher pour le moment.";
+    container.append(p);
+    return;
+  }
+  const count = document.createElement("p");
+  count.className = "muted";
+  count.textContent = entries.length + " participation(s) approuvée(s)";
+  container.append(count);
+  const awardNames = {
+    grand_prix: "🏆 Grand Prix Novelia",
+    prix_jury: "⚖️ Prix du jury",
+    prix_public: "❤️ Prix du public",
+    coup_de_coeur: "✨ Coup de cœur du jury"
+  };
+  entries.forEach(entry => {
+    const contest = Array.isArray(entry.novelia_contests) ? entry.novelia_contests[0] : entry.novelia_contests;
+    const story = Array.isArray(entry.stories) ? entry.stories[0] : entry.stories;
+    if (!contest) return;
+    const item = document.createElement("article");
+    item.className = "contest-history-item";
+    const title = document.createElement("strong");
+    title.textContent = (story?.title || "Œuvre participante") + " — " + contest.title;
+    const detail = document.createElement("small");
+    detail.textContent = (contest.theme || "Thème non précisé") + " · Participation approuvée";
+    item.append(title, detail);
+    const awards = Array.isArray(entry.novelia_contest_awards) ? entry.novelia_contest_awards : (entry.novelia_contest_awards ? [entry.novelia_contest_awards] : []);
+    awards.forEach(award => {
+      const badge = document.createElement("span");
+      badge.className = "award";
+      badge.textContent = awardNames[award.award_type] || "🏅 Distinction Novelia";
+      if (award.prize_description) badge.title = award.prize_description;
+      item.append(badge);
+    });
+    container.append(item);
+  });
+}
+
 async function loadPage() {
   $("followButton").hidden = true;
   message("Chargement du profil...");
@@ -340,6 +398,7 @@ async function loadPage() {
 
     profile = data;
     await loadPublicBadges(profile.id);
+    await loadPublicContestHistory(profile.id);
 
     $("name").textContent =
       profile.display_name || profile.username || "Lecteur Novelia";
