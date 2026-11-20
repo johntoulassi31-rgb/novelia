@@ -561,12 +561,19 @@ async function saveDetailedProgressToCloud() {
   detailedProgressSyncQueue = detailedProgressSyncQueue.then(async () => {
     const local = getProgress()[storyKey];
     if (!local || !Number.isInteger(local.chapter) || !chapters[local.chapter]?.id) return;
+    const webtoonPosition = story.type === 'Webtoon' && Number.isInteger(local.panelIndex)
+      ? JSON.stringify({
+          type: 'webtoon',
+          panelIndex: Math.max(0, local.panelIndex),
+          panelOffset: Math.max(0, Math.min(1, Number(local.panelOffset) || 0))
+        })
+      : 'scroll';
     const payload = {
       user_id: currentUser.id,
       story_id: story.id,
       chapter_id: chapters[local.chapter].id,
       progress_percent: Math.max(0, Math.min(100, Number(local.scrollPercent) || 0)),
-      position_hint: 'scroll',
+      position_hint: webtoonPosition,
       updated_at: local.updatedAt || new Date().toISOString()
     };
     const {data:remote,error:readError} = await supabase.from('novelia_reading_progress')
@@ -586,7 +593,7 @@ async function saveDetailedProgressToCloud() {
 async function loadDetailedProgressFromCloud() {
   if (!currentUser || !isDatabaseStory || !story?.id || isOfflineMode) return;
   const {data,error} = await supabase.from('novelia_reading_progress')
-    .select('chapter_id,progress_percent,updated_at').eq('user_id', currentUser.id).eq('story_id', story.id).maybeSingle();
+    .select('chapter_id,progress_percent,position_hint,updated_at').eq('user_id', currentUser.id).eq('story_id', story.id).maybeSingle();
   if (error) {
     console.warn('Historique détaillé cloud indisponible :', error.message);
     return;
@@ -604,12 +611,26 @@ async function loadDetailedProgressFromCloud() {
     if (progressTime(local.updatedAt) > progressTime(data.updated_at)) await saveDetailedProgressToCloud();
     return;
   }
+  let cloudPosition = null;
+  if (story.type === 'Webtoon' && typeof data.position_hint === 'string' && data.position_hint.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(data.position_hint);
+      if (parsed?.type === 'webtoon' && Number.isInteger(parsed.panelIndex) && parsed.panelIndex >= 0) {
+        cloudPosition = {
+          panelIndex: parsed.panelIndex,
+          panelOffset: Math.max(0, Math.min(1, Number(parsed.panelOffset) || 0))
+        };
+      }
+    } catch {}
+  }
   progress[storyKey] = {
     ...(local || {}),
     chapter: chapterIndex,
     chapterId: chapters[chapterIndex]?.id || null,
     total: chapters.length,
     scrollPercent: Math.max(0, Math.min(100, Number(data.progress_percent) || 0)),
+    panelIndex: cloudPosition?.panelIndex ?? null,
+    panelOffset: cloudPosition?.panelOffset ?? null,
     updatedAt: data.updated_at || new Date().toISOString(),
     syncSource: 'cloud'
   };
