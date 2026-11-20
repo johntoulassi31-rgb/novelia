@@ -1241,15 +1241,19 @@ chapterForm.addEventListener("submit", async event => {
   const title = $("chapterEditTitle").value.trim();
   const content = $("chapterEditContent").value.trim();
   if (!title || !content) return showMessage("Le titre et le contenu du chapitre sont obligatoires.", "error");
+  const isPremium=$("chapterPremium").checked;
+  const chapterPrice=isPremium?Number($("chapterPrice").value):null;
+  const currentChapter=chapterMode==="edit"?chaptersForSelectedStory.find(ch=>ch.id===$("chapterId").value):null;
+  const unchangedExistingPremium=Boolean(currentChapter?.is_premium&&isPremium&&Number(currentChapter.price_xof)===chapterPrice);
+  if(isPremium&&(!Number.isInteger(chapterPrice)||(monetizationConfig.enabled
+      ? chapterPrice<Number(monetizationConfig.minimum_chapter_price_xof)||chapterPrice>Number(monetizationConfig.maximum_chapter_price_xof)
+      : !unchangedExistingPremium)))return showMessage("Le prix est invalide ou la monétisation n’est pas activée.", "error");
+  const chapterValues={title,content,is_premium:isPremium,price_xof:chapterPrice};
   setBusy(saveChapterButton, true, "Enregistrement…", chapterMode === "edit" ? "Enregistrer les modifications" : "Enregistrer le chapitre");
   try {
     if (chapterMode === "edit") {
       const chapterId = $("chapterId").value;
-      const isPremium=$("chapterPremium").checked;
-  const chapterPrice=isPremium?Number($("chapterPrice").value):null;
-  if(isPremium&&(!monetizationConfig.enabled||!Number.isInteger(chapterPrice)||chapterPrice<Number(monetizationConfig.minimum_chapter_price_xof)||chapterPrice>Number(monetizationConfig.maximum_chapter_price_xof)))return showMessage("Le prix est invalide ou la monétisation n’est pas activée.", "error");
-  const chapterValues={title,content,is_premium:isPremium,price_xof:chapterPrice};
-  const { data, error } = await supabase.from("chapters")
+      const { data, error } = await supabase.from("chapters")
         .update(chapterValues)
         .eq("id", chapterId)
         .eq("story_id", selectedStory.id)
