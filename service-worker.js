@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "novelia-shell-v8";
+const CACHE_NAME = "novelia-shell-v9";
 const CACHE_PREFIX = "novelia-shell-";
 const CDN_CACHE = "novelia-cdn-v1";
 const CDN_ORIGIN = "https://cdn.jsdelivr.net";
@@ -17,7 +17,6 @@ const APP_FILES = [
   "./icons/icon-maskable-512.png"
 ];
 
-// Installation du Service Worker
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -26,23 +25,18 @@ self.addEventListener("install", event => {
   );
 });
 
-// Activation et nettoyage des anciens caches
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
         keys
-          .filter(key =>
-            key.startsWith(CACHE_PREFIX) &&
-            key !== CACHE_NAME
-          )
+          .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
           .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
   );
 });
 
-// Gestion des requêtes
 self.addEventListener("fetch", event => {
   const request = event.request;
 
@@ -50,11 +44,12 @@ self.addEventListener("fetch", event => {
 
   const url = new URL(request.url);
 
-  // Bibliothèque Supabase (versions fixées) : cache d'abord, pour fonctionner hors ligne
+  // Les dépendances CDN sont versionnées : cache-first pour le mode hors ligne.
   if (url.origin === CDN_ORIGIN && url.pathname.startsWith("/npm/")) {
     event.respondWith((async () => {
       const cached = await caches.match(request);
       if (cached) return cached;
+
       const response = await fetch(request);
       if (response.ok) {
         const cache = await caches.open(CDN_CACHE);
@@ -65,49 +60,46 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  // Ne pas intercepter Supabase ni les autres domaines externes
+  // Les appels Supabase et les autres domaines restent gérés par le navigateur.
   if (url.origin !== self.location.origin) return;
 
-  // Gestion des pages HTML
+  // Navigation : réseau en priorité, page en cache si hors ligne.
   if (request.mode === "navigate") {
     event.respondWith((async () => {
       try {
         const response = await fetch(request);
-
         if (response.ok) {
           const cache = await caches.open(CACHE_NAME);
           await cache.put(request, response.clone());
         }
-
         return response;
       } catch (error) {
-        return (
-          await caches.match(request) ||
-          await caches.match("./offline.html")
-        );
+        return await caches.match(request) ||
+          await caches.match("./offline.html") ||
+          Response.error();
       }
     })());
-
     return;
   }
 
-  // Gestion des ressources statiques
-  event.respondWith((async () => {
-    const cached = await caches.match(request);
+  // Ressources statiques : réponse immédiate depuis le cache,
+  // puis actualisation en arrière-plan pour éviter les anciennes versions.
+  const cachedResponse = caches.match(request);
+  const networkResponse = fetch(request).then(async response => {
+    if (response.ok && response.type === "basic") {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  }).catch(() => null);
 
+  event.waitUntil(networkResponse.then(() => undefined));
+
+  event.respondWith((async () => {
+    const cached = await cachedResponse;
     if (cached) return cached;
 
-    try {
-      const response = await fetch(request);
-
-      if (response.ok) {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(request, response.clone());
-      }
-
-      return response;
-    } catch (error) {
-      return Response.error();
-    }
+    const response = await networkResponse;
+    return response || Response.error();
   })());
 });
