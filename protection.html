@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#fbf8f1">
+<title>Protection de mes œuvres — Novelia</title>
+<link rel="stylesheet" href="theme-gold.css">
+<style>
+:root{--bg:#fbf8f1;--panel:#f8f3e6;--border:#f0e6cd;--text:#392b08;--muted:#675937;--accent:#7d5f12;--gold:#c3941c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,Arial,sans-serif;padding-bottom:76px}
+header{padding:15px 18px;background:#f9f4ea;border-bottom:1px solid var(--border)}header a{color:var(--accent);font-weight:800;text-decoration:none}
+main{max-width:900px;margin:24px auto;padding:0 14px}.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:19px;margin-bottom:16px}
+h1{font-size:1.55rem;margin:0 0 8px}h2{font-size:1.1rem;margin:0 0 8px}.muted{color:var(--muted)}.small{font-size:.85rem}
+button,.button{border:0;border-radius:9px;background:var(--gold);color:#241c0a;padding:10px 13px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
+.secondary{background:#eee4ce}.receipt{background:#fffdf8;border:1px solid var(--border);border-radius:12px;padding:15px;margin:12px 0;overflow-wrap:anywhere}
+.meta{font-size:.86rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}.hash{font:12px/1.5 ui-monospace,monospace;background:#f3eddf;padding:10px;border-radius:8px;word-break:break-all}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.message{padding:12px;border-radius:9px;background:#f3eddf}
+@media(max-width:560px){.panel{padding:14px}.receipt{padding:12px}}
+</style>
+</head>
+<body>
+<header><a href="index.html">✦ NOVELIA</a></header>
+<main>
+<section class="panel">
+<h1>Protection de mes œuvres</h1>
+<p class="muted">Retrouve les empreintes numériques et les reçus horodatés enregistrés lors de la publication ou de la mise à jour de tes œuvres.</p>
+<p class="small">Une empreinte SHA-256 permet de comparer une version de contenu à celle enregistrée. Un reçu Novelia constitue une trace technique datée ; il ne remplace pas un dépôt officiel, un contrat ou une décision juridique et ne garantit pas à lui seul la titularité des droits.</p>
+<div id="status" class="message" role="status" aria-live="polite">Vérification de la session…</div>
+<div class="actions"><button id="exportBtn" type="button" disabled>Exporter mes reçus (JSON)</button><a class="button secondary" href="copyright.html">Signaler une atteinte à mes droits</a></div>
+</section>
+<section class="panel">
+<h2>Historique des preuves de publication</h2>
+<p class="muted small">Seuls tes propres reçus sont affichés. Les empreintes sont copiables pour archivage ou comparaison ultérieure.</p>
+<div id="receipts"><p class="muted">Chargement…</p></div>
+</section>
+</main>
+<script type="module">
+import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const supabase=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
+const $=id=>document.getElementById(id);
+const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let receipts=[];
+function status(message){$("status").textContent=message;}
+function formatDate(value){const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"});}
+function render(){
+ const host=$("receipts");
+ if(!receipts.length){host.innerHTML='<p class="muted">Aucun reçu de publication enregistré pour le moment. Les prochains événements de publication apparaîtront ici.</p>';return;}
+ host.innerHTML=receipts.map((r,i)=>'<article class="receipt"><h3>'+esc(r.target_title)+'</h3><div class="meta"><span>'+esc(r.target_type)+'</span><span>•</span><span>'+esc(r.event_type)+'</span><span>•</span><span>'+esc(formatDate(r.recorded_at))+'</span></div><p class="small muted">Référence : '+esc(r.id)+' · Taille enregistrée : '+esc(r.content_bytes)+' octets</p><div class="hash" id="hash-'+i+'">'+esc(r.content_sha256)+'</div><div class="actions"><button type="button" data-copy="'+i+'">Copier l’empreinte</button></div></article>').join("");
+ host.querySelectorAll("[data-copy]").forEach(btn=>btn.addEventListener("click",async()=>{const r=receipts[Number(btn.dataset.copy)];try{await navigator.clipboard.writeText(r.content_sha256);btn.textContent="Empreinte copiée";}catch{btn.textContent="Copie indisponible";}}));
+}
+async function init(){
+ const {data,error}=await supabase.auth.getSession();
+ if(error)throw error;
+ if(!data.session){status("Connecte-toi à Novelia pour consulter tes reçus.");$("receipts").innerHTML='<p><a href="login.html">Se connecter</a></p>';return;}
+ const result=await supabase.from("novelia_publication_receipts").select("id,story_id,chapter_id,target_type,event_type,target_title,content_sha256,content_bytes,recorded_at").order("recorded_at",{ascending:false}).limit(200);
+ if(result.error)throw result.error;
+ receipts=result.data||[];
+ status(receipts.length+" reçu(s) personnel(s) chargé(s).");
+ $("exportBtn").disabled=receipts.length===0;
+ render();
+}
+$("exportBtn").addEventListener("click",()=>{
+ const blob=new Blob([JSON.stringify({product:"Novelia",exported_at:new Date().toISOString(),notice:"Ces reçus sont des traces techniques horodatées et ne constituent pas à eux seuls une preuve juridique définitive.",receipts},null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="novelia-recus-publication.json";a.click();URL.revokeObjectURL(url);
+});
+init().catch(error=>status("Impossible de charger les reçus : "+(error?.message||"erreur inconnue.")));
+supabase.auth.onAuthStateChange(()=>init().catch(error=>status("Erreur de session : "+(error?.message||"inconnue."))));
+</script>
+<script src="bottom-nav.js" defer></script>
+</body></html>
