@@ -403,6 +403,23 @@ async function saveCreateDraftToCloud() {
     if (autosavePending) saveCreateDraftToCloud();
   }
 }
+async function flushCreateDraftBeforeSubmit(){
+  while(true){
+    const hadTimer=Boolean(autosaveTimer);
+    if(autosaveTimer){clearTimeout(autosaveTimer);autosaveTimer=null;}
+    if(autosaveInProgress){
+      autosavePending=true;
+      while(autosaveInProgress) await new Promise(resolve=>window.setTimeout(resolve,40));
+      continue;
+    }
+    if(hadTimer||autosavePending){
+      autosavePending=false;
+      await saveCreateDraftToCloud();
+      continue;
+    }
+    break;
+  }
+}
 function clearCreateDraft() {
   clearTimeout(autosaveTimer);
   const id = remoteDraftId;
@@ -681,6 +698,7 @@ function renderOwnStories() {
 createForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!currentUser) return showMessage("Connecte-toi avant de publier.", "error");
+  await flushCreateDraftBeforeSubmit();
 
   const title = $("title").value.trim();
   const description = $("description").value.trim();
@@ -739,13 +757,20 @@ createForm.addEventListener("submit", async event => {
 });
 
 async function flushChapterDraftBeforeContextChange(){
-  const hadTimer=Boolean(chapterAutosaveTimer);
-  if(chapterAutosaveTimer){clearTimeout(chapterAutosaveTimer);chapterAutosaveTimer=null;}
-  if(chapterAutosaveInProgress){
-    chapterAutosavePending=true;
-    while(chapterAutosaveInProgress) await new Promise(resolve=>window.setTimeout(resolve,40));
-  }else if(hadTimer){
-    await saveChapterDraftToCloud();
+  while(true){
+    const hadTimer=Boolean(chapterAutosaveTimer);
+    if(chapterAutosaveTimer){clearTimeout(chapterAutosaveTimer);chapterAutosaveTimer=null;}
+    if(chapterAutosaveInProgress){
+      chapterAutosavePending=true;
+      while(chapterAutosaveInProgress) await new Promise(resolve=>window.setTimeout(resolve,40));
+      continue;
+    }
+    if(hadTimer||chapterAutosavePending){
+      chapterAutosavePending=false;
+      await saveChapterDraftToCloud();
+      continue;
+    }
+    break;
   }
 }
 
@@ -1187,6 +1212,7 @@ $("cancelChapter").addEventListener("click", () => {
 chapterForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!currentUser || !selectedStory) return showMessage("Sélectionne une de tes histoires avant d’ajouter un chapitre.", "error");
+  await flushChapterDraftBeforeContextChange();
   const title = $("chapterEditTitle").value.trim();
   const content = $("chapterEditContent").value.trim();
   if (!title || !content) return showMessage("Le titre et le contenu du chapitre sont obligatoires.", "error");
@@ -1241,18 +1267,10 @@ $("refreshStories").addEventListener("click", async () => {
 });
 
 async function flushPendingDrafts() {
-  if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
-  if (chapterAutosaveTimer) { clearTimeout(chapterAutosaveTimer); chapterAutosaveTimer = null; }
-  const tasks = [];
-  if (currentUser) {
-    if (autosaveInProgress) autosavePending = true;
-    else tasks.push(saveCreateDraftToCloud());
-  }
-  if (currentUser && selectedStory && !chapterForm.classList.contains("hidden")) {
-    if (chapterAutosaveInProgress) chapterAutosavePending = true;
-    else tasks.push(saveChapterDraftToCloud());
-  }
-  await Promise.allSettled(tasks);
+  await Promise.allSettled([
+    flushCreateDraftBeforeSubmit(),
+    flushChapterDraftBeforeContextChange()
+  ]);
 }
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") flushPendingDrafts();
