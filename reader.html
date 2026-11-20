@@ -348,7 +348,8 @@ function offlineImageUrls(chapter){const value=typeof chapter?.content==="string
 function blobAsDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
 async function cacheOfflineMedia(selected,previous={}){const media={...(previous||{})};const urls=[story?.cover,...selected.flatMap(offlineImageUrls)].filter(Boolean);let bytes=Object.values(media).reduce((n,v)=>n+(typeof v==="string"?Math.round(v.length*.75):0),0),saved=0,failed=0;for(const url of [...new Set(urls)]){if(media[url])continue;try{const response=await fetch(url,{mode:"cors"});if(!response.ok)throw new Error("Image indisponible");const blob=await response.blob();if(!blob.type.startsWith("image/")||blob.size>8*1024*1024||bytes+blob.size>30*1024*1024){failed++;continue;}media[url]=await blobAsDataURL(blob);bytes+=blob.size;saved++;}catch{failed++;}}return{media,saved,failed,missingUrls:urls.filter(url=>!media[url])};}
 async function saveSelectedOffline(selected){
- if(!isDatabaseStory||!story||!selected.length)throw new Error("Sélectionne au moins un chapitre.");
+ selected=(selected||[]).filter(ch=>!ch?.is_premium&&!ch?.is_locked);
+ if(!isDatabaseStory||!story||!selected.length)throw new Error("Seuls les chapitres gratuits peuvent être enregistrés hors connexion.");
  const previous=await getOfflineStory(dbStoryId);
  const map=new Map((previous?.chapters||[]).map(ch=>[String(ch.id),ch]));
  selected.forEach(ch=>map.set(String(ch.id),ch));
@@ -368,6 +369,7 @@ async function saveSelectedOffline(selected){
  return{count:selected.length,total:merged.length,...cached,missingCount:cached.missingUrls.length};
 }
 async function saveChapterAudioOffline(chapter){
+ if(chapter?.is_premium)throw new Error("Les chapitres premium ne sont pas disponibles hors connexion.");
  if(!isDatabaseStory||!chapter?.id||!chapter.audio_url)throw new Error("Aucune narration disponible pour ce chapitre.");
  const previous=await getOfflineStory(dbStoryId);
  const audio={...(previous?.audio||{})};
@@ -396,7 +398,7 @@ async function removeChapterAudioOffline(chapter){
  await putOfflineStory({...previous,audio,savedAt:new Date().toISOString()});
  offlineAudioMap=audio;
 }
-function renderOfflineChapterPicker(){const button=$("offlineSelectButton"),list=$("offlineChapterList");if(!button||!list||!isDatabaseStory)return;button.hidden=false;list.replaceChildren();chapters.forEach((chapter,index)=>{const label=document.createElement("label");label.style.display="block";label.style.padding="5px 0";const input=document.createElement("input");input.type="checkbox";input.className="offline-chapter-choice";input.value=String(index);input.checked=true;label.append(input,document.createTextNode(" "+(index+1)+". "+(chapter.title||"Chapitre sans titre")));list.append(label);});}
+function renderOfflineChapterPicker(){const button=$("offlineSelectButton"),list=$("offlineChapterList");if(!button||!list||!isDatabaseStory)return;button.hidden=false;list.replaceChildren();chapters.forEach((chapter,index)=>{if(chapter.is_premium||chapter.is_locked)return;const label=document.createElement("label");label.style.display="block";label.style.padding="5px 0";const input=document.createElement("input");input.type="checkbox";input.className="offline-chapter-choice";input.value=String(index);input.checked=true;label.append(input,document.createTextNode(" "+(index+1)+". "+(chapter.title||"Chapitre sans titre")));list.append(label);});}
 function isNetworkFailure(error){const m=String(error?.message||error||"");return !navigator.onLine||error instanceof TypeError||/failed to fetch|network|fetch failed|load failed|connection/i.test(m);}
 async function saveCurrentStoryOffline(){const b=$("offlineSaveButton"),s=$("offlineStatus");if(!isDatabaseStory||!story||!chapters.length)return;b.disabled=true;s.textContent="Enregistrement de l’œuvre et de ses images…";try{const result=await saveSelectedOffline(chapters);b.textContent="Supprimer la copie hors connexion";s.textContent=result.total+" chapitre(s) enregistré(s), "+result.saved+" nouvelle(s) image(s) copiée(s) localement"+(result.missingCount?" ; "+result.missingCount+" image(s) restent indisponibles hors connexion.":" ; toutes les images détectées sont disponibles localement.");}catch(e){s.textContent="Enregistrement impossible : "+(e?.message||String(e));}finally{b.disabled=false;}}
 async function updateOfflineButton(){const b=$("offlineSaveButton");if(!b||!isDatabaseStory)return;b.hidden=false;try{const saved=await getOfflineStory(dbStoryId);b.textContent=saved?"Supprimer la copie hors connexion":"Enregistrer pour hors connexion";if(saved)$("offlineStatus").textContent="Copie locale : "+(saved.chapters?.length||0)+" chapitre(s) · "+(saved.mediaMissing?.length? saved.mediaMissing.length+" image(s) à retélécharger":"images détectées enregistrées")+".";}catch(e){b.disabled=true;$("offlineStatus").textContent=e.message||"Stockage hors connexion indisponible.";}}
