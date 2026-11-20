@@ -54,6 +54,10 @@ h1,h2{line-height:1.2}h1{margin:0 0 8px;font-size:clamp(26px,5vw,38px)}h2{font-s
     <p class="muted">Des nouveautés, les œuvres les plus aimées et des suggestions qui évoluent selon tes goûts.</p>
     <p id="status" role="status" aria-live="polite">Chargement des histoires…</p>
   </section>
+  <section id="searchResultsSection" hidden>
+    <div class="section-head"><h2>Résultats de recherche</h2><span class="muted">Jusqu’à 24 œuvres affichées</span></div>
+    <div class="grid" id="searchResults"></div>
+  </section>
   <section class="discovery-filters" aria-label="Filtres de découverte">
     <div class="search-filter"><label for="storySearch">Rechercher une histoire</label><input id="storySearch" type="search" placeholder="Titre, résumé ou genre…" autocomplete="off"></div>
     <div><label for="genreFilter">Genre</label><select id="genreFilter"><option value="">Tous les genres</option></select></div>
@@ -119,8 +123,11 @@ function applyDiscoveryFilters() {
   renderCards("recommended",personalStories.filter(matches),"Aucune suggestion ne correspond à ces filtres.");
   renderCards("trending",trendingStories.filter(matches),"Aucune tendance ne correspond à ces filtres.");
   renderCards("latest",latestStories.filter(matches),"Aucune nouveauté ne correspond à ces filtres.");
-  const n=allStories.filter(matches).length;
-  $("filterSummary").textContent=n+" histoire"+(n>1?"s":"")+" correspond"+(n>1?"ent":"")+" à ta recherche.";
+  const results=allStories.filter(matches);
+  const hasFilters=Boolean(query||genre||format);
+  $("searchResultsSection").hidden=!hasFilters;
+  if(hasFilters)renderCards("searchResults",results.slice(0,24),"Aucune histoire ne correspond à ces critères.");
+  $("filterSummary").textContent=results.length+" résultat"+(results.length>1?"s":"")+" parmi les histoires chargées.";
 }
 function populateGenreFilter(stories) {
   const select=$("genreFilter"),chosen=select.value,genres=[...new Set(stories.map(s=>safeText(s.genre)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
