@@ -21,6 +21,8 @@ public class MainActivity extends Activity {
     private WebView webView;
     private MediaSession mediaSession;
     private static MainActivity instance;
+    private String currentMediaTitle = "Novelia";
+    private String currentMediaAuthor = "Novelia";
     private static final String HOME = "https://johntoulassi31-rgb.github.io/novelia/";
 
     @Override public void onCreate(Bundle savedInstanceState) {
@@ -67,6 +69,8 @@ public class MainActivity extends Activity {
     }
 
     private void setNativePlayback(String title, String author, boolean playing) {
+        currentMediaTitle = title == null ? "Novelia" : title;
+        currentMediaAuthor = author == null ? "Novelia" : author;
         mediaSession.setMetadata(new MediaMetadata.Builder()
             .putString(MediaMetadata.METADATA_KEY_TITLE, title == null ? "Novelia" : title)
             .putString(MediaMetadata.METADATA_KEY_ARTIST, author == null ? "Novelia" : author)
@@ -97,10 +101,10 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void paused() {
             runOnUiThread(() -> {
-                setNativePlayback("Novelia", "Lecture audio", false);
+                setNativePlayback(currentMediaTitle, currentMediaAuthor, false);
                 Intent service = new Intent(MainActivity.this, NoveliaPlaybackService.class);
                 service.setAction(NoveliaPlaybackService.ACTION_PAUSE);
-                service.putExtra(NoveliaPlaybackService.EXTRA_TITLE, "Novelia");
+                service.putExtra(NoveliaPlaybackService.EXTRA_TITLE, currentMediaTitle);
                 service.putExtra(NoveliaPlaybackService.EXTRA_TOKEN, mediaSession.getSessionToken());
                 startService(service);
             });
