@@ -492,7 +492,12 @@ function isFavorite() {
 }
 
 function savedChapterIndex() {
-  const value = getProgress()[storyKey]?.chapter;
+  const saved = getProgress()[storyKey] || {};
+  if (saved.chapterId) {
+    const matchingIndex = chapters.findIndex(ch => String(ch.id) === String(saved.chapterId));
+    if (matchingIndex >= 0) return matchingIndex;
+  }
+  const value = saved.chapter;
   return Number.isInteger(value) && value >= 0 && value < chapters.length ? value : null;
 }
 
@@ -602,6 +607,7 @@ async function loadDetailedProgressFromCloud() {
   progress[storyKey] = {
     ...(local || {}),
     chapter: chapterIndex,
+    chapterId: chapters[chapterIndex]?.id || null,
     total: chapters.length,
     scrollPercent: Math.max(0, Math.min(100, Number(data.progress_percent) || 0)),
     updatedAt: data.updated_at || new Date().toISOString(),
@@ -644,6 +650,7 @@ async function syncLibraryFromCloud() {
       const index = Math.min(data.last_chapter - 1, chapters.length - 1);
       progress[storyKey] = {
         chapter: index,
+        chapterId: chapters[index]?.id || null,
         total: chapters.length,
         scrollPercent: 0,
         updatedAt: data.updated_at || new Date().toISOString(),
@@ -684,6 +691,7 @@ function saveProgress() {
     progress[storyKey] = {
       ...previous,
       chapter: currentChapter,
+      chapterId: chapters[currentChapter]?.id || null,
       total: chapters.length,
       scrollPercent: sameChapter ? (Number(previous.scrollPercent) || 0) : 0,
       panelIndex: sameChapter ? (Number.isInteger(previous.panelIndex) ? previous.panelIndex : null) : null,
@@ -1203,7 +1211,7 @@ async function loadDatabaseStory() {
     const {data:chapterRows,error:chapterError}=await supabase.from("chapters").select("id,title,content,chapter_number,created_at,moderation_hidden,audio_url,audio_title,audio_duration_seconds").eq("story_id",row.id).eq("moderation_hidden",false).order("chapter_number",{ascending:true});
     if(chapterError)throw chapterError;
     const nextStory={id:row.id,authorId:row.author_id,title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
-    const nextChapters=(chapterRows||[]).map(ch=>({id:ch.id,title:ch.title,content:ch.content||"",audio_url:ch.audio_url||null,audio_title:ch.audio_title||null,audio_duration_seconds:ch.audio_duration_seconds||null}));
+    const nextChapters=(chapterRows||[]).map(ch=>({id:ch.id,title:ch.title,content:ch.content||"",chapter_number:ch.chapter_number,audio_url:ch.audio_url||null,audio_title:ch.audio_title||null,audio_duration_seconds:ch.audio_duration_seconds||null}));
     if(!nextChapters.length)throw new Error("Cette histoire ne possède pas encore de chapitre.");
     story=nextStory;
     chapters=nextChapters;
@@ -1369,6 +1377,7 @@ function persistCurrentReadingPosition({syncCloud=true}={}) {
     progress[storyKey] = {
       ...previous,
       chapter: currentChapter,
+      chapterId: chapters[currentChapter]?.id || null,
       total: chapters.length,
       scrollPercent: position,
       panelIndex,
