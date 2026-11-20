@@ -558,26 +558,35 @@ function progressTime(value) {
 
 async function saveDetailedProgressToCloud() {
   if (!currentUser || !isDatabaseStory || !story?.id || !chapters[currentChapter]?.id || isOfflineMode) return;
+  const userId = currentUser.id;
+  const storyId = story.id;
+  const storyType = story.type;
+  const progressKey = storyKey;
+  const local = getProgress()[progressKey];
+  if (!local) return;
+  const chapterIndex = local.chapterId
+    ? chapters.findIndex(ch => String(ch.id) === String(local.chapterId))
+    : local.chapter;
+  if (!Number.isInteger(chapterIndex) || chapterIndex < 0 || !chapters[chapterIndex]?.id) return;
+  const chapterId = chapters[chapterIndex].id;
+  const webtoonPosition = storyType === 'Webtoon' && Number.isInteger(local.panelIndex)
+    ? JSON.stringify({
+        type: 'webtoon',
+        panelIndex: Math.max(0, local.panelIndex),
+        panelOffset: Math.max(0, Math.min(1, Number(local.panelOffset) || 0))
+      })
+    : 'scroll';
+  const payload = {
+    user_id: userId,
+    story_id: storyId,
+    chapter_id: chapterId,
+    progress_percent: Math.max(0, Math.min(100, Number(local.scrollPercent) || 0)),
+    position_hint: webtoonPosition,
+    updated_at: local.updatedAt || new Date().toISOString()
+  };
   detailedProgressSyncQueue = detailedProgressSyncQueue.then(async () => {
-    const local = getProgress()[storyKey];
-    if (!local || !Number.isInteger(local.chapter) || !chapters[local.chapter]?.id) return;
-    const webtoonPosition = story.type === 'Webtoon' && Number.isInteger(local.panelIndex)
-      ? JSON.stringify({
-          type: 'webtoon',
-          panelIndex: Math.max(0, local.panelIndex),
-          panelOffset: Math.max(0, Math.min(1, Number(local.panelOffset) || 0))
-        })
-      : 'scroll';
-    const payload = {
-      user_id: currentUser.id,
-      story_id: story.id,
-      chapter_id: chapters[local.chapter].id,
-      progress_percent: Math.max(0, Math.min(100, Number(local.scrollPercent) || 0)),
-      position_hint: webtoonPosition,
-      updated_at: local.updatedAt || new Date().toISOString()
-    };
     const {data:remote,error:readError} = await supabase.from('novelia_reading_progress')
-      .select('updated_at').eq('user_id', currentUser.id).eq('story_id', story.id).maybeSingle();
+      .select('updated_at').eq('user_id', userId).eq('story_id', storyId).maybeSingle();
     if (readError) throw readError;
     if (remote && progressTime(remote.updated_at) > progressTime(payload.updated_at)) return;
     const {error} = await supabase.from('novelia_reading_progress')
@@ -589,7 +598,6 @@ async function saveDetailedProgressToCloud() {
   });
   await detailedProgressSyncQueue;
 }
-
 async function loadDetailedProgressFromCloud() {
   if (!currentUser || !isDatabaseStory || !story?.id || isOfflineMode) return;
   const {data,error} = await supabase.from('novelia_reading_progress')
