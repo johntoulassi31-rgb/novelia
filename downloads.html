@@ -144,7 +144,7 @@ async function checkRecord(record,status,update,check){
    ||Object.keys(record.media||{}).some(url=>!allowedMedia.has(url));
   const needsMediaRetry=Array.isArray(record.mediaMissing)&&record.mediaMissing.length>0;
   if(!latest.changed&&!needsMediaRetry&&!needsSanitize){status.textContent="Ta copie est déjà à jour.";}
-  else{status.textContent=latest.changed?"Une nouvelle version est disponible.":"Certaines images manquent dans la copie. Tu peux relancer leur téléchargement.";update.hidden=false;}
+  else{status.textContent=latest.changed?"Une nouvelle version est disponible.":needsSanitize?"Une ancienne copie contient des éléments premium à retirer.":"Certaines images manquent dans la copie. Tu peux relancer leur téléchargement.";update.hidden=false;}
  }catch(error){status.textContent=error.message||"Vérification impossible.";}
  finally{check.disabled=false;}
 }
@@ -164,7 +164,7 @@ function createCard(record){
  const check=node("button","Vérifier","check-update");check.type="button";
  const update=node("button","Mettre à jour","primary");update.type="button";update.hidden=true;
  check.addEventListener("click",()=>checkRecord(record,updateStatus,update,check));
- update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");const needsMediaRetry=Array.isArray(record.mediaMissing)&&record.mediaMissing.length>0;if(!latest.changed&&!needsMediaRetry){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}const allowedAudio=new Set((latest.record.chapters||[]).map(ch=>ch.audio_url).filter(Boolean));
+ update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");const allowedAudioCheck=new Set((latest.record.chapters||[]).map(ch=>ch.audio_url).filter(Boolean));const allowedMediaCheck=new Set(extractOfflineImageUrls(latest.record));const needsSanitize=(record.chapters||[]).some(ch=>ch.is_premium||ch.is_locked)||Object.keys(record.audio||{}).some(url=>!allowedAudioCheck.has(url))||Object.keys(record.media||{}).some(url=>!allowedMediaCheck.has(url));const needsMediaRetry=Array.isArray(record.mediaMissing)&&record.mediaMissing.length>0;if(!latest.changed&&!needsMediaRetry&&!needsSanitize){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}const allowedAudio=new Set((latest.record.chapters||[]).map(ch=>ch.audio_url).filter(Boolean));
  const allowedMedia=new Set(extractOfflineImageUrls(latest.record));
  const safeMedia=Object.fromEntries(Object.entries(record.media||{}).filter(([url])=>allowedMedia.has(url)));
  const safeAudio=Object.fromEntries(Object.entries(record.audio||{}).filter(([url])=>allowedAudio.has(url)));
