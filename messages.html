@@ -89,8 +89,16 @@ async function start(){
   if(!user){$("account").textContent="Connecte-toi pour accéder à tes messages.";$("inbox").innerHTML='<p class="empty"><a href="login.html">Se connecter</a></p>';return;}
   $("account").textContent="Connecté · tes conversations sont privées.";
   await loadInbox();
+  const conversationId=(params.get("conversation")||"").trim();
   const username=(params.get("with")||"").trim().replace(/^@/,"");
-  if(username){
+  if(conversationId){
+   const {data:c,error:conversationError}=await supabase.from("novelia_conversations")
+    .select("id,participant_low,participant_high,created_at").eq("id",conversationId).maybeSingle();
+   if(conversationError)throw conversationError;
+   if(!c)throw new Error("Cette conversation n’est pas accessible depuis ton compte.");
+   const profiles=await profileMap([otherId(c)]);
+   await openConversation(c,profiles.get(otherId(c))||null);
+  }else if(username){
    const {data:p,error:pe}=await supabase.from("profiles").select("id,username,display_name").ilike("username",username).maybeSingle();
    if(pe)throw pe;if(!p)throw new Error("Ce profil est introuvable.");
    if(p.id===user.id)throw new Error("Tu ne peux pas t’envoyer de message.");
