@@ -1153,6 +1153,7 @@ function renderLockedChapter(chapter) {
   const price=document.createElement("p");price.className="premium-price";
   price.textContent=new Intl.NumberFormat("fr-FR").format(Number(chapter.price_xof)||0)+" XOF";
   panel.append(title,description,price);
+  const infoLink=document.createElement("a");infoLink.href="monetization-info.html";infoLink.textContent="Comprendre les achats premium et la rémunération";panel.append(infoLink);
 
   if(isOfflineMode||!navigator.onLine){
     const notice=document.createElement("p");notice.className="notice";notice.textContent="Connecte-toi à Internet pour acheter et déverrouiller ce chapitre.";panel.append(notice);
