@@ -19,6 +19,8 @@ create policy "Public view published contest results" on public.novelia_contest_
 for select to anon, authenticated
 using (exists (select 1 from public.novelia_contests c where c.id=contest_id and c.results_published_at is not null));
 revoke select (jury_score, jury_reviews_count, vote_count, final_score) on public.novelia_contest_entries from anon, authenticated;
+revoke insert (jury_score, jury_reviews_count, vote_count, final_score) on public.novelia_contest_entries from authenticated;
+revoke update (jury_score, jury_reviews_count, vote_count, final_score) on public.novelia_contest_entries from authenticated;
 
 create or replace function public.novelia_publish_contest_results(p_contest_id uuid)
 returns integer language plpgsql security definer set search_path = '' as $$
