@@ -15,7 +15,7 @@ alter table public.novelia_contest_awards enable row level security;
 grant select on public.novelia_contest_awards to anon,authenticated;
 grant insert,delete on public.novelia_contest_awards to authenticated;
 create policy "Public can view contest awards" on public.novelia_contest_awards for select to anon,authenticated using(true);
-create policy "Admins award contest winners" on public.novelia_contest_awards for insert to authenticated with check(public.novelia_is_admin() and exists(select 1 from public.novelia_contests c where c.id=contest_id and c.status='closed') and exists(select 1 from public.novelia_contest_entries e where e.id=entry_id and e.contest_id=contest_id and e.author_id=author_id and e.status='approved'));
+create policy "Admins award contest winners" on public.novelia_contest_awards for insert to authenticated with check(public.novelia_is_admin() and exists(select 1 from public.novelia_contests c where c.id=novelia_contest_awards.contest_id and c.status='closed') and exists(select 1 from public.novelia_contest_entries e where e.id=novelia_contest_awards.entry_id and e.contest_id=novelia_contest_awards.contest_id and e.author_id=novelia_contest_awards.author_id and e.status='approved'));
 create policy "Admins revoke contest awards" on public.novelia_contest_awards for delete to authenticated using(public.novelia_is_admin());
 create or replace function private.novelia_contest_award_badge_trigger() returns trigger language plpgsql security definer set search_path='' as $$
 declare v_badge text;
