@@ -1133,6 +1133,45 @@ function renderChapterAudio(chapter) {
  offlineRow.append(offlineButton,offlineStatus);panel.append(heading,audio,speedRow,transport,offlineRow);
  focusButton.hidden=false;focusButton.textContent=audioFocusMode?"Désactiver le mode écoute":"Activer le mode écoute";focusButton.setAttribute("aria-pressed",String(audioFocusMode));
 }
+function renderLockedChapter(chapter) {
+  renderChapterAudio(null);
+  const container=$("content");
+  container.className="chapter-paywall";
+  container.replaceChildren();
+  $("commentsPanel").hidden=true;
+  $("commentsList").replaceChildren();
+  $("commentsStatus").textContent="Les commentaires seront accessibles après l’achat du chapitre.";
+  $("reportChapterButton").hidden=true;
+
+  const panel=document.createElement("section");
+  panel.className="card";
+  const title=document.createElement("h2");title.textContent="Chapitre premium";
+  const description=document.createElement("p");description.textContent="Ce chapitre est réservé aux lecteurs qui l’achètent. Son contenu reste protégé jusqu’à la confirmation du paiement.";
+  const price=document.createElement("p");price.className="premium-price";
+  price.textContent=new Intl.NumberFormat("fr-FR").format(Number(chapter.price_xof)||0)+" XOF";
+  panel.append(title,description,price);
+
+  if(isOfflineMode||!navigator.onLine){
+    const notice=document.createElement("p");notice.className="notice";notice.textContent="Connecte-toi à Internet pour acheter et déverrouiller ce chapitre.";panel.append(notice);
+  }else if(!currentUser){
+    const notice=document.createElement("p");notice.textContent="Connecte-toi pour acheter ce chapitre.";const link=document.createElement("a");link.href="profile.html";link.textContent="Ouvrir mon profil";panel.append(notice,link);
+  }else{
+    const form=document.createElement("form");form.className="premium-purchase-form";
+    const addField=(labelText,name,type,placeholder)=>{const wrap=document.createElement("div");wrap.className="field";const label=document.createElement("label");label.textContent=labelText;const input=document.createElement("input");input.name=name;input.type=type;input.required=true;input.placeholder=placeholder;input.autocomplete=name==="first_name"?"given-name":name==="last_name"?"family-name":"tel";if(name==="phone_number"){input.inputMode="tel";input.pattern="\\+228[0-9]{8}";}wrap.append(label,input);form.append(wrap);};
+    addField("Prénom","first_name","text","Ton prénom");addField("Nom","last_name","text","Ton nom");addField("Téléphone Moov/TMoney (+228)","phone_number","tel","+22890000000");
+    const methodWrap=document.createElement("div");methodWrap.className="field";const methodLabel=document.createElement("label");methodLabel.textContent="Moyen de paiement";const method=document.createElement("select");method.name="payment_method";method.required=true;method.add(new Option("Moov Money","MOOV_TG"));method.add(new Option("TMoney","TMONEY_TG"));methodWrap.append(methodLabel,method);form.append(methodWrap);
+    const button=document.createElement("button");button.type="submit";button.className="button primary";button.textContent="Acheter et lire";const message=document.createElement("p");message.className="notice";message.setAttribute("role","status");form.append(button,message);
+    form.addEventListener("submit",async event=>{
+      event.preventDefault();button.disabled=true;message.textContent="Préparation du paiement sécurisé…";
+      const values=Object.fromEntries(new FormData(form));
+      const result=await supabase.functions.invoke("cinetpay-create-payment",{body:{chapter_id:chapter.id,first_name:values.first_name,last_name:values.last_name,phone_number:values.phone_number,payment_method:values.payment_method}});
+      if(result.error||!result.data?.payment_url){message.textContent=result.data?.error||result.error?.message||"Impossible d’initialiser le paiement.";button.disabled=false;return;}
+      message.textContent="Redirection vers le paiement sécurisé…";window.location.assign(result.data.payment_url);
+    });
+    panel.append(form);
+  }
+  container.append(panel);
+}
 function renderChapter() {
   const chapter = chapters[currentChapter];
   if (!chapter) return;
@@ -1140,18 +1179,22 @@ function renderChapter() {
   $("chapterTitle").textContent = chapter.title || "Chapitre " + (currentChapter + 1);
   $("readingType").textContent = story.type;
 
-  renderChapterAudio(chapter);
-  if (story.type === "Webtoon") renderWebtoon(chapter);
-  else renderNovel(chapter);
-
   const percent = Math.round(((currentChapter + 1) / chapters.length) * 100);
   $("progressFill").style.width = percent + "%";
   $("progressTrack").setAttribute("aria-valuenow", String(percent));
   $("chapterCounter").textContent = "Chapitre " + (currentChapter + 1) + " sur " + chapters.length;
-  $("reportChapterButton").hidden = !isDatabaseStory || !chapter.id;
   $("previousChapter").disabled = currentChapter === 0;
   $("nextChapter").disabled = currentChapter >= chapters.length - 1;
 
+  if(chapter.is_locked){
+    renderLockedChapter(chapter);
+    return;
+  }
+  $("commentsPanel").hidden=false;
+  renderChapterAudio(chapter);
+  if (story.type === "Webtoon") renderWebtoon(chapter);
+  else renderNovel(chapter);
+  $("reportChapterButton").hidden = !isDatabaseStory || !chapter.id;
   saveProgress();
   loadComments();
 }
@@ -1254,10 +1297,21 @@ async function loadDatabaseStory() {
     const {data:row,error}=await supabase.from("stories").select("id,title,description,cover_url,story_type,genre,status,author_id,moderation_hidden").eq("id",dbStoryId).eq("status","published").eq("moderation_hidden",false).maybeSingle();
     if(error)throw error;
     if(!row)throw new Error("Cette histoire n'existe pas ou n'est pas publiée.");
-    const {data:chapterRows,error:chapterError}=await supabase.from("chapters").select("id,title,content,chapter_number,created_at,moderation_hidden,audio_url,audio_title,audio_duration_seconds").eq("story_id",row.id).eq("moderation_hidden",false).order("chapter_number",{ascending:true});
-    if(chapterError)throw chapterError;
+    const [catalogResult,contentResult]=await Promise.all([
+      supabase.from("novelia_chapter_catalog").select("id,story_id,title,chapter_number,created_at,is_premium,price_xof,audio_url,audio_title,audio_duration_seconds").eq("story_id",row.id).order("chapter_number",{ascending:true}),
+      supabase.from("chapters").select("id,title,content,chapter_number,created_at,moderation_hidden,audio_url,audio_title,audio_duration_seconds").eq("story_id",row.id).eq("moderation_hidden",false).order("chapter_number",{ascending:true})
+    ]);
+    if(catalogResult.error)throw catalogResult.error;
+    if(contentResult.error)throw contentResult.error;
+    const contentById=new Map((contentResult.data||[]).map(ch=>[ch.id,ch]));
     const nextStory={id:row.id,authorId:row.author_id,title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
-    const nextChapters=(chapterRows||[]).map(ch=>({id:ch.id,title:ch.title,content:ch.content||"",chapter_number:ch.chapter_number,audio_url:ch.audio_url||null,audio_title:ch.audio_title||null,audio_duration_seconds:ch.audio_duration_seconds||null}));
+    const nextChapters=(catalogResult.data||[]).map(meta=>{
+      const unlocked=contentById.get(meta.id);
+      return {id:meta.id,title:meta.title,content:unlocked?.content||"",chapter_number:meta.chapter_number,
+        audio_url:unlocked?.audio_url||meta.audio_url||null,audio_title:unlocked?.audio_title||meta.audio_title||null,
+        audio_duration_seconds:unlocked?.audio_duration_seconds||meta.audio_duration_seconds||null,
+        is_premium:Boolean(meta.is_premium),price_xof:meta.price_xof||null,is_locked:Boolean(meta.is_premium&&!unlocked)};
+    });
     if(!nextChapters.length)throw new Error("Cette histoire ne possède pas encore de chapitre.");
     story=nextStory;
     chapters=nextChapters;
