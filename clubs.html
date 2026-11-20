@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fbf8f1">
+<meta name="description" content="Rejoins les clubs de lecture Novelia, échange avec d'autres lecteurs et participe aux discussions.">
+<title>Clubs de lecture — Novelia</title><link rel="stylesheet" href="theme-gold.css">
+<style>
+:root{--bg:#fbf8f1;--panel:#f8f3e6;--border:#f0e6cd;--text:#392b08;--muted:#675937;--accent:#856513;--button:#c3941c;--soft:#f3ebd7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Arial,sans-serif}header{background:#f9f4ea;border-bottom:1px solid var(--border);padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}header strong{font-size:20px;color:var(--accent)}nav{display:flex;gap:12px;flex-wrap:wrap}a{color:#4e3c0f;text-decoration:none}main{width:min(900px,calc(100% - 26px));margin:24px auto 60px}.panel,.club,.post{background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:17px;margin-bottom:14px}h1,h2,h3{color:var(--accent);line-height:1.25}h1{margin:8px 0}h2{font-size:20px}h3{margin:0 0 5px}.muted,.small{color:var(--muted)}.small{font-size:12px}button,.button{border:0;border-radius:9px;background:var(--button);color:#2a2011;padding:10px 13px;font-weight:bold;cursor:pointer;display:inline-block;font-size:13px}button.secondary,.button.secondary{background:var(--soft);border:1px solid #cec1a0}button:disabled{opacity:.5;cursor:wait}input,textarea,select{width:100%;padding:11px;border:1px solid #d9cba9;border-radius:9px;background:#fffdf8;color:#392b08;font:inherit;margin:5px 0 12px}textarea{min-height:85px;resize:vertical}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:0 0 auto}.row .grow{flex:1 1 180px}.tag{display:inline-block;border:1px solid #d0c4a4;border-radius:30px;padding:3px 9px;font-size:11px;color:#644c0e}.empty{text-align:center;padding:25px;color:var(--muted)}.error{color:#8a1010}.success{color:#16713b}#status{min-height:20px;overflow-wrap:anywhere}.hidden{display:none}.club p{overflow-wrap:anywhere}.post{padding:12px}.post p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header><strong>✦ NOVELIA</strong><nav><a href="index.html">Accueil</a><a href="community.html">Communauté</a><a href="messages.html">Messages</a><a href="authors.html">Auteurs</a><a href="library.html">Bibliothèque</a></nav></header>
+<main>
+<section class="panel"><a href="community.html">← Communauté</a><h1>Clubs de lecture</h1><p class="muted">Trouve des lecteurs qui partagent tes goûts, échange autour des histoires et fais vivre tes lectures ensemble.</p><p id="account" class="muted" role="status">Vérification de la connexion…</p><p id="status" role="status" aria-live="polite"></p><div class="row"><button id="refresh" type="button">Actualiser</button><button id="showCreate" class="secondary" type="button">Créer un club</button><button id="showMine" class="secondary" type="button">Mes clubs</button><button id="showAll" class="secondary" type="button">Découvrir</button></div></section>
+<section id="createPanel" class="panel hidden"><h2>Créer un club</h2><form id="createForm"><label for="clubName">Nom du club</label><input id="clubName" maxlength="60" minlength="3" required placeholder="Ex. Les amoureux de fantasy"><label for="clubGenre">Thème ou genre</label><select id="clubGenre"><option>Général</option><option>Romance</option><option>Dark romance</option><option>Fantasy</option><option>Science-fiction</option><option>Thriller</option><option>Policier</option><option>Horreur</option><option>Webtoon</option><option>Classique</option><option>Autre</option></select><label for="clubDescription">Présentation</label><textarea id="clubDescription" maxlength="500" placeholder="Quel est l'objectif de ton club ?"></textarea><label for="clubVisibility">Visibilité</label><select id="clubVisibility"><option value="public">Public — tout le monde peut rejoindre</option><option value="private">Privé — visible uniquement aux membres</option></select><button type="submit">Créer le club</button></form></section>
+<section id="listSection"><div class="section-head"><h2 id="listTitle">Clubs à découvrir</h2><span class="small" id="count"></span></div><div id="clubs" class="grid"><p class="empty">Chargement…</p></div></section>
+<section id="detail" class="hidden"><div class="panel"><button id="back" class="secondary" type="button">← Retour aux clubs</button><h2 id="detailName"></h2><p id="detailMeta" class="muted"></p><p id="detailDescription"></p><div class="row"><button id="join" type="button">Rejoindre</button><button id="leave" class="secondary hidden" type="button">Quitter le club</button></div></div><div id="discussion" class="panel hidden"><h2>Discussion du club</h2><form id="postForm"><label for="postBody">Écrire un message aux membres</label><textarea id="postBody" maxlength="2000" required placeholder="Partage une idée, une recommandation ou lance une discussion…"></textarea><button type="submit">Publier</button></form><div id="posts"><p class="empty">Aucun message pour le moment.</p></div></div></section>
+</main>
+<script type="module">
+import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const supabase=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
+const $=id=>document.getElementById(id);let user=null,clubs=[],mine=new Set(),selected=null,view="all";
+function status(t,k=""){ $("status").textContent=t;$("status").className=k; }
+function node(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
+function showList(){ $("detail").classList.add("hidden");$("listSection").classList.remove("hidden"); }
+async function load(){
+ $("clubs").replaceChildren(node("p","empty","Chargement des clubs…"));
+ try{
+  let q=supabase.from("novelia_clubs").select("id,name,description,genre,visibility,created_by,created_at").order("created_at",{ascending:false}).limit(100);
+  if(view==="mine"){if(!user){clubs=[];render();status("Connecte-toi pour consulter tes clubs.");return;}const {data:m,error:me}=await supabase.from("novelia_club_members").select("club_id").eq("user_id",user.id);if(me)throw me;mine=new Set((m||[]).map(x=>x.club_id));if(!mine.size){clubs=[];render();return;}q=q.in("id",[...mine]);}
+  const {data,error}=await q;if(error)throw error;clubs=data||[];
+  if(user&&view==="all"){const {data:m,error:me}=await supabase.from("novelia_club_members").select("club_id").eq("user_id",user.id);if(me)throw me;mine=new Set((m||[]).map(x=>x.club_id));}
+  render();
+ }catch(e){$("clubs").replaceChildren(node("p","empty error","Chargement impossible : "+e.message));}
+}
+function render(){
+ $("listTitle").textContent=view==="mine"?"Mes clubs":"Clubs à découvrir";$("count").textContent=clubs.length+" club(s)";
+ const box=$("clubs");box.replaceChildren();if(!clubs.length){box.append(node("p","empty","Aucun club à afficher. Tu peux en créer un !"));return;}
+ clubs.forEach(c=>{const card=node("article","club"),top=node("div","row"),title=node("h3","grow",c.name),tag=node("span","tag",c.visibility==="public"?"Public":"Privé");top.append(title,tag);card.append(top,node("p","muted small",(c.genre||"Général")+" · "+new Date(c.created_at).toLocaleDateString("fr-FR")),node("p","",c.description||"Ce club n'a pas encore de présentation."));const actions=node("div","row"),open=node("button","secondary","Ouvrir");open.type="button";open.addEventListener("click",()=>openClub(c));actions.append(open);if(mine.has(c.id))actions.append(node("span","tag","Membre"));card.append(actions);box.append(card);});
+}
+async function openClub(c){
+ selected=c;$("listSection").classList.add("hidden");$("detail").classList.remove("hidden");$("detailName").textContent=c.name;$("detailMeta").textContent=(c.genre||"Général")+" · "+(c.visibility==="public"?"Club public":"Club privé");$("detailDescription").textContent=c.description||"";
+ const member=mine.has(c.id);$("join").classList.toggle("hidden",member||c.visibility!=="public");$("leave").classList.toggle("hidden",!member||c.created_by===user?.id);$("discussion").classList.toggle("hidden",!member);
+ if(member)await loadPosts(c.id);else $("posts").replaceChildren(node("p","empty","Rejoins ce club pour accéder à sa discussion."));
+}
+async function loadPosts(id){
+ const box=$("posts");box.replaceChildren(node("p","empty","Chargement des échanges…"));
+ try{const {data,error}=await supabase.from("novelia_club_posts").select("id,author_id,body,created_at").eq("club_id",id).order("created_at",{ascending:false}).limit(60);if(error)throw error;box.replaceChildren();if(!data?.length){box.append(node("p","empty","Aucun message pour le moment. Lance la première discussion !"));return;}
+ const ids=[...new Set(data.map(p=>p.author_id))];const {data:profiles}=await supabase.from("profiles").select("id,username,display_name").in("id",ids);const names=new Map((profiles||[]).map(p=>[p.id,p.display_name||p.username||"Lecteur Novelia"]));
+ data.forEach(p=>{const item=node("article","post");item.append(node("div","small muted",(names.get(p.author_id)||"Lecteur Novelia")+" · "+new Date(p.created_at).toLocaleString("fr-FR")),node("p","",p.body));if(p.author_id===user.id||selected.created_by===user.id){const del=node("button","secondary","Supprimer");del.type="button";del.addEventListener("click",()=>deletePost(p.id));item.append(del);}box.append(item);});
+ }catch(e){box.replaceChildren(node("p","error","Discussion indisponible : "+e.message));}
+}
+async function deletePost(id){if(!confirm("Supprimer ce message ?"))return;const {error}=await supabase.from("novelia_club_posts").delete().eq("id",id);if(error)status("Suppression impossible : "+error.message,"error");else{status("Message supprimé.","success");await loadPosts(selected.id);}}
+$("createForm").addEventListener("submit",async e=>{e.preventDefault();if(!user){status("Connecte-toi pour créer un club.","error");return;}const {data,error}=await supabase.from("novelia_clubs").insert({name:$("clubName").value.trim(),genre:$("clubGenre").value,description:$("clubDescription").value.trim(),visibility:$("clubVisibility").value,created_by:user.id}).select().single();if(error){status("Création impossible : "+error.message,"error");return;}status("Club créé. Tu en es le propriétaire.","success");$("createForm").reset();$("createPanel").classList.add("hidden");view="mine";await load();await openClub(data);});
+$("join").addEventListener("click",async()=>{if(!user){status("Connecte-toi pour rejoindre ce club.","error");return;}const {error}=await supabase.from("novelia_club_members").insert({club_id:selected.id,user_id:user.id,role:"member"});if(error){status("Impossible de rejoindre : "+error.message,"error");return;}mine.add(selected.id);status("Tu as rejoint le club !","success");await openClub(selected);});
+$("leave").addEventListener("click",async()=>{if(!user||!selected)return;const {error}=await supabase.from("novelia_club_members").delete().eq("club_id",selected.id).eq("user_id",user.id);if(error){status("Impossible de quitter le club : "+error.message,"error");return;}mine.delete(selected.id);status("Tu as quitté le club.","success");await openClub(selected);});
+$("postForm").addEventListener("submit",async e=>{e.preventDefault();if(!selected||!user)return;const body=$("postBody").value.trim();if(!body)return;const {error}=await supabase.from("novelia_club_posts").insert({club_id:selected.id,author_id:user.id,body});if(error){status("Publication impossible : "+error.message,"error");return;}$("postBody").value="";status("Message publié.","success");await loadPosts(selected.id);});
+$("showCreate").addEventListener("click",()=>{if(!user){status("Connecte-toi pour créer un club.","error");return;}$("createPanel").classList.toggle("hidden");});
+$("showMine").addEventListener("click",()=>{view="mine";showList();load();});$("showAll").addEventListener("click",()=>{view="all";showList();load();});$("refresh").addEventListener("click",load);$("back").addEventListener("click",showList);
+async function start(){const {data,error}=await supabase.auth.getUser();user=data?.user||null;$("account").textContent=user?"Connecté · crée un club ou rejoins une communauté.":"Mode visiteur · connecte-toi pour créer, rejoindre et discuter dans les clubs.";if(error)console.warn(error.message);await load();}
+start();
+</script><script src="bottom-nav.js" defer></script>
+</body></html>
