@@ -10,6 +10,7 @@ on conflict(id) do nothing;
 create table if not exists public.novelia_contest_awards(id uuid primary key default gen_random_uuid(),contest_id uuid not null references public.novelia_contests(id) on delete cascade,entry_id uuid not null references public.novelia_contest_entries(id) on delete cascade,author_id uuid not null references auth.users(id) on delete cascade,award_type text not null check(award_type in ('grand_prix','prix_jury','prix_public','coup_de_coeur')),prize_description text not null default '' check(char_length(prize_description)<=1200),awarded_by uuid references auth.users(id) on delete set null,awarded_at timestamptz not null default now(),unique(contest_id,award_type),unique(contest_id,entry_id,award_type),constraint contest_award_author_matches_entry check(author_id is not null));
 create index if not exists idx_novelia_contest_awards_author on public.novelia_contest_awards(author_id,awarded_at desc);
 create index if not exists idx_novelia_contest_awards_entry on public.novelia_contest_awards(entry_id);
+create index if not exists idx_novelia_contest_awards_awarded_by on public.novelia_contest_awards(awarded_by);
 alter table public.novelia_contest_awards enable row level security;
 grant select on public.novelia_contest_awards to anon,authenticated;
 grant insert,delete on public.novelia_contest_awards to authenticated;
