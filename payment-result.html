@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fbf8f1"><meta name="robots" content="noindex,nofollow"><title>Confirmation de paiement | Novelia</title>
+<link rel="stylesheet" href="theme-gold.css"><style>
+*{box-sizing:border-box}body{margin:0;background:#fbf8f1;color:#392b08;font:15px/1.55 Arial,sans-serif}
+main{max-width:560px;margin:8vh auto;padding:24px 16px}.card{padding:22px;border:1px solid #eee3c9;border-radius:16px;background:#f8f3e6}
+h1{font-size:27px;margin:0 0 10px}p{color:#756746}button,a{display:inline-block;margin:8px 8px 0 0;padding:11px 15px;border:0;border-radius:9px;background:#c3941c;color:#2a2011;font-weight:bold;text-decoration:none;cursor:pointer}
+.secondary{background:#e9dfc8}#status{font-weight:bold;color:#76570c}
+</style></head><body><main><section class="card"><h1>Confirmation de paiement</h1><p id="status" role="status">Vérification de la transaction…</p><p id="details"></p><div id="actions"></div><button id="refresh" class="secondary" type="button">Vérifier à nouveau</button></section></main>
+<script type="module">
+import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const db=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"),$=id=>document.getElementById(id);
+const purchaseId=new URLSearchParams(location.search).get("purchase");
+let storyId=null;
+async function check(){
+ $("status").textContent="Vérification de la transaction…";$("actions").replaceChildren();
+ const auth=await db.auth.getUser();if(!auth.data?.user){$("status").textContent="Connecte-toi avec le compte ayant effectué l’achat.";return;}
+ if(!purchaseId){$("status").textContent="Référence d’achat manquante.";return;}
+ const r=await db.from("novelia_chapter_purchases").select("id,status,story_id,chapter_id,gross_amount_xof,paid_at").eq("id",purchaseId).maybeSingle();
+ if(r.error||!r.data){$("status").textContent="Impossible de retrouver cet achat sur ce compte.";return;}
+ const p=r.data;storyId=p.story_id;
+ if(p.status==="paid"){
+  $("status").textContent="Paiement confirmé. Le chapitre est maintenant accessible.";
+  $("details").textContent="Montant : "+new Intl.NumberFormat("fr-FR").format(p.gross_amount_xof)+" XOF · "+(p.paid_at?new Date(p.paid_at).toLocaleString("fr-FR"):"");
+  const link=document.createElement("a");link.href="reader.html?db_story="+encodeURIComponent(storyId);link.textContent="Lire mon chapitre";$("actions").append(link);
+ }else if(p.status==="failed"||new URLSearchParams(location.search).get("failed")==="1"){
+  $("status").textContent="Le paiement n’a pas été confirmé.";
+  $("details").textContent="Aucun accès payant n’a été accordé. Tu peux revenir au lecteur et réessayer.";
+  const link=document.createElement("a");link.className="secondary";link.href="reader.html?db_story="+encodeURIComponent(storyId);link.textContent="Retour au lecteur";$("actions").append(link);
+ }else{
+  $("status").textContent="Paiement en attente de confirmation de l’opérateur.";
+  $("details").textContent="Ne relance pas un deuxième paiement. Vérifie à nouveau dans quelques instants.";
+ }
+}
+$("refresh").addEventListener("click",check);check();
+</script><script src="bottom-nav.js" defer></script></body></html>
