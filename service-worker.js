@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "novelia-shell-v17";
+const CACHE_NAME = "novelia-shell-v18";
 const CACHE_PREFIX = "novelia-shell-";
 const CDN_CACHE = "novelia-cdn-v1";
 const CDN_ORIGIN = "https://cdn.jsdelivr.net";
@@ -76,7 +76,10 @@ self.addEventListener("fetch", event => {
         }
         return response;
       } catch (error) {
-        return await caches.match(request) ||
+        // Les lecteurs hors ligne utilisent des paramètres (db_story, local_story).
+        // On sert donc la page mise en cache sans tenir compte de la query string.
+        const shellCache = await caches.open(CACHE_NAME);
+        return await shellCache.match(request, { ignoreSearch: true }) ||
           await caches.match("./offline.html") ||
           Response.error();
       }
