@@ -1323,6 +1323,10 @@ async function loadStoryReviews() {
     card.append(author,meta);
     if(review.title){const title=document.createElement("h3");title.textContent=review.title;card.append(title);}
     const body=document.createElement("p");body.textContent=review.body;card.append(body);
+    const reportButton=document.createElement("button");
+    reportButton.type="button";reportButton.className="button secondary report-button";reportButton.textContent="Signaler cet avis";
+    reportButton.addEventListener("click",()=>openReportModal({type:"review",id:review.id,title:story.title+" — avis de "+author.textContent,excerpt:review.body||""}));
+    card.append(reportButton);
     if(currentUser?.id===review.user_id){const remove=document.createElement("button");remove.type="button";remove.className="button secondary";remove.textContent="Supprimer mon avis";remove.addEventListener("click",async()=>{
       if(!confirm("Supprimer ton avis ?"))return;
       const {error:deleteError}=await supabase.from("novelia_story_reviews").delete().eq("id",review.id);
