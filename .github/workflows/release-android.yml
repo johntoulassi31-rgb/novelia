@@ -1,6 +1,7 @@
 name: Build and publish Novelia Android Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
