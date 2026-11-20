@@ -1023,7 +1023,11 @@ window.NoveliaHandleNativeMediaAction=function(action){
  else if(action==="previous"){if(currentChapter>0){currentChapter--;renderChapter();activeChapterAudio?.play().catch(()=>{});}}
 };
 function renderChapterAudio(chapter) {
- const panel=$("chapterAudioPlayer");panel.replaceChildren();
+ const panel=$("chapterAudioPlayer");
+ // Libère le décodeur et la source du lecteur précédent avant de changer de chapitre.
+ const previousAudio=panel.querySelector("audio");
+ if(previousAudio){previousAudio.pause();previousAudio.removeAttribute("src");previousAudio.load();}
+ panel.replaceChildren();
  if(currentAudioObjectUrl){URL.revokeObjectURL(currentAudioObjectUrl);currentAudioObjectUrl=null;}
  panel.hidden=!chapter?.audio_url;const focusButton=$("audioFocusToggle");focusButton.hidden=!chapter?.audio_url;if(!chapter?.audio_url){activeChapterAudio=null;return;}
  const heading=document.createElement("h3");heading.textContent=chapter.audio_title||"Écouter la narration";
