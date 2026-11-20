@@ -1282,8 +1282,7 @@ function openReader(index, restorePosition = true) {
 function sanitizeOfflineRecord(record){
   const safeChapters=(Array.isArray(record?.chapters)?record.chapters:[]).filter(ch=>!ch?.is_premium&&!ch?.is_locked);
   const allowedAudio=new Set(safeChapters.map(ch=>ch?.audio_url).filter(Boolean));
-  const imagePattern=/^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i;
-  const allowedMedia=new Set([record?.story?.cover,...safeChapters.flatMap(ch=>String(ch?.content||"").split(/\r?\n+/).map(line=>line.trim()).filter(line=>imagePattern.test(line)))].filter(Boolean));
+  const allowedMedia=new Set([record?.story?.cover,...safeChapters.flatMap(offlineImageUrls)].filter(Boolean));
   const media=Object.fromEntries(Object.entries(record?.media||{}).filter(([url])=>allowedMedia.has(url)));
   const audio=Object.fromEntries(Object.entries(record?.audio||{}).filter(([url])=>allowedAudio.has(url)));
   const mediaMissing=(record?.mediaMissing||[]).filter(url=>allowedMedia.has(url));
