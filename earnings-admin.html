@@ -55,11 +55,19 @@ async function load(){
   const actions=el("div","");
   const addAction=(label,status,cls="secondary")=>{const b=el("button",cls,label);b.onclick=()=>updateRequest(req,status);actions.append(b);};
   if(req.status==="requested")addAction("Approuver","approved");
-  if(["requested","approved"].includes(req.status))addAction("Transfert lancé","processing","");
-  if(req.status==="processing")addAction("Marquer payé","paid","");
-  if(["requested","approved","processing"].includes(req.status))addAction("Échec / libérer le solde","failed","secondary");
+  if(req.status==="approved"||req.status==="processing"){
+    const b=el("button","",req.status==="approved"?"Envoyer via CinetPay":"Vérifier le transfert");
+    b.onclick=()=>processPayout(req,b);actions.append(b);
+  }
   row.append(info,actions);root.append(row);
  }
+}
+async function processPayout(req,button){
+ button.disabled=true;button.textContent="Vérification CinetPay…";
+ const result=await db.functions.invoke("cinetpay-process-payout",{body:{request_id:req.id}});
+ if(result.error||result.data?.error){alert(result.data?.error||result.error?.message||"Traitement impossible.");}
+ else alert(result.data?.message||"Statut : "+result.data?.status);
+ await load();
 }
 async function updateRequest(req,status){
  let reference=req.provider_transaction_id||null;
