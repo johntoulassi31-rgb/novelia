@@ -103,7 +103,7 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
       <textarea id="content" required placeholder="Commence à écrire ici…"></textarea>
       <div id="createWritingMetrics" class="writing-metrics" aria-live="polite">0 mot · environ 1 min de lecture</div>
       <p id="autosaveStatus" class="note" role="status" aria-live="polite">La sauvegarde automatique démarrera dès que tu écriras.</p>
-      <p class="note">Pour un webtoon, tu peux pour le moment saisir du texte et des liens d’images dans le contenu.</p>
+      <p class="note">Pour un Webtoon, crée d’abord l’épisode avec son titre. Après l’enregistrement, Novelia ouvrira directement son éditeur pour importer tes planches dans l’ordre.</p>
       <label for="status">Visibilité</label>
       <select id="status"><option value="published">Publier maintenant</option><option value="draft">Garder en brouillon</option></select>
       <button id="createButton" type="submit" style="width:100%;margin-top:20px">Enregistrer mon histoire</button>
@@ -730,7 +730,7 @@ createForm.addEventListener("submit", async event => {
     showCoverPreview(null, "");
     await loadOwnStories();
     switchTab("manage");
-    if (createdStoryId) await openStoryEditor(createdStoryId);
+    if (createdStoryId) { await openStoryEditor(createdStoryId); if (storyType === "webtoon" && chaptersForSelectedStory.length) { await openChapterEditor(chaptersForSelectedStory[0]); showMessage("Ton premier épisode est créé. Importe maintenant ses planches dans l’ordre depuis « Planches de l’épisode ».","success"); } }
   } catch (error) {
     showMessage("Impossible d’enregistrer : " + (error?.message || String(error)), "error");
   } finally {
