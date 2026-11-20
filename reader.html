@@ -981,6 +981,9 @@ function renderWebtoon(chapter) {
       img.alt = story.title + " — planche " + panelNumber;
       img.loading = panelNumber === 1 ? "eager" : "lazy";
       img.decoding = "async";
+      // Priorité réseau basse pour les planches suivantes : la première s'affiche d'abord,
+      // tandis que le navigateur charge progressivement le reste sans saturer le mobile.
+      if ("fetchPriority" in img) img.fetchPriority = panelNumber === 1 ? "high" : "low";
       img.onerror = () => {
         const notice = document.createElement("p");
         notice.className = "notice";
