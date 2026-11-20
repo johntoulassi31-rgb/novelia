@@ -62,12 +62,13 @@
     #avatarPreview{border-radius:50%;object-fit:cover}
     #avatarPreview[hidden]{display:none}
     .hint{font-size:13px;opacity:.8;margin:6px 0 0}
-  .stats-panel{margin:18px 0;padding:18px;background:#fffdf8;border:1px solid #ede0c1;border-radius:14px}.stats-panel h2{margin:0 0 5px;color:#7d5f12;font-size:19px}.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.stat{padding:12px;border-radius:10px;background:#f8f3e6;display:flex;flex-direction:column;gap:4px}.stat strong{font-size:23px;color:#7d5f12}.stat span{font-size:12px;color:#675937}@media(min-width:560px){.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
+  .stats-panel{margin:18px 0;padding:18px;background:#fffdf8;border:1px solid #ede0c1;border-radius:14px}.stats-panel h2{margin:0 0 5px;color:#7d5f12;font-size:19px}.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.stat{padding:12px;border-radius:10px;background:#f8f3e6;display:flex;flex-direction:column;gap:4px}.stat strong{font-size:23px;color:#7d5f12}.stat span{font-size:12px;color:#675937}@media(min-width:560px){.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}.badge-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.badge-card{padding:12px;border:1px solid #ede0c1;border-radius:10px;background:#fffaf0;display:flex;gap:10px;align-items:flex-start}.badge-icon{font-size:25px;line-height:1.2}.badge-card strong{display:block;color:#705411;font-size:14px}.badge-card span{display:block;color:#675937;font-size:12px;margin-top:3px}.badge-empty{padding:12px;background:#f8f3e6;border-radius:10px;color:#675937;font-size:13px}@media(max-width:380px){.badge-grid{grid-template-columns:1fr}}</style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
   <main class="container">
     <h1>Mon profil</h1><section class="stats-panel" aria-labelledby="statsTitle"><h2 id="statsTitle">Mon activité sur Novelia</h2><p class="hint">Tes statistiques communautaires, visibles uniquement depuis ton espace personnel.</p><div id="communityStats" class="stats-grid"><div class="stat"><strong>—</strong><span>Œuvres</span></div><div class="stat"><strong>—</strong><span>Abonnés</span></div><div class="stat"><strong>—</strong><span>Abonnements</span></div><div class="stat"><strong>—</strong><span>Clubs</span></div><div class="stat"><strong>—</strong><span>Messages de club</span></div><div class="stat"><strong>—</strong><span>Chapitres lus en groupe</span></div></div></section>
+    <section class="stats-panel" aria-labelledby="badgesTitle"><h2 id="badgesTitle">Mes badges</h2><p class="hint">Des distinctions attribuées automatiquement selon ton activité réelle sur Novelia.</p><div id="earnedBadges" class="badge-grid"><p class="hint">Chargement des badges…</p></div></section>
     <p>Personnalise ton identité sur Novelia.</p>
 
     <p class="email">
@@ -176,6 +177,56 @@
       return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
     }
 
+    async function loadMyBadges() {
+      const box = document.getElementById("earnedBadges");
+      if (!currentUser || !box) return;
+      box.replaceChildren();
+      const award = await supabase.rpc("novelia_refresh_my_badges");
+      if (award.error) {
+        const msg = document.createElement("p");
+        msg.className = "badge-empty";
+        msg.textContent = "Les badges ne sont pas disponibles pour le moment.";
+        box.append(msg);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("novelia_user_badges")
+        .select("earned_at, badge:novelia_badge_catalog(id,name,description,icon,category)")
+        .eq("user_id", currentUser.id)
+        .order("earned_at", { ascending: false });
+      if (error) {
+        const msg = document.createElement("p");
+        msg.className = "badge-empty";
+        msg.textContent = "Impossible de charger tes badges.";
+        box.append(msg);
+        return;
+      }
+      if (!data || data.length === 0) {
+        const msg = document.createElement("p");
+        msg.className = "badge-empty";
+        msg.textContent = "Aucun badge pour le moment. Continue à publier, lire et participer aux clubs pour en obtenir.";
+        box.append(msg);
+        return;
+      }
+      data.forEach(row => {
+        const badge = Array.isArray(row.badge) ? row.badge[0] : row.badge;
+        if (!badge) return;
+        const card = document.createElement("article");
+        card.className = "badge-card";
+        const icon = document.createElement("span");
+        icon.className = "badge-icon";
+        icon.textContent = badge.icon;
+        const info = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = badge.name;
+        const desc = document.createElement("span");
+        desc.textContent = badge.description;
+        info.append(title, desc);
+        card.append(icon, info);
+        box.append(card);
+      });
+    }
+
     async function loadCommunityStats() {
       const box = document.getElementById("communityStats");
       if (!currentUser || !box) return;
@@ -252,6 +303,7 @@
 
       statusEl.textContent = "Profil chargé.";
       loadCommunityStats();
+      loadMyBadges();
     }
 
     document.getElementById("profileForm")
