@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.109.0";
 import { CinetPayClient, parseNotification, verifyNotification } from "npm:cinetpay-js@0.1.0";
 
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json"}});
-const samePhone=(a:string,b:string)=>String(a||"").replace(/\\D/g,"").slice(-8)===String(b||"").replace(/\\D/g,"").slice(-8);
+const samePhone=(a:string,b:string)=>String(a||"").replace(/\D/g,"").slice(-8)===String(b||"").replace(/\D/g,"").slice(-8);
 Deno.serve(async(req:Request)=>{
  if(req.method!=="POST")return json({error:"Method not allowed"},405);
  try{
