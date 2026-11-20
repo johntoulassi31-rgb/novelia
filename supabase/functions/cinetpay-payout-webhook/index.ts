@@ -30,7 +30,7 @@ Deno.serve(async(req:Request)=>{
   if(status.status!=="SUCCESS"&&status.status!=="FAILED")return json({ok:true,pending:true});
   const next=status.status==="SUCCESS"?"paid":"failed";
   const {error:updateError}=await admin.from("novelia_payout_requests").update({
-   status:next,provider_transaction_id:status.transactionId
+   status:next,provider_transaction_id:status.transactionId,provider_fee_xof:Math.round(Number(status.feeAmount)||0)
   }).eq("id",request.id).eq("status","processing");
   if(updateError)return json({error:"Unable to update payout"},500);
   return json({ok:true,status:next});
