@@ -16,9 +16,19 @@ import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.media.MediaMetadata;
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.view.ViewGroup;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private View splashOverlay;
     private MediaSession mediaSession;
     private static MainActivity instance;
     private String currentMediaTitle = "Novelia";
@@ -42,7 +52,13 @@ public class MainActivity extends Activity {
             @Override public void onStop() { sendPlayerCommand("pause"); }
         });
         webView = new WebView(this);
-        setContentView(webView);
+        FrameLayout root = new FrameLayout(this);
+        root.addView(webView, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        splashOverlay = createSplashOverlay();
+        root.addView(splashOverlay, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(root);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -53,6 +69,9 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new NoveliaMediaBridge(), "NoveliaNativeMedia");
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                if (splashOverlay != null) splashOverlay.setVisibility(View.GONE);
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String host = uri.getHost();
@@ -69,6 +88,70 @@ public class MainActivity extends Activity {
         });
         if (savedInstanceState == null) webView.loadUrl(HOME);
         else webView.restoreState(savedInstanceState);
+    }
+
+
+    private View createSplashOverlay() {
+        FrameLayout screen = new FrameLayout(this);
+        GradientDrawable background = new GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            new int[] { Color.rgb(13, 7, 39), Color.rgb(35, 10, 77), Color.rgb(9, 5, 31) });
+        screen.setBackground(background);
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
+        content.setPadding(dp(28), dp(28), dp(28), dp(28));
+        FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        screen.addView(content, contentParams);
+
+        TextView brand = new TextView(this);
+        brand.setText("Novelia");
+        brand.setTextColor(Color.rgb(255, 211, 119));
+        brand.setTextSize(58);
+        brand.setTypeface(Typeface.SERIF, Typeface.ITALIC);
+        brand.setGravity(Gravity.CENTER);
+        brand.setShadowLayer(dp(12), 0, 0, Color.rgb(194, 126, 29));
+        content.addView(brand, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView tagline = new TextView(this);
+        tagline.setText("Lire sans limites");
+        tagline.setTextColor(Color.rgb(239, 205, 143));
+        tagline.setTextSize(17);
+        tagline.setTypeface(Typeface.SERIF, Typeface.ITALIC);
+        tagline.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams taglineParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        taglineParams.bottomMargin = dp(28);
+        content.addView(tagline, taglineParams);
+
+        TextView quote = new TextView(this);
+        quote.setText("Lire c’est nous permettre de rêver\\n"
+            + "Grâce au roman, grâce aux BD, grâce à la poésie.\\n\\n"
+            + "Lire c’est voyager à travers le temps\\n"
+            + "Voyager parmi tous les peuples,\\n"
+            + "Lire c’est avoir le monde entier à nos pieds,\\n"
+            + "Sans bouger !!!");
+        quote.setTextColor(Color.rgb(255, 242, 218));
+        quote.setTextSize(17);
+        quote.setTypeface(Typeface.SERIF);
+        quote.setGravity(Gravity.CENTER);
+        quote.setLineSpacing(dp(5), 1.0f);
+        quote.setPadding(dp(18), dp(22), dp(18), dp(22));
+        GradientDrawable panel = new GradientDrawable();
+        panel.setColor(Color.argb(105, 8, 5, 31));
+        panel.setCornerRadius(dp(18));
+        panel.setStroke(dp(1), Color.argb(210, 218, 169, 86));
+        quote.setBackground(panel);
+        content.addView(quote, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return screen;
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void handleAudioFocusChange(int focusChange) {
