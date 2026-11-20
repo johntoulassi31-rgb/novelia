@@ -692,6 +692,7 @@ async function saveChapterDraftToCloud() {
     if (result.error) throw result.error;
     if (!result.data?.id) throw new Error("La sauvegarde n’a pas été confirmée.");
     chapterRemoteDraftId = result.data.id;
+    try { localStorage.setItem(chapterDraftKey(), JSON.stringify({title,content,remoteDraftId:chapterRemoteDraftId,savedAt:new Date().toISOString()})); } catch {}
     setChapterAutosaveStatus("Chapitre sauvegardé automatiquement à " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + ".", "success");
   } catch (error) {
     setChapterAutosaveStatus("Sauvegarde en ligne impossible. Le texte reste conservé sur cet appareil. " + (error?.message || ""), "error");
@@ -705,6 +706,7 @@ async function restoreChapterDraft(chapter) {
   const key = chapterDraftKey();
   let snapshot = null;
   try { snapshot = JSON.parse(localStorage.getItem(key) || "null"); } catch {}
+  if (snapshot?.remoteDraftId) chapterRemoteDraftId = snapshot.remoteDraftId;
   if (!snapshot) {
     const query = supabase.from("novelia_author_drafts").select("id,title,content,updated_at")
       .eq("author_id", currentUser.id).eq("story_id", selectedStory.id);
@@ -737,8 +739,11 @@ async function clearChapterDraft() {
 }
 async function openChapterEditor(chapter = null) {
   if (!selectedStory) return showMessage("Sélectionne d’abord une histoire.", "error");
-  clearTimeout(chapterAutosaveTimer);
-  chapterAutosaveTimer = null;
+  if (chapterAutosaveTimer) {
+    clearTimeout(chapterAutosaveTimer);
+    chapterAutosaveTimer = null;
+    await saveChapterDraftToCloud();
+  }
   chapterMode = chapter ? "edit" : "add";
   chapterRemoteDraftId = null;
   $("chapterId").value = chapter?.id || "";
