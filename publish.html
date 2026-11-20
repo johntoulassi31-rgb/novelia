@@ -480,7 +480,7 @@ async function uploadWebtoonPanel(optimized,index,originalName){
  });
  if(error)throw new Error("Échec de l’envoi de "+originalName+" : "+error.message);
  const {data}=supabase.storage.from(WEBTOON_BUCKET).getPublicUrl(path);
- if(!data?.publicUrl)throw new Error("Adresse publique introuvable pour "+file.name);
+ if(!data?.publicUrl)throw new Error("Adresse publique introuvable pour "+originalName);
  return {url:data.publicUrl,size:optimized.size,name:originalName};
 }
 $("webtoonPanelFiles").addEventListener("change",()=>{
