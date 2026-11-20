@@ -93,7 +93,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 @media(max-width:520px){.book-top{grid-template-columns:100px minmax(0,1fr);gap:14px;padding:14px}.book-top h1{font-size:24px}.summary{font-size:13px}.chapter{padding:16px}.details{padding:0 14px 16px}.novel-text{font-size:var(--novel-font-size)}.button{padding:10px}.comments-panel{padding:15px}}
 @media(max-width:360px){.book-top{grid-template-columns:1fr}.cover,.cover-fallback{width:65%}}
 .chapter-paywall{max-width:680px;margin:18px auto;padding:18px}.premium-purchase-form{margin-top:18px}.premium-purchase-form .field{margin:12px 0}.premium-purchase-form label{display:block;font-weight:bold;margin-bottom:6px}.premium-purchase-form input,.premium-purchase-form select{width:100%;padding:12px;border:1px solid #dfd2b4;border-radius:9px;background:#fffdf8;color:#392b08;font:inherit}.premium-price{font-size:27px;font-weight:bold;color:#76570c}.chapter-paywall .card{background:#f8f3e6;border:1px solid #eee3c9;border-radius:14px;padding:18px}
-\n.webtoon-script-panel{position:relative;margin:14px 0;padding:16px 14px 18px;min-height:120px;background:linear-gradient(145deg,#171326,#29213b 58%,#151321);border:1px solid #76608f;border-radius:14px;box-shadow:0 8px 22px #09061125;color:#f8f2ff;overflow:hidden}.webtoon-script-panel:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 90% 8%,#b99be51c,transparent 38%)}.webtoon-panel-label{position:relative;z-index:1;margin:-2px 0 13px;color:#d6b8ff;font:700 11px/1.4 Arial,sans-serif;letter-spacing:1.3px;text-transform:uppercase}.webtoon-panel-narration{position:relative;z-index:1;margin:8px 0;color:#f2edf8;font:15px/1.65 Georgia,serif}.webtoon-script-caption{position:relative;z-index:1;margin:6px auto 14px;padding:10px 12px;max-width:92%;border:1px solid #d8c5a0;border-radius:8px;background:#f4e9d1;color:#352b22;text-align:center;font:italic 14px/1.55 Georgia,serif}.webtoon-speech-bubble{position:relative;z-index:1;display:flex;flex-direction:column;gap:4px;width:fit-content;max-width:92%;margin:12px 0 8px auto;padding:10px 13px;background:#fff;color:#282238;border:1px solid #d9d1e8;border-radius:15px 15px 3px 15px;font:14px/1.5 Arial,sans-serif;box-shadow:0 3px 10px #0002}.webtoon-speech-bubble strong{font-size:10px;letter-spacing:.8px;color:#7651a3}.webtoon-speech-bubble span{font-size:14px}.webtoon-script-panel:nth-child(even) .webtoon-speech-bubble{margin-left:0;margin-right:auto;border-radius:15px 15px 15px 3px}.webtoon-script-panel:nth-child(even){background:linear-gradient(145deg,#21172d,#30233d 60%,#191522)}\n</style>
+\n.webtoon-upload-box{margin:12px 0;padding:14px;border:1px dashed #b99b63;border-radius:12px;background:var(--panel);color:var(--text)}.webtoon-upload-box p{font-size:13px;color:var(--muted)}.webtoon-upload-box input{max-width:100%;font:inherit}
+.webtoon-script-panel{position:relative;margin:14px 0;padding:16px 14px 18px;min-height:120px;background:linear-gradient(145deg,#171326,#29213b 58%,#151321);border:1px solid #76608f;border-radius:14px;box-shadow:0 8px 22px #09061125;color:#f8f2ff;overflow:hidden}.webtoon-script-panel:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 90% 8%,#b99be51c,transparent 38%)}.webtoon-panel-label{position:relative;z-index:1;margin:-2px 0 13px;color:#d6b8ff;font:700 11px/1.4 Arial,sans-serif;letter-spacing:1.3px;text-transform:uppercase}.webtoon-panel-narration{position:relative;z-index:1;margin:8px 0;color:#f2edf8;font:15px/1.65 Georgia,serif}.webtoon-script-caption{position:relative;z-index:1;margin:6px auto 14px;padding:10px 12px;max-width:92%;border:1px solid #d8c5a0;border-radius:8px;background:#f4e9d1;color:#352b22;text-align:center;font:italic 14px/1.55 Georgia,serif}.webtoon-speech-bubble{position:relative;z-index:1;display:flex;flex-direction:column;gap:4px;width:fit-content;max-width:92%;margin:12px 0 8px auto;padding:10px 13px;background:#fff;color:#282238;border:1px solid #d9d1e8;border-radius:15px 15px 3px 15px;font:14px/1.5 Arial,sans-serif;box-shadow:0 3px 10px #0002}.webtoon-speech-bubble strong{font-size:10px;letter-spacing:.8px;color:#7651a3}.webtoon-speech-bubble span{font-size:14px}.webtoon-script-panel:nth-child(even) .webtoon-speech-bubble{margin-left:0;margin-right:auto;border-radius:15px 15px 15px 3px}.webtoon-script-panel:nth-child(even){background:linear-gradient(145deg,#21172d,#30233d 60%,#191522)}\n</style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
@@ -193,6 +194,12 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
     </div>
     <section id="chapterAudioPlayer" class="chapter-audio-player" hidden></section>
     <div class="actions" style="margin:0 0 12px"><button class="button secondary" id="audioFocusToggle" type="button" aria-pressed="false" hidden>Activer le mode écoute</button></div>
+    <div id="webtoonUploadBox" class="webtoon-upload-box" hidden>
+      <strong>Illustrer cet épisode</strong>
+      <p>Choisis une planche JPG, PNG ou WebP (8 Mo maximum). Elle sera ajoutée automatiquement à l’épisode.</p>
+      <input id="webtoonImageInput" type="file" accept="image/jpeg,image/png,image/webp">
+      <p id="webtoonUploadStatus" role="status" aria-live="polite"></p>
+    </div>
     <div id="content" class="novel-text"></div>
     <p class="reading-info" id="savedMessage" role="status"></p>
     <div class="chapter-nav">
@@ -1024,7 +1031,26 @@ function renderWebtoon(chapter) {
   const container = $("content");
   container.className = "webtoon-content";
   container.replaceChildren();
-  const text = typeof chapter.content === "string" ? chapter.content.trim() : "";
+  let text = typeof chapter.content === "string" ? chapter.content.trim() : "";
+  const marker = text.match(/^IMAGE:\s*(https?:\/\/\S+)/im);
+  if (marker) {
+    const figure = document.createElement("figure");
+    figure.className = "webtoon-panel";
+    const img = document.createElement("img");
+    img.src = offlineMediaMap[marker[1]] || marker[1];
+    img.alt = story.title + " — illustration";
+    img.loading = "eager";
+    img.decoding = "async";
+    img.onerror = () => {
+      const notice = document.createElement("p");
+      notice.className = "notice";
+      notice.textContent = "Cette illustration n’a pas pu être chargée.";
+      figure.replaceWith(notice);
+    };
+    figure.appendChild(img);
+    container.appendChild(figure);
+    text = text.replace(marker[0], "").trim();
+  }
   const isPanelUrl = value => /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(value);
   const blocks = text.split(/\n\s*\n/).map(part => part.trim()).filter(Boolean);
   const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
@@ -1040,13 +1066,6 @@ function renderWebtoon(chapter) {
         img.alt = story.title + " — planche " + panelNumber;
         img.loading = panelNumber === 1 ? "eager" : "lazy";
         img.decoding = "async";
-        if ("fetchPriority" in img) img.fetchPriority = panelNumber === 1 ? "high" : "low";
-        img.onerror = () => {
-          const notice = document.createElement("p");
-          notice.className = "notice";
-          notice.textContent = "Cette planche n’a pas pu être chargée.";
-          figure.replaceWith(notice);
-        };
         figure.appendChild(img);
         container.appendChild(figure);
       } else {
@@ -1059,14 +1078,18 @@ function renderWebtoon(chapter) {
     return;
   }
   if (!blocks.some(part => /^PLAN\s+\d+/i.test(part))) {
-    renderNovel(chapter);
+    if (text) {
+      const caption = document.createElement("p");
+      caption.className = "webtoon-caption";
+      caption.textContent = text;
+      container.appendChild(caption);
+    }
     return;
   }
-  blocks.forEach((block, index) => {
+  blocks.forEach(block => {
     const panel = document.createElement("section");
     panel.className = "webtoon-script-panel";
-    const parts = block.split(/\n+/).map(line => line.trim()).filter(Boolean);
-    parts.forEach(line => {
+    block.split(/\n+/).map(line => line.trim()).filter(Boolean).forEach(line => {
       if (/^PLAN\s+\d+/i.test(line)) {
         const label = document.createElement("div");
         label.className = "webtoon-panel-label";
@@ -1099,7 +1122,6 @@ function renderWebtoon(chapter) {
     container.appendChild(panel);
   });
 }
-
 function updateMediaSession(chapter,audio){
  const title=chapter.audio_title||chapter.title||"Novelia";
  const author=story?.author_name||"Novelia";
@@ -1715,6 +1737,12 @@ async function refreshUser() {
   if (error) console.warn("Vérification du compte :", error.message);
 
   currentUser = data?.user || null;
+  $("webtoonUploadBox").hidden = !(
+    currentUser?.id === "e2cf85f2-5f0d-45c0-8a5c-4ad1aeb2b24c" &&
+    isDatabaseStory &&
+    ["2fb1e4df-baf1-4360-bf62-701873c2b378", "ccd9b2d8-6121-4bef-9581-93ca4b55a0be"].includes(dbStoryId) &&
+    story?.type === "Webtoon"
+  );
 
   $("commentForm").hidden = !currentUser || !isDatabaseStory;
   $("loginCommentNotice").hidden = Boolean(currentUser) || !isDatabaseStory;
@@ -2030,6 +2058,46 @@ supabase.auth.onAuthStateChange(() => {
   setTimeout(() => {
     refreshUser().catch(error => console.error("Actualisation du compte :", error));
   }, 0);
+});
+
+
+$("webtoonImageInput").addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const status = $("webtoonUploadStatus");
+  const input = $("webtoonImageInput");
+  if (!currentUser || !chapters[currentChapter]?.id) {
+    status.textContent = "Connecte-toi au compte propriétaire avant l’envoi.";
+    return;
+  }
+  input.disabled = true;
+  status.textContent = "Envoi et association de la planche…";
+  try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session?.access_token) throw new Error("Session expirée. Reconnecte-toi.");
+    const form = new FormData();
+    form.append("storyId", dbStoryId);
+    form.append("chapterId", chapters[currentChapter].id);
+    form.append("image", file);
+    const response = await fetch("https://czwaokqpqgrghxeeyguq.supabase.co/functions/v1/upload-webtoon-panel", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + sessionData.session.access_token,
+        "apikey": "sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"
+      },
+      body: form
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || "Envoi impossible.");
+    chapters[currentChapter].content = result.content;
+    renderWebtoon(chapters[currentChapter]);
+    status.textContent = "Planche ajoutée à cet épisode.";
+  } catch (error) {
+    status.textContent = error.message || "Erreur pendant l’envoi.";
+  } finally {
+    input.disabled = false;
+    input.value = "";
+  }
 });
 
 await main();
