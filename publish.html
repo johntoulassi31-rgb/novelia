@@ -1235,9 +1235,13 @@ async function flushPendingDrafts() {
   if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
   if (chapterAutosaveTimer) { clearTimeout(chapterAutosaveTimer); chapterAutosaveTimer = null; }
   const tasks = [];
-  if (currentUser && !autosaveInProgress) tasks.push(saveCreateDraftToCloud());
-  if (currentUser && selectedStory && !chapterForm.classList.contains("hidden") && !chapterAutosaveInProgress) {
-    tasks.push(saveChapterDraftToCloud());
+  if (currentUser) {
+    if (autosaveInProgress) autosavePending = true;
+    else tasks.push(saveCreateDraftToCloud());
+  }
+  if (currentUser && selectedStory && !chapterForm.classList.contains("hidden")) {
+    if (chapterAutosaveInProgress) chapterAutosavePending = true;
+    else tasks.push(saveChapterDraftToCloud());
   }
   await Promise.allSettled(tasks);
 }
