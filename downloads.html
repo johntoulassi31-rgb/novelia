@@ -74,6 +74,24 @@ const getAll=()=>requestStore("readonly",store=>store.getAll());
 const putRecord=record=>requestStore("readwrite",store=>store.put(record));
 const removeOne=id=>requestStore("readwrite",store=>store.delete(id));
 function formatBytes(bytes){if(!Number.isFinite(bytes)||bytes<0)return"—";if(bytes<1024)return bytes+" o";const units=["Ko","Mo","Go"];let n=bytes/1024,i=0;while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toLocaleString("fr-FR",{maximumFractionDigits:1})+" "+units[i];}
+function estimateRecordBytes(record){
+ let bytes=0;
+ const addText=value=>{if(typeof value==="string")bytes+=value.length*2;};
+ addText(JSON.stringify(record?.story||{}));
+ (Array.isArray(record?.chapters)?record.chapters:[]).forEach(chapter=>{
+  addText(chapter?.title);addText(chapter?.content);
+  addText(chapter?.audio_url);addText(chapter?.audio_title);
+ });
+ Object.values(record?.media||{}).forEach(value=>{
+  if(typeof value==="string")bytes+=Math.round(value.length*.75);
+  else if(value instanceof Blob)bytes+=value.size;
+ });
+ Object.values(record?.audio||{}).forEach(value=>{
+  if(value instanceof Blob)bytes+=value.size;
+  else if(typeof value==="string")bytes+=Math.round(value.length*.75);
+ });
+ return bytes;
+}
 function formatDate(value){const date=new Date(value);return Number.isNaN(date.getTime())?"Date inconnue":date.toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"});}
 function node(tag,content,className){const el=document.createElement(tag);el.textContent=content??"";if(className)el.className=className;return el;}
 async function fetchLatest(id){
@@ -151,7 +169,7 @@ async function render(){
  try{
   const records=await getAll();recordCache.clear();records.forEach(record=>recordCache.set(record.id,record));records.sort((a,b)=>Date.parse(b.savedAt||0)-Date.parse(a.savedAt||0));
   const totalChapters=records.reduce((sum,r)=>sum+(Array.isArray(r.chapters)?r.chapters.length:0),0);
-  const bytes=records.reduce((sum,r)=>sum+new Blob([JSON.stringify(r)]).size+Object.values(r.audio||{}).reduce((n,b)=>n+(b instanceof Blob?b.size:0),0),0);
+  const bytes=records.reduce((sum,record)=>sum+estimateRecordBytes(record),0);
   $("workCount").textContent=String(records.length);$("chapterCount").textContent=String(totalChapters);$("totalSize").textContent=formatBytes(bytes);
   $("downloadList").replaceChildren();
   if(!records.length){$("downloadList").append(node("p","Aucune œuvre enregistrée pour le moment. Ouvre une histoire lorsque tu es connecté, puis utilise « Enregistrer pour hors connexion ».","empty"));}
