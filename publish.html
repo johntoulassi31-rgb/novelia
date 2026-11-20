@@ -236,7 +236,7 @@ const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const WEBTOON_BUCKET = "webtoon-panels";
 const CHAPTER_AUDIO_BUCKET = "chapter-audio";
 const MAX_CHAPTER_AUDIO_BYTES = 15 * 1024 * 1024;
-const ALLOWED_CHAPTER_AUDIO_TYPES = ["audio/mpeg","audio/mp3","audio/mp4","audio/aac","audio/ogg","audio/wav","audio/x-wav"];
+const ALLOWED_CHAPTER_AUDIO_TYPES = ["audio/mpeg","audio/mp3","audio/mp4","audio/m4a","audio/x-m4a","audio/aac","audio/x-aac","audio/ogg","audio/wav","audio/x-wav"];
 const MAX_WEBTOON_SOURCE_BYTES = 20 * 1024 * 1024;
 const MAX_WEBTOON_UPLOAD_BYTES = 30 * 1024 * 1024;
 const MAX_WEBTOON_FILES = 20;
@@ -1017,7 +1017,7 @@ function refreshChapterAudioComposer(chapter) {
       : "Enregistre d’abord le chapitre pour pouvoir lui associer une narration.";
 }
 function audioExtension(type) {
-  return ({ "audio/mpeg":"mp3", "audio/mp3":"mp3", "audio/mp4":"m4a", "audio/aac":"aac", "audio/ogg":"ogg", "audio/wav":"wav", "audio/x-wav":"wav" })[type] || "mp3";
+  return ({ "audio/mpeg":"mp3", "audio/mp3":"mp3", "audio/mp4":"m4a", "audio/m4a":"m4a", "audio/x-m4a":"m4a", "audio/aac":"aac", "audio/x-aac":"aac", "audio/ogg":"ogg", "audio/wav":"wav", "audio/x-wav":"wav" })[type] || "mp3";
 }
 function chapterAudioStoragePath(url) {
   const marker = "/storage/v1/object/public/" + CHAPTER_AUDIO_BUCKET + "/";
@@ -1043,6 +1043,8 @@ $("uploadChapterAudio").addEventListener("click", async () => {
   button.disabled = true;
   $("chapterAudioStatus").textContent = "Import de la narration…";
   try {
+    const previousChapter = chaptersForSelectedStory.find(ch => ch.id === chapterId);
+    const previousAudioPath = chapterAudioStoragePath(previousChapter?.audio_url);
     const path = currentUser.id + "/" + selectedStory.id + "/" + chapterId + "/" + Date.now() + "." + audioExtension(file.type);
     const {error:uploadError} = await supabase.storage.from(CHAPTER_AUDIO_BUCKET).upload(path,file,{
       contentType:file.type,cacheControl:"31536000",upsert:false
@@ -1057,6 +1059,10 @@ $("uploadChapterAudio").addEventListener("click", async () => {
     if(updateError) throw updateError;
     if(!data) throw new Error("La narration a été importée, mais son association au chapitre n’a pas été confirmée.");
     chaptersForSelectedStory = chaptersForSelectedStory.map(ch => ch.id === chapterId ? {...ch,...data} : ch);
+    if(previousAudioPath && previousAudioPath !== path) {
+      const {error:cleanupError} = await supabase.storage.from(CHAPTER_AUDIO_BUCKET).remove([previousAudioPath]);
+      if(cleanupError) console.warn("Ancienne narration conservée dans le stockage :",cleanupError.message);
+    }
     $("removeChapterAudio").hidden = false;
     $("chapterAudioStatus").textContent = "Narration importée et associée au chapitre.";
     $("chapterAudioFile").value = "";
