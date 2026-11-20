@@ -982,7 +982,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
   }
 });
 
-await initialize();\nrenderWritingMetrics($("content"),"createWritingMetrics");\nloadWritingGoal();
+await initialize();\nrenderWritingMetrics($("content"),"createWritingMetrics");\nloadWritingGoal();\nupdateGoalProgress(countWords($("chapterEditContent").value));
 </script>
 <script src="bottom-nav.js" defer></script>
 <script src="suspension-banner.js" defer></script>
