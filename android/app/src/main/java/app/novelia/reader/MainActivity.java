@@ -137,11 +137,11 @@ public class MainActivity extends Activity {
         content.addView(separator, lineParams);
 
         TextView quote = new TextView(this);
-        quote.setText("Lire c’est nous permettre de rêver\\n"
-            + "Grâce au roman, grâce aux BD, grâce à la poésie.\\n"
-            + "Lire c’est voyager à travers le temps\\n"
-            + "Voyager parmi tous les peuples,\\n"
-            + "Lire c’est avoir le monde entier à nos pieds,\\n"
+        quote.setText("Lire c’est nous permettre de rêver\n"
+            + "Grâce au roman, grâce aux BD, grâce à la poésie.\n"
+            + "Lire c’est voyager à travers le temps\n"
+            + "Voyager parmi tous les peuples,\n"
+            + "Lire c’est avoir le monde entier à nos pieds,\n"
             + "Sans bouger !!!");
         quote.setTextColor(Color.rgb(247, 229, 199));
         quote.setTextSize(12);
