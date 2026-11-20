@@ -687,7 +687,9 @@ function saveProgress() {
   try {
     const progress = getProgress();
     const previous = progress[storyKey] || {};
-    const sameChapter = previous.chapter === currentChapter;
+    const sameChapter = previous.chapterId
+      ? String(previous.chapterId) === String(chapters[currentChapter]?.id)
+      : previous.chapter === currentChapter;
     progress[storyKey] = {
       ...previous,
       chapter: currentChapter,
@@ -1130,10 +1132,15 @@ function openReader(index, restorePosition = true) {
   currentChapter = Math.max(0, Math.min(index, chapters.length - 1));
   if (!restorePosition) {
     const progress = getProgress();
-    if (progress[storyKey]?.chapter === currentChapter) {
-      progress[storyKey].scrollPercent = 0;
-      progress[storyKey].panelIndex = null;
-      progress[storyKey].panelOffset = null;
+    const saved = progress[storyKey];
+    const savedMatchesChapter = saved?.chapterId
+      ? String(saved.chapterId) === String(chapters[currentChapter]?.id)
+      : saved?.chapter === currentChapter;
+    if (savedMatchesChapter) {
+      saved.scrollPercent = 0;
+      saved.panelIndex = null;
+      saved.panelOffset = null;
+      saved.chapterId = chapters[currentChapter]?.id || null;
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
     }
   }
@@ -1142,7 +1149,17 @@ function openReader(index, restorePosition = true) {
   $("reader").scrollIntoView({behavior:"smooth",block:"start"});
   const saved = getProgress()[storyKey];
   const targetIndex = currentChapter;
-  const percent = restorePosition && saved?.chapter === targetIndex ? Math.max(0, Math.min(100, Number(saved.scrollPercent) || 0)) : 0;
+  const savedMatchesChapter = saved?.chapterId
+    ? String(saved.chapterId) === String(chapters[targetIndex]?.id)
+    : saved?.chapter === targetIndex;
+  const percent = restorePosition && savedMatchesChapter ? Math.max(0, Math.min(100, Number(saved.scrollPercent) || 0)) : 0;
+  if (restorePosition && savedMatchesChapter && saved.chapterId !== String(chapters[targetIndex]?.id)) {
+    saved.chapterId = chapters[targetIndex]?.id || null;
+    saved.chapter = targetIndex;
+    const progress = getProgress();
+    progress[storyKey] = saved;
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  }
   if (percent > 0 || Number.isInteger(saved?.panelIndex)) {
     const savedPanelIndex = Number.isInteger(saved?.panelIndex) ? saved.panelIndex : null;
     const savedPanelOffset = Math.max(0, Math.min(1, Number(saved?.panelOffset) || 0));
