@@ -70,6 +70,7 @@
   </div>
 
   <button id="followButton" class="btn" type="button" hidden>S'abonner</button>
+  <a id="messageButton" class="btn secondary" href="#" hidden>Envoyer un message</a>
   <a id="editLink" class="btn secondary" href="profile.html" hidden>Modifier mon profil</a>
   <p id="status" role="status" aria-live="polite"></p>
   <p id="counts" hidden></p>
@@ -195,10 +196,12 @@ async function refreshFollowButton() {
   if (!profile) return;
 
   const button = $("followButton");
+  const messageButton = $("messageButton");
 
   // Profil personnel : impossible de s'abonner à soi-même.
   if (currentUser && currentUser.id === profile.id) {
     button.hidden = true;
+    messageButton.hidden = true;
     $("editLink").hidden = false;
     message("");
     return;
@@ -208,6 +211,7 @@ async function refreshFollowButton() {
   button.hidden = false;
 
   if (!currentUser) {
+    messageButton.hidden = true;
     following = false;
     button.textContent = "Se connecter pour suivre";
     message("Connecte-toi pour t'abonner à cet auteur.");
@@ -237,6 +241,19 @@ async function refreshFollowButton() {
 
   following = Boolean(data);
   button.textContent = following ? "Se désabonner" : "S'abonner";
+  const { data: reverseFollow, error: reverseError } = await supabase
+    .from("follows")
+    .select("follower_id")
+    .eq("follower_id", profile.id)
+    .eq("followed_id", currentUser.id)
+    .maybeSingle();
+  if (reverseError) {
+    messageButton.hidden = true;
+  } else {
+    const hasConnection = following || Boolean(reverseFollow);
+    messageButton.hidden = !hasConnection;
+    messageButton.href = "messages.html?with=" + encodeURIComponent(profile.username || "");
+  }
   message("");
 }
 
