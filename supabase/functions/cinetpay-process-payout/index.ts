@@ -51,13 +51,13 @@ Deno.serve(async(req:Request)=>{
         (recovered.phoneNumber&&recovered.phoneNumber!==request.destination_phone_number))throw new Error("Mismatch");
      const next=recovered.status==="FAILED"?"failed":"processing";
      const update=await admin.from("novelia_payout_requests").update({
-      status:next,provider_transaction_id:recovered.transactionId
+      status:next,provider_transaction_id:recovered.transactionId,provider_fee_xof:Math.round(Number(recovered.feeAmount)||0)
      }).eq("id",request.id).eq("status","approved");
      if(update.error)return json({error:"Impossible d’enregistrer le transfert retrouvé."},500);
      if(next==="failed")return json({status:"failed",message:"CinetPay confirme l’échec. Le solde a été libéré."});
      const statusRecovered=await client.transfer.getStatus(recovered.transactionId,"TG");
      if(statusRecovered.status==="SUCCESS"){
-      const paid=await admin.from("novelia_payout_requests").update({status:"paid",provider_transaction_id:statusRecovered.transactionId})
+      const paid=await admin.from("novelia_payout_requests").update({status:"paid",provider_transaction_id:statusRecovered.transactionId,provider_fee_xof:Math.round(Number(statusRecovered.feeAmount)||0)})
        .eq("id",request.id).eq("status","processing");
       if(paid.error)return json({error:"Transfert confirmé mais portefeuille non actualisé."},500);
       return json({status:"paid",message:"Transfert confirmé par CinetPay."});
@@ -69,7 +69,7 @@ Deno.serve(async(req:Request)=>{
    }
    const nextStatus=transfer.status==="FAILED"?"failed":"processing";
    const update=await admin.from("novelia_payout_requests").update({
-    status:nextStatus,provider_transaction_id:transfer.transactionId,notify_token:transfer.notifyToken
+    status:nextStatus,provider_transaction_id:transfer.transactionId,notify_token:transfer.notifyToken,provider_fee_xof:Math.round(Number(transfer.feeAmount)||0)
    }).eq("id",request.id).eq("status","approved");
    if(update.error)return json({error:"Transfert créé mais enregistrement du suivi impossible. Contacte l’assistance."},500);
    if(nextStatus==="failed")return json({status:"failed",message:"CinetPay a refusé le transfert. Le solde a été libéré."});
@@ -84,14 +84,14 @@ Deno.serve(async(req:Request)=>{
   }
   if(status.status==="SUCCESS"){
    const {error:updateError}=await admin.from("novelia_payout_requests").update({
-    status:"paid",provider_transaction_id:status.transactionId
+    status:"paid",provider_transaction_id:status.transactionId,provider_fee_xof:Math.round(Number(status.feeAmount)||0)
    }).eq("id",request.id).eq("status","processing");
    if(updateError)return json({error:"Transfert confirmé mais mise à jour du portefeuille impossible."},500);
    return json({status:"paid",message:"Transfert confirmé par CinetPay."});
   }
   if(status.status==="FAILED"){
    const {error:updateError}=await admin.from("novelia_payout_requests").update({
-    status:"failed",provider_transaction_id:status.transactionId
+    status:"failed",provider_transaction_id:status.transactionId,provider_fee_xof:Math.round(Number(status.feeAmount)||0)
    }).eq("id",request.id).eq("status","processing");
    if(updateError)return json({error:"Échec confirmé, mais le portefeuille n’a pas pu être actualisé."},500);
    return json({status:"failed",message:"Transfert échoué. Le solde a été libéré."});
