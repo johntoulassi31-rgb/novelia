@@ -56,7 +56,13 @@ public class MainActivity extends Activity {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String host = uri.getHost();
-                if (host != null && (host.equals("johntoulassi31-rgb.github.io") || host.equals("czwaokqpqgrghxeeyguq.supabase.co"))) return false;
+                if (host != null && (
+                    host.equals("johntoulassi31-rgb.github.io")
+                    || host.equals("czwaokqpqgrghxeeyguq.supabase.co")
+                    || host.equals("cinetpay.com") || host.endsWith(".cinetpay.com")
+                    || host.equals("cinetpay.co") || host.endsWith(".cinetpay.co")
+                    || host.equals("cinetpay.net") || host.endsWith(".cinetpay.net")
+                )) return false;
                 startActivity(new Intent(Intent.ACTION_VIEW, uri));
                 return true;
             }
