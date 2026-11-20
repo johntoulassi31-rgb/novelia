@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.109.0";
 import { CinetPayClient, parseNotification, verifyNotification } from "npm:cinetpay-js@0.1.0";
 
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json"}});
+const samePhone=(a:string,b:string)=>String(a||"").replace(/\\D/g,"").slice(-8)===String(b||"").replace(/\\D/g,"").slice(-8);
 Deno.serve(async(req:Request)=>{
  if(req.method!=="POST")return json({error:"Method not allowed"},405);
  try{
@@ -23,7 +24,7 @@ Deno.serve(async(req:Request)=>{
   if(status.merchantTransactionId!==request.client_transaction_id||
      status.transactionId!==notification.transactionId||
      Number(status.amount)!==Number(request.amount_xof)||
-     (status.phoneNumber&&status.phoneNumber!==request.destination_phone_number)){
+     (status.phoneNumber&&!samePhone(status.phoneNumber,request.destination_phone_number))){
     return json({error:"Transfer mismatch"},400);
   }
   if(status.status==="PENDING"||status.status==="INITIATED")return json({ok:true,pending:true});
