@@ -228,7 +228,10 @@
   }
 
   function buildTargetLink(item) {
-    if (item.type === "new_message") {\n      return { label: "Ouvrir la conversation", href: "messages.html" + (item.conversation_id ? "?conversation=" + encodeURIComponent(item.conversation_id) : ""), kind: "message" };\n    }\n    if (item.type === "new_follower" && item.actor_id) {
+    if (item.type === "new_message") {
+      return { label: "Ouvrir la conversation", href: "messages.html" + (item.conversation_id ? "?conversation=" + encodeURIComponent(item.conversation_id) : ""), kind: "message" };
+    }
+    if (item.type === "new_follower" && item.actor_id) {
       const actor = profilesById.get(item.actor_id);
       if (actor?.username) {
         return {
@@ -238,12 +241,13 @@
         };
       }
     }
-    if (["new_chapter","comment_reply","new_comment","new_review"].includes(item.type) && item.story_id) {
+    if (["new_chapter","comment_reply","new_comment","new_review","contest_award"].includes(item.type) && item.story_id) {
       const url = "reader.html?db_story=" + encodeURIComponent(item.story_id) +
         (item.chapter_id ? "&chapter_id=" + encodeURIComponent(item.chapter_id) : "");
       if (item.type === "comment_reply") return { label: "Voir la réponse", href: url, kind: "comment" };
       if (item.type === "new_comment") return { label: "Voir le commentaire", href: url, kind: "comment" };
       if (item.type === "new_review") return { label: "Voir les avis", href: url, kind: "review" };
+      if (item.type === "contest_award") return { label: "Voir l’œuvre primée", href: url, kind: "award" };
       return { label: "Lire le chapitre", href: url, kind: "chapter" };
     }
     return null;
@@ -269,7 +273,8 @@
         item.type === "new_chapter" ? "Nouveau chapitre" :
         item.type === "comment_reply" ? "Réponse à ton commentaire" :
         item.type === "new_comment" ? "Nouveau commentaire sur ton œuvre" :
-        item.type === "new_review" ? "Nouvel avis sur ton œuvre" :\n        item.type === "new_message" ? "Nouveau message privé" :
+        item.type === "new_review" ? "Nouvel avis sur ton œuvre" :
+        item.type === "new_message" ? "Nouveau message privé" :
         item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
       top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
