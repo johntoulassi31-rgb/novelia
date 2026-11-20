@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "novelia-shell-v56";
+const CACHE_NAME = "novelia-shell-v57";
 const CACHE_PREFIX = "novelia-shell-";
 const CDN_CACHE = "novelia-cdn-v1";
 const CDN_ORIGIN = "https://cdn.jsdelivr.net";
@@ -18,6 +18,7 @@ const APP_FILES = [
   "./public-profile.html",
   "./earnings.html",
   "./earnings-admin.html",
+  "./monetization-info.html",
   "./payment-result.html",
   "./purchases.html",
   "./downloads.html",
