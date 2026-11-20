@@ -3,6 +3,7 @@ import { CinetPayClient } from "npm:cinetpay-js@0.1.0";
 
 const cors={"Access-Control-Allow-Origin":"https://johntoulassi31-rgb.github.io","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
+const samePhone=(a:string,b:string)=>String(a||"").replace(/\\D/g,"").slice(-8)===String(b||"").replace(/\\D/g,"").slice(-8);
 
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
@@ -48,7 +49,7 @@ Deno.serve(async(req:Request)=>{
      const recovered=await client.transfer.getStatus(request.client_transaction_id,"TG");
      if(recovered.merchantTransactionId!==request.client_transaction_id||
         Number(recovered.amount)!==Number(request.amount_xof)||
-        (recovered.phoneNumber&&recovered.phoneNumber!==request.destination_phone_number))throw new Error("Mismatch");
+        (recovered.phoneNumber&&!samePhone(recovered.phoneNumber,request.destination_phone_number)))throw new Error("Mismatch");
      const next=recovered.status==="FAILED"?"failed":"processing";
      const update=await admin.from("novelia_payout_requests").update({
       status:next,provider_transaction_id:recovered.transactionId,provider_fee_xof:Math.round(Number(recovered.feeAmount)||0)
@@ -79,7 +80,7 @@ Deno.serve(async(req:Request)=>{
   const status=await client.transfer.getStatus(transactionId,"TG");
   if(status.merchantTransactionId!==request.client_transaction_id||
      Number(status.amount)!==Number(request.amount_xof)||
-     (status.phoneNumber&&status.phoneNumber!==request.destination_phone_number)){
+     (status.phoneNumber&&!samePhone(status.phoneNumber,request.destination_phone_number))){
     return json({error:"Les informations du transfert ne correspondent pas à la demande."},409);
   }
   if(status.status==="SUCCESS"){
