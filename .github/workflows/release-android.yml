@@ -72,10 +72,8 @@ jobs:
         run: gradle --no-daemon :app:assembleRelease
         working-directory: android
 
-      - name: Align and verify APK signature
+      - name: Verify APK alignment and signature
         run: |
-          zipalign -f -v 4 android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/novelia-release-aligned.apk"
-          mv "$RUNNER_TEMP/novelia-release-aligned.apk" android/app/build/outputs/apk/release/app-release.apk
           test -s android/app/build/outputs/apk/release/app-release.apk
           zipalign -c -v 4 android/app/build/outputs/apk/release/app-release.apk
           apksigner verify --verbose android/app/build/outputs/apk/release/app-release.apk
