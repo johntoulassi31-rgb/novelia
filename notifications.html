@@ -228,6 +228,7 @@
   }
 
   function buildTargetLink(item) {
+    if (["chapter_sale","payout_update"].includes(item.type)) return { label: "Voir mes revenus", href: "earnings.html", kind: "earnings" };
     if (["contest_update","contest_results"].includes(item.type)) return { label: item.type === "contest_results" ? "Voir les résultats" : "Voir le concours", href: "contests.html" + (item.contest_id ? "?contest=" + encodeURIComponent(item.contest_id) : ""), kind: "contest" };
     if (item.type === "new_message") {
       return { label: "Ouvrir la conversation", href: "messages.html" + (item.conversation_id ? "?conversation=" + encodeURIComponent(item.conversation_id) : ""), kind: "message" };
@@ -279,6 +280,8 @@
         item.type === "contest_award" ? "Prix de concours reçu" :
         item.type === "contest_results" ? "Résultats officiels publiés" :
         item.type === "contest_update" ? "Actualité d’un concours" :
+        item.type === "chapter_sale" ? "Nouvelle vente sur ton œuvre" :
+        item.type === "payout_update" ? "Mise à jour de ton retrait" :
         item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
       top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
