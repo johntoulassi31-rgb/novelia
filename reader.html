@@ -1153,7 +1153,24 @@ function openReader(index, restorePosition = true) {
   }
 }
 
+async function loadCachedDatabaseStory() {
+  const cached=await getOfflineStory(dbStoryId);
+  if(!cached?.story||!Array.isArray(cached.chapters)||!cached.chapters.length) {
+    throw new Error("Connexion indisponible et aucune copie hors connexion n’a été enregistrée pour cette œuvre.");
+  }
+  story=cached.story;
+  chapters=cached.chapters;
+  offlineMediaMap=cached.media||{};
+  offlineAudioMap=cached.audio||{};
+  isOfflineMode=true;
+  $("offlineStatus").textContent="Mode hors connexion : copie du "+new Date(cached.savedAt).toLocaleString("fr-FR")+"."+(cached.mediaMissing?.length?" "+cached.mediaMissing.length+" image(s) n’ont pas été téléchargées et peuvent rester invisibles.":"");
+}
+
 async function loadDatabaseStory() {
+  if(!navigator.onLine) {
+    await loadCachedDatabaseStory();
+    return;
+  }
   try {
     const {data:row,error}=await supabase.from("stories").select("id,title,description,cover_url,story_type,genre,status,author_id,moderation_hidden").eq("id",dbStoryId).eq("status","published").eq("moderation_hidden",false).maybeSingle();
     if(error)throw error;
@@ -1163,13 +1180,14 @@ async function loadDatabaseStory() {
     const nextStory={id:row.id,authorId:row.author_id,title:row.title,description:row.description||"",cover:row.cover_url||"",genre:row.genre||"Autre",type:row.story_type==="webtoon"?"Webtoon":"Roman"};
     const nextChapters=(chapterRows||[]).map(ch=>({id:ch.id,title:ch.title,content:ch.content||"",audio_url:ch.audio_url||null,audio_title:ch.audio_title||null,audio_duration_seconds:ch.audio_duration_seconds||null}));
     if(!nextChapters.length)throw new Error("Cette histoire ne possède pas encore de chapitre.");
-    story=nextStory;chapters=nextChapters;const localCopy=await getOfflineStory(dbStoryId);offlineMediaMap=localCopy?.media||{};offlineAudioMap=localCopy?.audio||{};
+    story=nextStory;
+    chapters=nextChapters;
+    const localCopy=await getOfflineStory(dbStoryId);
+    offlineMediaMap=localCopy?.media||{};
+    offlineAudioMap=localCopy?.audio||{};
   } catch(error) {
     if(!isNetworkFailure(error))throw error;
-    const cached=await getOfflineStory(dbStoryId);
-    if(!cached?.story||!Array.isArray(cached.chapters)||!cached.chapters.length)throw new Error("Connexion indisponible et aucune copie hors connexion n’a été enregistrée pour cette œuvre.");
-    story=cached.story;chapters=cached.chapters;offlineMediaMap=cached.media||{};offlineAudioMap=cached.audio||{};isOfflineMode=true;
-    $("offlineStatus").textContent="Mode hors connexion : copie du "+new Date(cached.savedAt).toLocaleString("fr-FR")+"."+(cached.mediaMissing?.length?" "+cached.mediaMissing.length+" image(s) n’ont pas été téléchargées et peuvent rester invisibles.":"");
+    await loadCachedDatabaseStory();
   }
 }
 
