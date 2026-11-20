@@ -1,0 +1,24 @@
+-- Jury assignments and private scoring. Applied to Supabase project on 2026-11-20.
+alter table public.novelia_contests drop constraint if exists novelia_contests_status_check;
+alter table public.novelia_contests add constraint novelia_contests_status_check check(status in ('draft','open','judging','voting','closed'));
+alter table public.novelia_contest_entries
+ add column if not exists jury_score numeric(4,2) not null default 0 check(jury_score between 0 and 10),
+ add column if not exists jury_reviews_count integer not null default 0 check(jury_reviews_count>=0),
+ add column if not exists vote_count integer not null default 0 check(vote_count>=0),
+ add column if not exists final_score numeric(5,2) generated always as(round(coalesce(jury_score,0)*0.70+least(10::numeric,(coalesce(vote_count,0)::numeric/(coalesce(vote_count,0)+5))*10)*0.30,2)) stored;
+create table if not exists public.novelia_contest_jurors(id uuid primary key default gen_random_uuid(),contest_id uuid not null references public.novelia_contests(id) on delete cascade,juror_id uuid not null references auth.users(id) on delete cascade,assigned_by uuid references auth.users(id) on delete set null,assigned_at timestamptz not null default now(),unique(contest_id,juror_id));
+create table if not exists public.novelia_contest_reviews(id uuid primary key default gen_random_uuid(),contest_id uuid not null references public.novelia_contests(id) on delete cascade,entry_id uuid not null references public.novelia_contest_entries(id) on delete cascade,juror_id uuid not null references auth.users(id) on delete cascade,originality smallint not null check(originality between 1 and 10),writing_style smallint not null check(writing_style between 1 and 10),coherence smallint not null check(coherence between 1 and 10),theme_respect smallint not null check(theme_respect between 1 and 10),feedback text not null default '' check(char_length(feedback)<=2000),created_at timestamptz not null default now(),updated_at timestamptz not null default now(),unique(entry_id,juror_id));
+create index if not exists idx_novelia_contest_jurors_juror on public.novelia_contest_jurors(juror_id,contest_id);
+create index if not exists idx_novelia_contest_jurors_assigned_by on public.novelia_contest_jurors(assigned_by);
+create index if not exists idx_novelia_contest_reviews_contest_entry on public.novelia_contest_reviews(contest_id,entry_id);
+create index if not exists idx_novelia_contest_reviews_juror on public.novelia_contest_reviews(juror_id,contest_id);
+alter table public.novelia_contest_jurors enable row level security;
+alter table public.novelia_contest_reviews enable row level security;
+grant select,insert,delete on public.novelia_contest_jurors to authenticated;
+grant select,insert,update on public.novelia_contest_reviews to authenticated;
+create policy "Jurors view their assignments and admins view all" on public.novelia_contest_jurors for select to authenticated using(juror_id=(select auth.uid()) or public.novelia_is_admin());
+create policy "Admins assign contest jurors" on public.novelia_contest_jurors for insert to authenticated with check(public.novelia_is_admin());
+create policy "Admins remove contest jurors" on public.novelia_contest_jurors for delete to authenticated using(public.novelia_is_admin());
+create policy "Jurors view their own reviews and admins view all" on public.novelia_contest_reviews for select to authenticated using(juror_id=(select auth.uid()) or public.novelia_is_admin());
+create policy "Assigned jurors submit reviews" on public.novelia_contest_reviews for insert to authenticated with check(juror_id=(select auth.uid()) and not public.novelia_is_suspended() and exists(select 1 from public.novelia_contest_jurors j where j.contest_id=novelia_contest_reviews.contest_id and j.juror_id=(select auth.uid())) and exists(select 1 from public.novelia_contest_entries e join public.novelia_contests c on c.id=e.contest_id where e.id=novelia_contest_reviews.entry_id and e.contest_id=novelia_contest_reviews.contest_id and e.status='approved' and c.status in ('judging','voting')));
+create policy "Assigned jurors update their reviews" on public.novelia_contest_reviews for update to authenticated using(juror_id=(select auth.uid()) and exists(select 1 from public.novelia_contest_jurors j where j.contest_id=novelia_contest_reviews.contest_id and j.juror_id=(select auth.uid()))) with check(juror_id=(select auth.uid()) and exists(select 1 from public.novelia_contest_jurors j where j.contest_id=novelia_contest_reviews.contest_id and j.juror_id=(select auth.uid())) and exists(select 1 from public.novelia_contest_entries e join public.novelia_contests c on c.id=e.contest_id where e.id=novelia_contest_reviews.entry_id and e.contest_id=novelia_contest_reviews.contest_id and e.status='approved' and c.status in ('judging','voting')));
