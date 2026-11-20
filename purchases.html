@@ -1,6 +1,6 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#fbf8f1"><title>Mes achats | Novelia</title><link rel="stylesheet" href="theme-gold.css"><style>
 *{box-sizing:border-box}body{margin:0;background:#fbf8f1;color:#392b08;font:15px/1.5 Arial,sans-serif}header{padding:14px 18px;background:#f9f4ea;border-bottom:1px solid #eee3c9}a{color:#76570c}main{max-width:850px;margin:auto;padding:22px 15px 60px}h1{font-size:29px}.card{display:flex;gap:14px;padding:15px;margin:12px 0;background:#f8f3e6;border:1px solid #eee3c9;border-radius:14px}.cover{width:66px;height:90px;object-fit:cover;border-radius:7px;background:#eee3c9}.details{flex:1;min-width:0}.muted{color:#756746}.tag{display:inline-block;padding:3px 9px;border-radius:99px;background:#efe5ce;font-size:12px}.button{display:inline-block;padding:9px 12px;border-radius:8px;background:#c3941c;color:#2a2011;text-decoration:none;font-weight:bold;margin:5px 5px 0 0}.empty{padding:18px;border:1px dashed #d8c99f;border-radius:12px;color:#756746}
-</style></head><body><header><a href="profile.html">← Mon profil</a></header><main><h1>Mes achats</h1><p class="muted">Retrouve les chapitres premium achetés et vérifie les paiements en cours.</p><p id="status" class="muted" role="status">Chargement…</p><h2>Achats confirmés</h2><div id="paid"><p class="empty">Chargement…</p></div><h2>Paiements en attente</h2><div id="pending"><p class="empty">Chargement…</p></div></main>
+</style></head><body><header><a href="profile.html">← Mon profil</a></header><main><h1>Mes achats</h1><p class="muted">Retrouve les chapitres premium achetés et vérifie les paiements en cours.</p><p id="status" class="muted" role="status">Chargement…</p><h2>Achats confirmés</h2><div id="paid"><p class="empty">Chargement…</p></div><h2>Paiements en attente</h2><div id="pending"><p class="empty">Chargement…</p></div><h2>Achats remboursés</h2><div id="refunded"><p class="empty">Chargement…</p></div></main>
 <script type="module">
 import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
 const db=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"),$=id=>document.getElementById(id);
@@ -12,18 +12,20 @@ async function init(){
  const r=await db.from("novelia_chapter_purchases").select("id,story_id,chapter_id,status,gross_amount_xof,created_at,paid_at,stories(title,cover_url)").eq("buyer_id",user.id).order("created_at",{ascending:false}).limit(100);
  if(r.error){$("status").textContent="Impossible de charger tes achats : "+r.error.message;return;}
  const rows=r.data||[];const chapterIds=[...new Set(rows.map(x=>x.chapter_id))];const metaResult=chapterIds.length?await db.from("novelia_chapter_catalog").select("id,title,chapter_number").in("id",chapterIds):{data:[]};const chapterMap=new Map((metaResult.data||[]).map(x=>[x.id,x]));$("status").textContent=rows.length?rows.length+" transaction(s).":"Aucun achat pour le moment.";
- const paid=$("paid"),pending=$("pending");paid.replaceChildren();pending.replaceChildren();
- const paidRows=rows.filter(x=>x.status==="paid"),pendingRows=rows.filter(x=>x.status==="pending");
+ const paid=$("paid"),pending=$("pending"),refunded=$("refunded");paid.replaceChildren();pending.replaceChildren();refunded.replaceChildren();
+ const paidRows=rows.filter(x=>x.status==="paid"),pendingRows=rows.filter(x=>x.status==="pending"),refundedRows=rows.filter(x=>x.status==="refunded");
  function cardFor(x,isPending){
   const card=el("article","card"),story=x.stories||{},chapter=x.chapters||{};
   if(story.cover_url){const img=el("img","cover");img.src=story.cover_url;img.alt="Couverture";card.append(img);}
-  const d=el("div","details");d.append(el("strong","",story.title||"Œuvre"),el("p","",chapter.title||("Chapitre "+(chapter.chapter_number||""))),el("span","tag",isPending?"Paiement en attente":"Achat confirmé"),el("p","muted",fmt(x.gross_amount_xof)+" · "+date(isPending?x.created_at:x.paid_at)));
-  const link=el("a","button",isPending?"Vérifier le paiement":"Lire le chapitre");link.href=isPending?"payment-result.html?purchase_id="+encodeURIComponent(x.id):"reader.html?db_story="+encodeURIComponent(x.story_id)+"&chapter_id="+encodeURIComponent(x.chapter_id);d.append(link);card.append(d);return card;
+  const d=el("div","details");d.append(el("strong","",story.title||"Œuvre"),el("p","",chapter.title||("Chapitre "+(chapter.chapter_number||""))),el("span","tag",isPending?"Paiement en attente":x.status==="refunded"?"Remboursé":"Achat confirmé"),el("p","muted",fmt(x.gross_amount_xof)+" · "+date(isPending?x.created_at:x.paid_at)));
+  if(x.status!=="refunded"){const link=el("a","button",isPending?"Vérifier le paiement":"Lire le chapitre");link.href=isPending?"payment-result.html?purchase_id="+encodeURIComponent(x.id):"reader.html?db_story="+encodeURIComponent(x.story_id)+"&chapter_id="+encodeURIComponent(x.chapter_id);d.append(link);}card.append(d);return card;
  }
  if(!paidRows.length)paid.append(el("p","empty","Aucun chapitre acheté."));
  else paidRows.forEach(x=>paid.append(cardFor(x,false)));
  if(!pendingRows.length)pending.append(el("p","empty","Aucun paiement en attente."));
  else pendingRows.forEach(x=>pending.append(cardFor(x,true)));
+ if(!refundedRows.length)refunded.append(el("p","empty","Aucun achat remboursé."));
+ else refundedRows.forEach(x=>refunded.append(cardFor(x,false)));
 }
 init();
 </script><script src="bottom-nav.js" defer></script></body></html>
