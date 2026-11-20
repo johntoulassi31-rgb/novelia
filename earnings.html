@@ -25,7 +25,7 @@ small{color:#756746}@media(max-width:540px){main{padding:15px 12px 45px}.balance
 <section class="card"><div class="muted">Solde disponible</div><div id="balance" class="balance">— XOF</div><p id="monetizationStatus" class="muted">Vérification du programme…</p></section>
 <div class="grid">
 <section class="card"><strong id="totalEarned">— XOF</strong><p class="muted">Gains nets cumulés</p></section>
-<section class="card"><strong id="totalWithdrawn">— XOF</strong><p class="muted">Montants réservés ou retirés</p></section>
+<section class="card"><strong id="totalWithdrawn">— XOF</strong><p class="muted">Retraits effectués</p></section>
 </div>
 <h2>Mes moyens de retrait</h2>
 <section class="card">
@@ -59,7 +59,7 @@ const el=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=
 let user=null,config=null,destinations=[];
 async function init(){
  const auth=await db.auth.getUser();user=auth.data?.user;
- if(!user){$("balance").textContent="Connexion requise";$("monetizationStatus").textContent="Connecte-toi depuis ton profil pour consulter ton portefeuille.";return;}
+ if(!user){$("balance").textContent="Connexion requise";$("monetizationStatus").textContent="Connecte-toi depuis ton profil pour consulter ton portefeuille.";document.querySelectorAll("#destinationForm input,#destinationForm select,#destinationForm button,#payoutForm input,#payoutForm select,#payoutForm button").forEach(x=>x.disabled=true);return;}
  const [cfg,bal,ledger,payouts,dests]=await Promise.all([
   db.from("novelia_public_monetization_config").select("enabled,author_share_bps,minimum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof").single(),
   db.from("novelia_author_wallet_balances").select("available_balance_xof").eq("author_id",user.id).maybeSingle(),
@@ -71,8 +71,8 @@ async function init(){
  const balance=Number(bal.data?.available_balance_xof||0);$("balance").textContent=fmt(balance);
  $("monetizationStatus").textContent=config.enabled?"Programme actif · Part auteur : "+(Number(config.author_share_bps)/100)+" % · Retrait minimum : "+fmt(config.minimum_payout_xof):"Programme de rémunération désactivé pour le moment. Aucun achat ni retrait réel ne peut être effectué.";
  const rows=ledger.data||[];
- const earned=rows.filter(x=>Number(x.amount_xof)>0&&["chapter_sale","manual_adjustment","payout_release"].includes(x.entry_type)).reduce((a,x)=>a+Number(x.amount_xof),0);
- const withdrawn=rows.filter(x=>x.entry_type==="payout_hold").reduce((a,x)=>a+Math.abs(Number(x.amount_xof)),0);
+ const earned=rows.filter(x=>["chapter_sale","chapter_refund","manual_adjustment"].includes(x.entry_type)).reduce((a,x)=>a+Number(x.amount_xof),0);
+ const withdrawn=(payouts.data||[]).filter(x=>x.status==="paid").reduce((a,x)=>a+Number(x.amount_xof),0);
  $("totalEarned").textContent=fmt(earned);$("totalWithdrawn").textContent=fmt(withdrawn);
  destinations=dests.data||[];renderDestinations();
  $("payoutButton").disabled=!config.enabled||destinations.length===0;
