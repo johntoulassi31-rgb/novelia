@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.Build;
 import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
@@ -28,6 +29,8 @@ import android.view.ViewGroup;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private ValueCallback<Uri[]> fileChooserCallback;
+    private static final int FILE_CHOOSER_REQUEST = 1001;
     private View splashOverlay;
     private MediaSession mediaSession;
     private static MainActivity instance;
@@ -67,7 +70,27 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         webView.addJavascriptInterface(new NoveliaMediaBridge(), "NoveliaNativeMedia");
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePathCallback,
+                    FileChooserParams fileChooserParams) {
+                if (MainActivity.this.fileChooserCallback != null) {
+                    MainActivity.this.fileChooserCallback.onReceiveValue(null);
+                }
+                MainActivity.this.fileChooserCallback = filePathCallback;
+                try {
+                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("image/*");
+                    startActivityForResult(Intent.createChooser(intent, "Choisir une couverture"), FILE_CHOOSER_REQUEST);
+                    return true;
+                } catch (Exception error) {
+                    MainActivity.this.fileChooserCallback = null;
+                    filePathCallback.onReceiveValue(null);
+                    return false;
+                }
+            }
+        });
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) {
                 if (splashOverlay != null) splashOverlay.setVisibility(View.GONE);
@@ -259,6 +282,21 @@ public class MainActivity extends Activity {
             instance.mediaSession.setActive(false);
             instance.mediaSession.release();
             instance.mediaSession = null;
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST) {
+            if (fileChooserCallback != null) {
+                Uri[] results = null;
+                if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+                    results = new Uri[] { data.getData() };
+                }
+                fileChooserCallback.onReceiveValue(results);
+                fileChooserCallback = null;
+            }
         }
     }
 
