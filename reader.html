@@ -11,7 +11,7 @@
 :root{--bg:#fbf9f3;--panel:#f9f4e9;--purple:#c8981d;--text:#392b08;--muted:#7c6c43;--border:#f2e8d1;--heading:#6f5410;--novel-font-size:18px;--novel-line-height:2}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;line-height:1.7}
-header{padding:18px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header{position:sticky;top:0;z-index:60;padding:13px 18px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px #00000010}
 header a,.back-link{color:#7b5d12;text-decoration:none;font-weight:bold}
 .container{width:min(850px,100%);margin:auto;padding:24px 16px 60px}
 .back-link{display:inline-block;margin-bottom:20px}
@@ -33,7 +33,7 @@ h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:8px 0 12px}
 .story-like-button.is-liked{background:#f3ebd7;border-color:#9b7516;color:#715510}
 .like-counter{color:var(--muted);font-size:13px;margin:8px 0 0;overflow-wrap:anywhere}
 .details{padding:0 20px 20px;color:var(--muted);font-size:13px}
-.reader{margin-top:28px;scroll-margin-top:15px}
+.reader{margin-top:28px;scroll-margin-top:75px;padding-bottom:86px}.reader-topbar{position:sticky;top:57px;z-index:55;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin:0 -16px 12px;background:var(--panel);border-bottom:1px solid var(--border);box-shadow:0 2px 8px #00000010}.reader-topbar strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reader-bottom-bar{position:fixed;left:0;right:0;bottom:0;z-index:80;display:flex;justify-content:space-around;gap:8px;padding:9px 10px max(9px,env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--border);box-shadow:0 -3px 12px #00000012}.reader-bottom-bar button{flex:1;min-width:0}.story-sections{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:0 20px 18px}.story-sections button{background:#f4ecd9;color:#513e0c;border:1px solid #ede0c2;border-radius:9px;padding:9px 5px;font-size:12px;font-weight:bold}.story-section-panel{margin:0 20px 18px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--muted);font-size:14px}.story-section-panel h2{margin:0 0 8px;color:var(--heading);font-size:17px}
 .chapter{padding:22px}
 .chapter h2{color:var(--heading);font-size:21px;line-height:1.4}
 .progress-track{width:100%;height:7px;border-radius:20px;background:#f4ecd9;overflow:hidden;margin:12px 0 22px}
@@ -120,7 +120,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
       </div>
       <p class="summary" id="description"></p>
       <div class="actions">
-        <button class="button primary" id="startReading">Commencer la lecture</button>
+        <button class="button primary" id="startReading">Commencer la lecture</button>\n        <button class="button secondary" id="libraryButton" type="button">＋ Ajouter à ma bibliothèque</button>
         <button class="button primary" id="resumeReading" hidden>Reprendre la lecture</button>
         <button class="button favorite-button" id="favoriteButton">♡ Ajouter aux favoris</button>
         <button class="button story-like-button" id="storyLikeButton" hidden aria-pressed="false">♡ J’aime cette œuvre</button>
@@ -134,7 +134,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
       <p class="summary" id="progressMessage" role="status"></p>
     </div>
   </div>
-  <div class="details"><span id="chapterCount"></span></div>
+  <div class="details"><span id="chapterCount"></span></div>\n  <div class="story-sections" role="tablist" aria-label="Informations sur l’œuvre"><button type="button" data-story-section="about" aria-selected="true">À propos</button><button type="button" data-story-section="characters" aria-selected="false">Personnages</button><button type="button" data-story-section="playlist" aria-selected="false">Playlist</button></div>\n  <section class="story-section-panel" id="storyAboutPanel"><h2>À propos</h2><p id="storyAboutText"></p></section>\n  <section class="story-section-panel" id="storyCharactersPanel" hidden><h2>Fiches personnages</h2><p>Les fiches personnages seront affichées ici lorsque l’auteur les aura renseignées.</p></section>\n  <section class="story-section-panel" id="storyPlaylistPanel" hidden><h2>Playlist</h2><p>Aucune playlist n’a encore été ajoutée à cette œuvre.</p></section>
 <div class="actions" style="margin:12px 0">
 <button class="button secondary" id="offlineSaveButton" type="button" hidden>Enregistrer pour hors connexion</button>
 <p class="reading-info" id="offlineStatus" role="status" aria-live="polite"></p>
@@ -950,6 +950,8 @@ function updateFavoriteButton() {
     : "♡ Ajouter aux favoris";
 }
 
+async function updateLibraryButton(){const b=$("libraryButton");if(!b)return;if(!currentUser||!isDatabaseStory){b.textContent="＋ Ajouter à ma bibliothèque";return;}const {data,error}=await supabase.from("user_library").select("story_key").eq("user_id",currentUser.id).eq("story_key",storyKey).maybeSingle();if(error){b.textContent="＋ Ajouter à ma bibliothèque";return;}b.textContent=data?"✓ Dans ma bibliothèque":"＋ Ajouter à ma bibliothèque";b.setAttribute("aria-pressed",String(Boolean(data)));}
+async function toggleLibrary(){if(!currentUser){$("favoriteMessage").textContent="Connecte-toi pour ajouter cette œuvre à ta bibliothèque.";return;}if(!isDatabaseStory)return;const b=$("libraryButton");b.disabled=true;try{const {data}=await supabase.from("user_library").select("story_key").eq("user_id",currentUser.id).eq("story_key",storyKey).maybeSingle();if(data){const {error}=await supabase.from("user_library").delete().eq("user_id",currentUser.id).eq("story_key",storyKey);if(error)throw error;$("favoriteMessage").textContent="Œuvre retirée de ta bibliothèque.";}else{const {error}=await supabase.from("user_library").upsert({user_id:currentUser.id,story_key:storyKey,is_favorite:false,last_chapter:0,is_archived:false},{onConflict:"user_id,story_key"});if(error)throw error;$("favoriteMessage").textContent="Œuvre ajoutée à ta bibliothèque.";}await updateLibraryButton();}catch(e){$("favoriteMessage").textContent="Action impossible : "+e.message;}finally{b.disabled=false;}}
 function updateResumeButton() {
   const index = savedChapterIndex();
   $("resumeReading").hidden = index === null;
@@ -1376,6 +1378,12 @@ function showStory() {
   $("resumeReading").disabled = chapters.length === 0;
 }
 
+$("libraryButton").addEventListener("click",toggleLibrary);
+document.querySelectorAll("[data-story-section]").forEach(button=>button.addEventListener("click",()=>{const key=button.dataset.storySection;document.querySelectorAll("[data-story-section]").forEach(x=>x.setAttribute("aria-selected",String(x===button)));$("storyAboutPanel").hidden=key!=="about";$("storyCharactersPanel").hidden=key!=="characters";$("storyPlaylistPanel").hidden=key!=="playlist";}));
+$("readerToolsShortcut").addEventListener("click",()=>{$("readerTools").open=true;$("readerTools").scrollIntoView({behavior:"smooth",block:"center"});});
+$("readerPrevFixed").addEventListener("click",()=>changeReaderChapter(currentChapter-1));
+$("readerNextFixed").addEventListener("click",()=>changeReaderChapter(currentChapter+1));
+$("readerCommentsFixed").addEventListener("click",()=>$("commentsPanel").scrollIntoView({behavior:"smooth",block:"start"}));
 $("storyLikeButton").addEventListener("click", toggleStoryLike);
 
 $("shareStoryButton").addEventListener("click", async () => {
@@ -1917,6 +1925,9 @@ async function main() {
       } else {
         $("status").textContent = "Le chapitre demandé n'est pas disponible dans cette histoire.";
       }
+    }
+    else if (params.get("open") === "1") {
+      openReader(savedChapterIndex() ?? 0, true);
     }
   } catch (error) {
     console.error(error);
