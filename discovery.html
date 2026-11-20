@@ -220,7 +220,7 @@ async function loadDiscovery() {
     if (!metricsError) (metricsRows || []).forEach(row => discoveryMetrics.set(String(row.story_id), {
       impressions: Number(row.impressions || 0), clicks: Number(row.clicks || 0)
     }));
-    let likedIds = [], savedIds = [], followedAuthors = [], progressRows = [], favoriteRows = [];
+    let likedIds = [], savedIds = [], historyIds = [], followedAuthors = [], progressRows = [], favoriteRows = [];
     if (currentUser) {
       const [likedResult, savedResult, followsResult, progressResult, historyResult] = await Promise.all([
         supabase.from("story_likes").select("story_id").eq("user_id", currentUser.id).limit(1000),
@@ -237,8 +237,7 @@ async function loadDiscovery() {
       if (!followsResult.error) followedAuthors = (followsResult.data || []).map(row => String(row.followed_id));
       if (!progressResult.error) progressRows = progressResult.data || [];
       if (!historyResult.error) {
-        const historyIds = (historyResult.data || []).map(row => String(row.story_key || "").replace(/^db_/, ""));
-        historyIds.forEach(id => { if (id) savedIds.push(id); });
+        historyIds = (historyResult.data || []).map(row => String(row.story_key || "").replace(/^db_/, "")).filter(Boolean);
       }
     }
     const likedSet = new Set(likedIds);
@@ -251,7 +250,7 @@ async function loadDiscovery() {
     });
     const tasteGenres = new Map();
     const tasteFormats = new Map();
-    const historySet = new Set(savedIds);
+    const historySet = new Set(historyIds);
     items.forEach(story => {
       const id = String(story.id);
       let weight = 0;
