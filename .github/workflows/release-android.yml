@@ -2,9 +2,12 @@ name: Build and publish Novelia Android Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Version tag to publish (for example v1.0.3)"
+        required: true
+        type: string
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 
@@ -79,7 +82,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.2' }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
           target_commitish: main
           files: android/app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
