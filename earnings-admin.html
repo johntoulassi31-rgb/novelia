@@ -1,0 +1,88 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fbf8f1"><meta name="robots" content="noindex,nofollow"><title>Administration des revenus | Novelia</title>
+<link rel="stylesheet" href="theme-gold.css"><style>
+*{box-sizing:border-box}body{margin:0;background:#fbf8f1;color:#392b08;font:15px/1.5 Arial,sans-serif}header{padding:14px 18px;background:#f9f4ea;border-bottom:1px solid #eee3c9}a{color:#76570c}
+main{max-width:1000px;margin:auto;padding:22px 16px 55px}h1{font-size:29px}h2{font-size:21px;margin-top:28px}.card{padding:16px;margin:12px 0;border:1px solid #eee3c9;border-radius:14px;background:#f8f3e6}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.field{margin:10px 0}.field label{display:block;font-size:13px;font-weight:bold;margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px;border:1px solid #dfd2b4;border-radius:8px;background:#fffdf8;color:#392b08;font:inherit}
+button{padding:9px 12px;margin:4px;border:0;border-radius:8px;background:#c3941c;font-weight:bold;cursor:pointer}button.secondary{background:#e9dfc8}button:disabled{opacity:.5}
+.row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid #e7dbc2}.row:last-child{border-bottom:0}.muted{color:#756746}.warning{padding:12px;background:#fff9ed;border:1px solid #e8dcc2;border-radius:9px}
+</style></head><body><header><a href="earnings.html">← Portefeuille auteur</a></header><main><h1>Administration des revenus</h1><p id="status" class="muted">Vérification des droits…</p><section id="panel" hidden>
+<h2>Paramètres de rémunération</h2><form id="settings" class="card">
+<p class="warning">Le programme doit rester désactivé tant que le compte marchand CinetPay et les secrets serveur ne sont pas configurés et testés. Les frais affichés sont modifiables selon ton contrat.</p>
+<div class="field"><label><input id="enabled" type="checkbox" style="width:auto"> Activer les achats et retraits réels</label></div>
+<div class="grid">
+<div class="field"><label for="share">Part auteur (%)</label><input id="share" type="number" min="1" max="99" step="0.01" required></div>
+<div class="field"><label for="minPayout">Retrait minimum (XOF)</label><input id="minPayout" type="number" min="1" step="1" required></div>
+<div class="field"><label for="minPrice">Prix minimum d’un chapitre (XOF)</label><input id="minPrice" type="number" min="1" step="1" required></div>
+<div class="field"><label for="maxPrice">Prix maximum d’un chapitre (XOF)</label><input id="maxPrice" type="number" min="1" step="1" required></div>
+<div class="field"><label for="moovFee">Frais Moov estimés (%)</label><input id="moovFee" type="number" min="0" max="20" step="0.01" required></div>
+<div class="field"><label for="tmoneyFee">Frais TMoney estimés (%)</label><input id="tmoneyFee" type="number" min="0" max="20" step="0.01" required></div>
+</div><button type="submit">Enregistrer les paramètres</button><p id="settingsMessage" class="muted" role="status"></p>
+</form>
+<h2>Demandes de retrait des auteurs</h2><div id="requests" class="card"><p class="muted">Chargement…</p></div>
+</section></main>
+<script type="module">
+import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const db=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg"),$=id=>document.getElementById(id);
+const fmt=n=>new Intl.NumberFormat("fr-FR").format(Number(n)||0)+" XOF";
+const labels={requested:"En attente",approved:"Approuvée",processing:"Transfert en cours",paid:"Payée",failed:"Échec",cancelled:"Annulée"};
+const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
+async function init(){
+ const auth=await db.auth.getUser();if(!auth.data?.user){$("status").textContent="Connexion administrateur requise.";return;}
+ const check=await db.rpc("novelia_is_admin");if(check.error||check.data!==true){$("status").textContent="Accès réservé aux administrateurs Novelia.";return;}
+ $("status").textContent="Accès administrateur confirmé.";$("panel").hidden=false;await load();
+}
+async function load(){
+ const [s,p]=await Promise.all([
+  db.from("novelia_monetization_settings").select("enabled,author_share_bps,minimum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof,moov_fee_bps,tmoney_fee_bps").eq("id",true).single(),
+  db.from("novelia_payout_requests").select("id,author_id,destination_operator,destination_phone_number,destination_account_holder,amount_xof,status,provider_transaction_id,admin_note,created_at").order("created_at",{ascending:false}).limit(100)
+ ]);
+ if(s.error){$("settingsMessage").textContent="Impossible de charger les paramètres : "+s.error.message;return;}
+ $("enabled").checked=s.data.enabled;$("share").value=(Number(s.data.author_share_bps)/100).toFixed(2);
+ $("minPayout").value=s.data.minimum_payout_xof;$("minPrice").value=s.data.minimum_chapter_price_xof;$("maxPrice").value=s.data.maximum_chapter_price_xof;
+ $("moovFee").value=(Number(s.data.moov_fee_bps)/100).toFixed(2);$("tmoneyFee").value=(Number(s.data.tmoney_fee_bps)/100).toFixed(2);
+ const root=$("requests");root.replaceChildren();
+ if(p.error){root.append(el("p","muted","Impossible de charger les demandes : "+p.error.message));return;}
+ if(!p.data?.length){root.append(el("p","muted","Aucune demande de retrait."));return;}
+ const ids=[...new Set(p.data.map(x=>x.author_id))];let profiles=new Map();
+ if(ids.length){const pr=await db.from("profiles").select("id,username,display_name").in("id",ids);(pr.data||[]).forEach(x=>profiles.set(x.id,x));}
+ for(const req of p.data){
+  const row=el("article","row"),info=el("div",""),author=profiles.get(req.author_id);
+  info.append(el("strong","",(author?.display_name||author?.username||"Auteur")+" · "+fmt(req.amount_xof)));
+  info.append(el("p","muted",(labels[req.status]||req.status)+" · "+(req.destination_operator==="moov_tg"?"Moov Money":"TMoney")+" · "+req.destination_phone_number+" · "+req.destination_account_holder));
+  info.append(el("small","",new Date(req.created_at).toLocaleString("fr-FR")));
+  const actions=el("div","");
+  const addAction=(label,status,cls="secondary")=>{const b=el("button",cls,label);b.onclick=()=>updateRequest(req,status);actions.append(b);};
+  if(req.status==="requested")addAction("Approuver","approved");
+  if(["requested","approved"].includes(req.status))addAction("Transfert lancé","processing","");
+  if(req.status==="processing")addAction("Marquer payé","paid","");
+  if(["requested","approved","processing"].includes(req.status))addAction("Échec / libérer le solde","failed","secondary");
+  row.append(info,actions);root.append(row);
+ }
+}
+async function updateRequest(req,status){
+ let reference=req.provider_transaction_id||null;
+ if(status==="paid"){reference=prompt("Référence de transfert CinetPay (obligatoire) :","");if(!reference?.trim())return;}
+ let note=req.admin_note||"";
+ if(status==="failed")note=prompt("Motif de l’échec (facultatif) :",note)||note;
+ const patch={status,provider_transaction_id:reference,admin_note:note,updated_at:new Date().toISOString()};
+ const r=await db.from("novelia_payout_requests").update(patch).eq("id",req.id);
+ if(r.error)alert("Mise à jour impossible : "+r.error.message);else await load();
+}
+$("settings").onsubmit=async e=>{
+ e.preventDefault();const msg=$("settingsMessage");
+ const share=Number($("share").value),minPayout=Number($("minPayout").value),minPrice=Number($("minPrice").value),maxPrice=Number($("maxPrice").value);
+ const moov=Number($("moovFee").value),tmoney=Number($("tmoneyFee").value);
+ if(!(share>0&&share<100&&minPayout>0&&minPrice>0&&maxPrice>=minPrice&&moov>=0&&tmoney>=0)){msg.textContent="Vérifie les valeurs saisies.";return;}
+ if($("enabled").checked&&!confirm("Activer les paiements et retraits réels ? Vérifie d’abord les clés CinetPay et les tarifs de ton contrat."))return;
+ const r=await db.from("novelia_monetization_settings").update({
+  enabled:$("enabled").checked,author_share_bps:Math.round(share*100),minimum_payout_xof:minPayout,
+  minimum_chapter_price_xof:minPrice,maximum_chapter_price_xof:maxPrice,
+  moov_fee_bps:Math.round(moov*100),tmoney_fee_bps:Math.round(tmoney*100),
+  updated_by:(await db.auth.getUser()).data.user.id,updated_at:new Date().toISOString()
+ }).eq("id",true);
+ msg.textContent=r.error?"Enregistrement impossible : "+r.error.message:"Paramètres enregistrés.";if(!r.error)await load();
+};
+init();
+</script></body></html>
