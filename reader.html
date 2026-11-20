@@ -1024,6 +1024,12 @@ window.NoveliaHandleNativeMediaAction=function(action){
  else if(action==="next"){changeReaderChapter(currentChapter+1,{playAudio:true});}
  else if(action==="previous"){changeReaderChapter(currentChapter-1,{playAudio:true});}
 };
+function clearChapterMediaSession(){
+ if(window.NoveliaNativeMedia){try{window.NoveliaNativeMedia.stopped();}catch(error){}}
+ if(!("mediaSession" in navigator))return;
+ try{navigator.mediaSession.metadata=null;}catch(error){}
+ ["play","pause","previoustrack","nexttrack"].forEach(action=>{try{navigator.mediaSession.setActionHandler(action,null);}catch(error){}});
+}
 function renderChapterAudio(chapter) {
  const panel=$("chapterAudioPlayer");
  // Libère le décodeur et la source du lecteur précédent avant de changer de chapitre.
@@ -1031,15 +1037,15 @@ function renderChapterAudio(chapter) {
  if(previousAudio){previousAudio.pause();previousAudio.removeAttribute("src");previousAudio.load();}
  panel.replaceChildren();
  if(currentAudioObjectUrl){URL.revokeObjectURL(currentAudioObjectUrl);currentAudioObjectUrl=null;}
- panel.hidden=!chapter?.audio_url;const focusButton=$("audioFocusToggle");focusButton.hidden=!chapter?.audio_url;if(!chapter?.audio_url){activeChapterAudio=null;return;}
+ panel.hidden=!chapter?.audio_url;const focusButton=$("audioFocusToggle");focusButton.hidden=!chapter?.audio_url;if(!chapter?.audio_url){activeChapterAudio=null;clearChapterMediaSession();return;}
  const heading=document.createElement("h3");heading.textContent=chapter.audio_title||"Écouter la narration";
- const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.setAttribute("aria-label","Narration audio du chapitre");activeChapterAudio=audio;
+ const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.setAttribute("aria-label","Narration audio du chapitre");
  const cachedBlob=offlineAudioMap?.[chapter.audio_url];
  const audioUnavailableOffline=isOfflineMode&&!(cachedBlob instanceof Blob);
- if(cachedBlob instanceof Blob){currentAudioObjectUrl=URL.createObjectURL(cachedBlob);audio.src=currentAudioObjectUrl;}
- else if(!isOfflineMode)audio.src=chapter.audio_url;
- else {audio.removeAttribute("src");audio.controls=false;audio.setAttribute("aria-disabled","true");}
- updateMediaSession(chapter,audio);
+ if(cachedBlob instanceof Blob){currentAudioObjectUrl=URL.createObjectURL(cachedBlob);audio.src=currentAudioObjectUrl;activeChapterAudio=audio;}
+ else if(!isOfflineMode){audio.src=chapter.audio_url;activeChapterAudio=audio;}
+ else {audio.removeAttribute("src");audio.controls=false;audio.setAttribute("aria-disabled","true");activeChapterAudio=null;}
+ if(audioUnavailableOffline)clearChapterMediaSession();else updateMediaSession(chapter,audio);
  if(audioUnavailableOffline){const notice=document.createElement("p");notice.className="notice";notice.textContent="Cette narration n’a pas été téléchargée. Reconnecte-toi à Internet pour l’écouter ou la conserver hors connexion.";panel.appendChild(notice);}
  audio.addEventListener("ended",()=>{
   const hasNextAudio=currentChapter<chapters.length-1&&Boolean(chapters[currentChapter+1]?.audio_url);
