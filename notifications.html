@@ -117,7 +117,7 @@
     }
     const status = document.getElementById("activityStatus");
     const container = document.getElementById("activityList");
-    status.textContent = "Chargement des publications des auteurs suivis…";
+    status.textContent = "Chargement des publications et nouveaux chapitres…";
     try {
       const { data: followRows, error: followError } = await supabase.from("follows")
         .select("followed_id").eq("follower_id", currentUser.id).limit(500);
@@ -131,37 +131,58 @@
       const { data: stories, error: storyError } = await supabase.from("stories")
         .select("id,title,cover_url,author_id,story_type,genre,created_at,status,moderation_hidden")
         .in("author_id", authorIds).eq("status", "published").eq("moderation_hidden", false)
-        .order("created_at", { ascending: false }).limit(40);
+        .order("created_at", { ascending: false }).limit(100);
       if (storyError) throw storyError;
-      const items = stories || [];
-      const profileIds = [...new Set(items.map(s => s.author_id).filter(Boolean))];
+      const storyRows = stories || [];
+      const storyIds = storyRows.map(s => s.id);
+      let chapterRows = [];
+      if (storyIds.length) {
+        const { data: chapters, error: chapterError } = await supabase.from("chapters")
+          .select("id,title,story_id,chapter_number,created_at,moderation_hidden")
+          .in("story_id", storyIds).eq("moderation_hidden", false)
+          .order("created_at", { ascending: false }).limit(100);
+        if (chapterError) throw chapterError;
+        chapterRows = chapters || [];
+      }
+      const storyMap = new Map(storyRows.map(story => [story.id, story]));
+      const profileIds = [...new Set(storyRows.map(s => s.author_id).filter(Boolean))];
       let profileMap = new Map();
       if (profileIds.length) {
         const { data: profiles, error: profileError } = await supabase.from("profiles")
           .select("id,username,display_name").in("id", profileIds);
         if (!profileError) profileMap = new Map((profiles || []).map(p => [p.id, p]));
       }
+      const events = [
+        ...storyRows.map(story => ({kind:"story",story,created_at:story.created_at})),
+        ...chapterRows.map(chapter => ({kind:"chapter",chapter,story:storyMap.get(chapter.story_id),created_at:chapter.created_at}))
+          .filter(event => event.story)
+      ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,40);
       container.replaceChildren();
-      if (!items.length) {
-        status.textContent = "Les auteurs que tu suis n’ont pas encore de nouvelle histoire publiée.";
+      if (!events.length) {
+        status.textContent = "Les auteurs que tu suis n’ont pas encore publié de nouvelle histoire ou de nouveau chapitre.";
         return;
       }
-      items.forEach(story => {
+      events.forEach(event => {
+        const story = event.story;
         const profile = profileMap.get(story.author_id);
         const name = profile?.display_name || (profile?.username ? "@" + profile.username : "Un auteur suivi");
+        const isChapter = event.kind === "chapter";
         const card = makeElement("article", "activity");
         const avatar = makeElement("div", "avatar", name.replace(/^@/, "").slice(0,1).toLocaleUpperCase("fr"));
         const copy = makeElement("div", "activity-copy");
         const line = makeElement("p");
         const strong = makeElement("strong", "", name);
-        const verb = document.createTextNode(" a publié une nouvelle histoire : ");
+        const verb = document.createTextNode(isChapter ? " a publié un nouveau chapitre dans : " : " a publié une nouvelle histoire : ");
         const title = makeElement("strong", "", story.title || "Sans titre");
         line.append(strong, verb, title);
-        copy.append(line, makeElement("p", "notification-date", niceDate(story.created_at)));
-        const meta = makeElement("p", "notification-message", (story.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + (story.genre || "Autre"));
-        copy.append(meta);
-        const open = makeElement("a", "link", "Découvrir");
-        open.href = "reader.html?db_story=" + encodeURIComponent(story.id);
+        copy.append(line, makeElement("p", "notification-date", niceDate(event.created_at)));
+        const metaText = isChapter
+          ? "Chapitre " + (event.chapter.chapter_number ?? "") + " · " + (event.chapter.title || "Sans titre")
+          : (story.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + (story.genre || "Autre");
+        copy.append(makeElement("p", "notification-message", metaText));
+        const open = makeElement("a", "link", isChapter ? "Lire le chapitre" : "Découvrir");
+        open.href = "reader.html?db_story=" + encodeURIComponent(story.id) +
+          (isChapter ? "&chapter_id=" + encodeURIComponent(event.chapter.id) : "");
         copy.append(open);
         card.append(avatar, copy);
         if (story.cover_url) {
@@ -171,7 +192,7 @@
         }
         container.append(card);
       });
-      status.textContent = items.length + " publication(s) des auteurs suivis.";
+      status.textContent = events.length + " nouveauté(s) des auteurs suivis.";
     } catch (error) {
       status.textContent = "Impossible de charger le fil : " + (error.message || "erreur inconnue");
       console.error("Fil Novelia", error);
