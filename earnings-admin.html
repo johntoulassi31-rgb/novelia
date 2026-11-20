@@ -75,7 +75,7 @@ $("settings").onsubmit=async e=>{
  const share=Number($("share").value),minPayout=Number($("minPayout").value),minPrice=Number($("minPrice").value),maxPrice=Number($("maxPrice").value);
  const moov=Number($("moovFee").value),tmoney=Number($("tmoneyFee").value);
  if(!(share>0&&share<100&&minPayout>0&&minPrice>0&&maxPrice>=minPrice&&moov>=0&&tmoney>=0)){msg.textContent="Vérifie les valeurs saisies.";return;}
- if($("enabled").checked&&!confirm("Activer les paiements et retraits réels ? Vérifie d’abord les clés CinetPay et les tarifs de ton contrat."))return;
+ if($("enabled").checked){msg.textContent="Vérification du compte CinetPay…";const health=await db.functions.invoke("cinetpay-health-check");if(health.error||!health.data?.verified||health.data?.environment!=="production"){msg.textContent="Activation refusée : configure des identifiants CinetPay de production valides dans les secrets Supabase.";return;}if(!confirm("Les identifiants CinetPay de production répondent. Activer les paiements et retraits réels ? Vérifie les tarifs et l’autorisation des transferts."))return;}
  const r=await db.from("novelia_monetization_settings").update({
   enabled:$("enabled").checked,author_share_bps:Math.round(share*100),minimum_payout_xof:minPayout,
   minimum_chapter_price_xof:minPrice,maximum_chapter_price_xof:maxPrice,
