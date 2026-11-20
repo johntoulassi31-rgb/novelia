@@ -228,6 +228,7 @@
   }
 
   function buildTargetLink(item) {
+    if (["contest_update","contest_results"].includes(item.type)) return { label: item.type === "contest_results" ? "Voir les résultats" : "Voir le concours", href: "contests.html" + (item.contest_id ? "?contest=" + encodeURIComponent(item.contest_id) : ""), kind: "contest" };
     if (item.type === "new_message") {
       return { label: "Ouvrir la conversation", href: "messages.html" + (item.conversation_id ? "?conversation=" + encodeURIComponent(item.conversation_id) : ""), kind: "message" };
     }
@@ -275,6 +276,9 @@
         item.type === "new_comment" ? "Nouveau commentaire sur ton œuvre" :
         item.type === "new_review" ? "Nouvel avis sur ton œuvre" :
         item.type === "new_message" ? "Nouveau message privé" :
+        item.type === "contest_award" ? "Prix de concours reçu" :
+        item.type === "contest_results" ? "Résultats officiels publiés" :
+        item.type === "contest_update" ? "Actualité d’un concours" :
         item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
       top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
@@ -318,7 +322,7 @@
     try {
       const { data, error } = await supabase
         .from("notifications")
-        .select("id, recipient_id, actor_id, type, story_id, chapter_id, conversation_id, message, is_read, created_at")
+        .select("id, recipient_id, actor_id, type, story_id, chapter_id, conversation_id, contest_id, message, is_read, created_at")
         .eq("recipient_id", currentUser.id)
         .order("created_at", { ascending: false })
         .limit(100);
