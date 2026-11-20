@@ -110,7 +110,7 @@ Deno.serve(async (req: Request) => {
         failedUrl: base + "/payment-result.html?purchase=" + purchase.id + "&failed=1",
         notifyUrl: supabaseUrl + "/functions/v1/cinetpay-webhook",
         channel: "PUSH",
-        paymentMethod: method,
+        paymentMethod: method as 'MOOV_TG' | 'TMONEY_TG',
       }, "TG");
 
       const { error: updateError } = await admin
