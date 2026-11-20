@@ -101,17 +101,17 @@ async function checkRecord(record,status,update,check){
 }
 function createCard(record){
  const story=record.story||{},chapters=Array.isArray(record.chapters)?record.chapters:[];
- const card=node("article","","download-card"),cover=story.cover?document.createElement("img"):node("div",story.title||"Novelia","cover-fallback");
+ const card=node("article","","download-card");card.dataset.storyId=record.id;const cover=story.cover?document.createElement("img"):node("div",story.title||"Novelia","cover-fallback");
  if(story.cover){cover.className="cover";cover.src=story.cover;cover.alt="Couverture de "+(story.title||"l’œuvre");cover.loading="lazy";cover.onerror=()=>cover.replaceWith(node("div",story.title||"Novelia","cover-fallback"));}
  card.append(cover);const body=node("div","","card-body");
  body.append(node("h2",story.title||"Œuvre sans titre"));
  body.append(node("p",(story.type||"Roman")+" · "+(story.genre||"Autre"),"meta"));
  body.append(node("p",chapters.length+" chapitre(s) ou épisode(s)","meta"));
  body.append(node("p","Enregistrée le "+formatDate(record.savedAt),"meta"));
- const updateStatus=node("p","Mises à jour non vérifiées.","meta");updateStatus.setAttribute("role","status");body.append(updateStatus);
+ const updateStatus=node("p","Mises à jour non vérifiées.","meta update-status");updateStatus.setAttribute("role","status");body.append(updateStatus);
  const actions=node("div","","card-actions"),open=node("a","Lire hors connexion","btn primary");
  open.href="reader.html?db_story="+encodeURIComponent(record.id);actions.append(open);
- const check=node("button","Vérifier","");check.type="button";
+ const check=node("button","Vérifier","check-update");check.type="button";
  const update=node("button","Mettre à jour","primary");update.type="button";update.hidden=true;
  check.addEventListener("click",()=>checkRecord(record,updateStatus,update,check));
  update.addEventListener("click",async()=>{update.disabled=true;check.disabled=true;updateStatus.textContent="Téléchargement des nouveaux chapitres…";try{const latest=await fetchLatest(record.id);if(!latest)throw new Error("Cette œuvre n’est plus disponible publiquement.");if(!latest.changed){updateStatus.textContent="Cette copie est déjà à jour.";update.hidden=true;return;}await putRecord(latest.record);updateStatus.textContent="Copie mise à jour le "+formatDate(latest.record.savedAt)+".";update.hidden=true;await render();}catch(error){updateStatus.textContent=error.message||"Mise à jour impossible.";}finally{update.disabled=false;check.disabled=false;}});
@@ -133,7 +133,7 @@ async function render(){
   if(navigator.storage&&navigator.storage.estimate){try{const estimate=await navigator.storage.estimate();if(Number.isFinite(estimate.quota)&&estimate.quota>0){$("quotaInfo").textContent="Espace navigateur utilisé : "+formatBytes(estimate.usage||0)+" sur environ "+formatBytes(estimate.quota)+" (toutes les données du site).";}}catch{}}
  }catch(error){$("status").textContent=error.message||"Impossible de lire les téléchargements."; $("status").className="error";$("downloadList").replaceChildren(node("p","Le stockage hors connexion est inaccessible sur cet appareil.","empty"));}
 }
-$("checkAllButton").addEventListener("click",async()=>{const button=$("checkAllButton");button.disabled=true;try{const records=await getAll();if(!navigator.onLine)throw new Error("Connecte-toi à Internet pour vérifier les mises à jour.");for(const record of records){const latest=await fetchLatest(record.id);if(latest&&!latest.changed)continue;/* Le contrôle individuel affiche les détails et propose la mise à jour. */}await render();$("status").textContent="Vérification terminée. Ouvre chaque œuvre pour voir si une mise à jour est disponible."; }catch(error){$("status").textContent=error.message||"Vérification impossible.";$("status").className="error";}finally{button.disabled=false;}});
+$("checkAllButton").addEventListener("click",async()=>{const button=$("checkAllButton");button.disabled=true;try{if(!navigator.onLine)throw new Error("Connecte-toi à Internet pour vérifier les mises à jour.");const cards=[...$("downloadList").querySelectorAll(".download-card")];for(const card of cards){const check=card.querySelector(".check-update"),update=card.querySelector("button.primary"),status=card.querySelector(".update-status"),record=recordCache.get(card.dataset.storyId);if(check&&update&&status&&record)await checkRecord(record,status,update,check);}const available=$("downloadList").querySelectorAll(".download-card button.primary:not([hidden])").length;$("status").textContent="Vérification terminée : "+available+" mise(s) à jour disponible(s).";$("status").className="success";}catch(error){$("status").textContent=error.message||"Vérification impossible.";$("status").className="error";}finally{button.disabled=false;}});
 $("refreshButton").addEventListener("click",render);render();
 </script>
 </body>
