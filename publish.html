@@ -892,7 +892,8 @@ async function openChapterEditor(chapter = null) {
   chapterForm.classList.remove("hidden");
   setChapterAutosaveStatus("Recherche d’un brouillon…");
   await restoreChapterDraft(chapter);
-  renderWritingMetrics($("chapterEditContent"),"chapterWritingMetrics");\n  await loadChapterVersions();
+  renderWritingMetrics($("chapterEditContent"),"chapterWritingMetrics");
+  await loadChapterVersions();
   chapterForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -989,7 +990,8 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
 await initialize();
 renderWritingMetrics($("content"),"createWritingMetrics");
-loadWritingGoal();\nupdateGoalProgress(countWords($("chapterEditContent").value));
+loadWritingGoal();
+updateGoalProgress(countWords($("chapterEditContent").value));
 </script>
 <script src="bottom-nav.js" defer></script>
 <script src="suspension-banner.js" defer></script>
