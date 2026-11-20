@@ -710,7 +710,7 @@ function renderChapters() {
 }
 
 
-function countWords(value) { const t=String(value||"").trim(); return t ? (t.match(/\\S+/g)||[]).length : 0; }
+function countWords(value) { const t=String(value||"").trim(); return t ? (t.match(/\S+/g)||[]).length : 0; }
 function renderWritingMetrics(textarea,targetId) {
   const words=countWords(textarea.value), minutes=Math.max(1,Math.ceil(words/200)), node=$(targetId);
   if(node) node.textContent=words+" mot"+(words>1?"s":"")+" · environ "+minutes+" min de lecture";
