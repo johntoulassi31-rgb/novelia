@@ -30,13 +30,14 @@ begin
     else raise exception 'Méthode de paiement non prise en charge.';
     end if;
     new.author_share_bps:=v_share_bps;
+    new.provider_fee_bps:=v_fee_bps;
     new.provider_fee_xof:=0; new.platform_fee_xof:=0; new.author_earning_xof:=0; new.paid_at:=null;
     return new;
   end if;
   if new.buyer_id<>old.buyer_id or new.author_id<>old.author_id or new.story_id<>old.story_id
      or new.chapter_id<>old.chapter_id or new.gross_amount_xof<>old.gross_amount_xof
      or new.payment_provider<>old.payment_provider or new.payment_method<>old.payment_method
-     or new.client_transaction_id<>old.client_transaction_id or new.author_share_bps<>old.author_share_bps then
+     or new.client_transaction_id<>old.client_transaction_id or new.author_share_bps<>old.author_share_bps or new.provider_fee_bps<>old.provider_fee_bps then
     raise exception 'Les informations principales d’un achat sont immuables.';
   end if;
   if old.status in ('failed','refunded') and new.status<>old.status then
@@ -49,7 +50,7 @@ begin
     end if;
     if new.paid_at is null then new.paid_at:=now(); end if;
     if new.provider_fee_xof<0 or new.provider_fee_xof>new.gross_amount_xof then raise exception 'Frais de paiement invalides.'; end if;
-    v_expected_fee:=ceil(new.gross_amount_xof*v_fee_bps::numeric/10000)::bigint;
+    v_expected_fee:=ceil(new.gross_amount_xof*new.provider_fee_bps::numeric/10000)::bigint;
     v_net:=new.gross_amount_xof-new.provider_fee_xof;
     v_expected_platform:=floor(v_net*(10000-new.author_share_bps)::numeric/10000)::bigint;
     if new.platform_fee_xof<>v_expected_platform or new.author_earning_xof<>v_net-v_expected_platform then
