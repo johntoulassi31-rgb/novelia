@@ -719,6 +719,11 @@ $("reportForm").addEventListener("submit", async event => {
   $("reportStatus").textContent = "Envoi du signalement…";
 
   try {
+    if ($("reportReason").value === "copyright") {
+      const query = new URLSearchParams({type:reportTarget.type,id:reportTarget.id,title:reportTarget.title||"Contenu Novelia",details:$("reportDetails").value.trim()});
+      window.location.href = "copyright.html?" + query.toString();
+      return;
+    }
     const { error } = await supabase.from("content_reports").insert({
       reporter_id: currentUser.id,
       target_type: reportTarget.type,
