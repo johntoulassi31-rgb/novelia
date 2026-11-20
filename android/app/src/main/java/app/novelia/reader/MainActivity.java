@@ -85,9 +85,6 @@ public class MainActivity extends Activity {
             service.putExtra(NoveliaPlaybackService.EXTRA_TITLE, title);
             service.putExtra(NoveliaPlaybackService.EXTRA_TOKEN, mediaSession.getSessionToken());
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(service); else startService(service);
-        } else {
-            service.setAction(NoveliaPlaybackService.ACTION_STOP);
-            startService(service);
         }
     }
 
@@ -99,7 +96,14 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> setNativePlayback(title, author, true));
         }
         @JavascriptInterface public void paused() {
-            runOnUiThread(() -> setNativePlayback("Novelia", "Lecture audio", false));
+            runOnUiThread(() -> {
+                setNativePlayback("Novelia", "Lecture audio", false);
+                Intent service = new Intent(MainActivity.this, NoveliaPlaybackService.class);
+                service.setAction(NoveliaPlaybackService.ACTION_PAUSE);
+                service.putExtra(NoveliaPlaybackService.EXTRA_TITLE, "Novelia");
+                service.putExtra(NoveliaPlaybackService.EXTRA_TOKEN, mediaSession.getSessionToken());
+                startService(service);
+            });
         }
         @JavascriptInterface public void stopped() {
             runOnUiThread(() -> {
