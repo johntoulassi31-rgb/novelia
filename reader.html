@@ -1192,6 +1192,7 @@ function renderChapter() {
     return;
   }
   $("commentsPanel").hidden=false;
+  $("content").classList.remove("chapter-paywall");
   renderChapterAudio(chapter);
   if (story.type === "Webtoon") renderWebtoon(chapter);
   else renderNovel(chapter);
