@@ -210,6 +210,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
     <div id="commentsList"></div>
   </section>
 </section>
+<div class="reader-bottom-bar" id="readerBottomBar" hidden><button class="button secondary" id="readerPrevFixed" type="button">← Précédent</button><button class="button secondary" id="readerCommentsFixed" type="button">Commentaires</button><button class="button primary" id="readerNextFixed" type="button">Suivant →</button></div>
+
 
 <p class="notice" id="errorMessage" hidden>Cette œuvre est introuvable ou n'est pas accessible.</p>
 <p id="status" role="status" aria-live="polite"></p>
@@ -1183,6 +1185,9 @@ function renderChapter() {
   if (!chapter) return;
 
   $("chapterTitle").textContent = chapter.title || "Chapitre " + (currentChapter + 1);
+  $("readerBarTitle").textContent=story.title+" · "+(chapter.title||"Chapitre "+(currentChapter+1));
+  $("readerPrevFixed").disabled=currentChapter<=0;
+  $("readerNextFixed").disabled=currentChapter>=chapters.length-1;
   $("readingType").textContent = story.type;
 
   const percent = Math.round(((currentChapter + 1) / chapters.length) * 100);
@@ -1224,6 +1229,7 @@ function openReader(index, restorePosition = true) {
     }
   }
   $("reader").hidden = false;
+  $("readerBottomBar").hidden = false;
   renderChapter();
   $("reader").scrollIntoView({behavior:"smooth",block:"start"});
   const saved = getProgress()[storyKey];
@@ -1360,6 +1366,8 @@ function showStory() {
   $("chapterCount").textContent = chapters.length + (story.type === "Roman" ? " chapitre(s)" : " épisode(s)");
 
   setCover(story.cover, story.title);
+  $("storyAboutText").textContent=story.description||"Aucune présentation n’a encore été ajoutée.";
+  $("readerBarTitle").textContent=story.title;
   updateFavoriteButton();
   updateResumeButton();
   // Les œuvres de démonstration locales n'ont pas d'UUID dans public.stories.
