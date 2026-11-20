@@ -217,12 +217,13 @@
         };
       }
     }
-    if ((item.type === "new_chapter" || item.type === "comment_reply") && item.story_id) {
+    if (["new_chapter","comment_reply","new_comment","new_review"].includes(item.type) && item.story_id) {
       const url = "reader.html?db_story=" + encodeURIComponent(item.story_id) +
         (item.chapter_id ? "&chapter_id=" + encodeURIComponent(item.chapter_id) : "");
-      return item.type === "comment_reply"
-        ? { label: "Voir la réponse", href: url, kind: "comment" }
-        : { label: "Lire le chapitre", href: url, kind: "chapter" };
+      if (item.type === "comment_reply") return { label: "Voir la réponse", href: url, kind: "comment" };
+      if (item.type === "new_comment") return { label: "Voir le commentaire", href: url, kind: "comment" };
+      if (item.type === "new_review") return { label: "Voir les avis", href: url, kind: "review" };
+      return { label: "Lire le chapitre", href: url, kind: "chapter" };
     }
     return null;
   }
@@ -246,6 +247,8 @@
       const typeLabel = item.type === "new_follower" ? "Nouvel abonné" :
         item.type === "new_chapter" ? "Nouveau chapitre" :
         item.type === "comment_reply" ? "Réponse à ton commentaire" :
+        item.type === "new_comment" ? "Nouveau commentaire sur ton œuvre" :
+        item.type === "new_review" ? "Nouvel avis sur ton œuvre" :
         item.type === "moderation_warning" ? "Avertissement de modération" : "Notification";
       top.appendChild(makeElement("strong", "", typeLabel));
       top.appendChild(makeElement("span", "badge", item.is_read ? "Lue" : "Non lue"));
