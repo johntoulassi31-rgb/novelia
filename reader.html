@@ -280,6 +280,7 @@ let chapters = [];
 let currentChapter = 0;
 let currentUser = null;
 let isDatabaseStory = Boolean(dbStoryId);
+let isOfflineMode = false;
 let librarySyncReady = false;
 let librarySyncQueue = Promise.resolve();
 let storyLiked = false;
@@ -1054,7 +1055,7 @@ async function loadDatabaseStory() {
     if(!isNetworkFailure(error))throw error;
     const cached=await getOfflineStory(dbStoryId);
     if(!cached?.story||!Array.isArray(cached.chapters)||!cached.chapters.length)throw new Error("Connexion indisponible et aucune copie hors connexion n’a été enregistrée pour cette œuvre.");
-    story=cached.story;chapters=cached.chapters;offlineMediaMap=cached.media||{};offlineAudioMap=cached.audio||{};
+    story=cached.story;chapters=cached.chapters;offlineMediaMap=cached.media||{};offlineAudioMap=cached.audio||{};isOfflineMode=true;
     $("offlineStatus").textContent="Mode hors connexion : copie enregistrée le "+new Date(cached.savedAt).toLocaleString("fr-FR")+".";
   }
 }
@@ -1072,9 +1073,9 @@ function showStory() {
   updateFavoriteButton();
   updateResumeButton();
   // Les œuvres de démonstration locales n'ont pas d'UUID dans public.stories.
-  $("storyLikeButton").hidden = !isDatabaseStory;
-  $("storyLikeCount").hidden = !isDatabaseStory;
-  $("reportStoryButton").hidden = !isDatabaseStory;
+  $("storyLikeButton").hidden = !isDatabaseStory || isOfflineMode;
+  $("storyLikeCount").hidden = !isDatabaseStory || isOfflineMode;
+  $("reportStoryButton").hidden = !isDatabaseStory || isOfflineMode;
   $("shareStoryButton").hidden = !isDatabaseStory;
   $("storyLikeMessage").textContent = "";
 
@@ -1275,6 +1276,11 @@ $("cancelReplyButton").addEventListener("click", () => {
 
 async function loadComments() {
   if (!isDatabaseStory || !chapters[currentChapter]?.id) return;
+  if (isOfflineMode || !navigator.onLine) {
+    $("commentsList").replaceChildren();
+    $("commentsStatus").textContent = "Commentaires indisponibles hors connexion. Ils réapparaîtront dès le retour d’Internet.";
+    return;
+  }
 
   const chapterId = chapters[currentChapter].id;
   $("commentsList").replaceChildren();
@@ -1444,7 +1450,20 @@ async function main() {
     showStory();
     if(isDatabaseStory) await updateOfflineButton();
     renderOfflineChapterPicker();
-    await refreshUser();
+    if (isOfflineMode) {
+      $("commentForm").hidden = true;
+      $("loginCommentNotice").hidden = true;
+      $("storyLikeMessage").textContent = "Mode hors connexion : les interactions communautaires seront réactivées avec Internet.";
+    } else {
+      try { await refreshUser(); }
+      catch (error) {
+        console.warn("Fonctions de compte indisponibles :", error);
+        currentUser = null;
+        librarySyncReady = false;
+        $("commentForm").hidden = true;
+        $("loginCommentNotice").hidden = false;
+      }
+    }
 
     // Si la page a été ouverte depuis une notification, privilégier le chapitre visé
     // plutôt que la dernière progression enregistrée dans la bibliothèque.
