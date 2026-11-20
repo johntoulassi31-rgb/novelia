@@ -90,7 +90,35 @@ let allStories = [];
 let personalStories = [];
 let trendingStories = [];
 let latestStories = [];
+let discoveryMetrics = new Map();
+const recordedImpressions = new Set();
 const dateNow = Date.now();
+async function trackDiscoveryEvent(storyId, eventType, sourceSection) {
+  if (!currentUser || !storyId) return;
+  const key = String(storyId) + ":" + eventType;
+  if (eventType === "impression") {
+    if (recordedImpressions.has(key)) return;
+    recordedImpressions.add(key);
+  }
+  const { error } = await supabase.from("novelia_discovery_events").insert({
+    user_id: currentUser.id,
+    story_id: storyId,
+    event_type: eventType,
+    source_section: sourceSection
+  });
+  if (error && error.code !== "23505") console.debug("Novelia discovery tracking:", error.message);
+}
+const impressionObserver = typeof IntersectionObserver !== "undefined"
+  ? new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.35) {
+          const card = entry.target;
+          impressionObserver.unobserve(card);
+          trackDiscoveryEvent(card.dataset.storyId, "impression", card.dataset.sourceSection || "discovery");
+        }
+      });
+    }, {threshold:[0.35]})
+  : null;
 function safeText(value, fallback = "") { return typeof value === "string" && value.trim() ? value.trim() : fallback; }
 function readLink(story) { return "reader.html?db_story=" + encodeURIComponent(String(story.id)); }
 function renderCards(targetId, stories, emptyText) {
@@ -98,6 +126,9 @@ function renderCards(targetId, stories, emptyText) {
   if (!stories || stories.length === 0) { const note = document.createElement("p"); note.className = "empty"; note.textContent = emptyText; container.append(note); return; }
   stories.forEach(story => {
     const card = document.createElement("article"); card.className = "card";
+    card.dataset.storyId = String(story.id);
+    card.dataset.sourceSection = targetId === "recommended" ? "recommended" : targetId === "trending" ? "trending" : targetId === "latest" ? "latest" : "search";
+    if (impressionObserver && currentUser) impressionObserver.observe(card);
     if (story.cover_url) {
       const img = document.createElement("img"); img.className = "cover"; img.src = story.cover_url;
       img.alt = "Couverture de " + safeText(story.title, "cette histoire"); img.loading = "lazy";
@@ -109,6 +140,7 @@ function renderCards(targetId, stories, emptyText) {
     const details = document.createElement("p"); details.textContent = (story.story_type === "webtoon" ? "Webtoon" : "Roman") + " · " + safeText(story.genre, "Autre");
     const like = document.createElement("span"); like.className = "pill"; like.textContent = "♥ " + (story.likesCount || 0) + " J’aime";
     const read = document.createElement("a"); read.className = "read"; read.href = readLink(story); read.textContent = "Lire l’histoire";
+    read.addEventListener("click", () => trackDiscoveryEvent(story.id, "click", card.dataset.sourceSection));
     info.append(title, details, like, read); card.append(info); container.append(card);
   });
 }
@@ -156,6 +188,10 @@ async function loadDiscovery() {
     const likesCount = new Map();
     if (!likesError) (likesRows || []).forEach(row => likesCount.set(String(row.story_id), (likesCount.get(String(row.story_id)) || 0) + 1));
     items.forEach(s => s.likesCount = likesCount.get(String(s.id)) || 0);
+    const { data: metricsRows, error: metricsError } = await supabase.rpc("novelia_discovery_metrics");
+    if (!metricsError) (metricsRows || []).forEach(row => discoveryMetrics.set(String(row.story_id), {
+      impressions: Number(row.impressions || 0), clicks: Number(row.clicks || 0)
+    }));
     let likedIds = [], savedIds = [], followedAuthors = [], progressRows = [], favoriteRows = [];
     if (currentUser) {
       const [likedResult, savedResult, followsResult, progressResult] = await Promise.all([
@@ -208,11 +244,16 @@ async function loadDiscovery() {
       const explorationBoost = (s.likesCount <= 2 ? 28 : s.likesCount <= 5 ? 15 : 0)
         + (authorCount <= 2 ? 12 : authorCount <= 4 ? 6 : 0)
         + (ageDays <= 14 ? 10 : 0);
-      const engagementScore = Math.log1p(s.likesCount || 0) * 4;
+      const engagementScore = Math.log1p(s.likesCount || 0) * 3;
       const freshnessScore = Math.max(0, 24 - Math.min(ageDays, 24));
+      const metrics = discoveryMetrics.get(String(s.id)) || {impressions:0,clicks:0};
+      const clickRate = (metrics.clicks + 1) / (metrics.impressions + 20);
+      const exposureBoost = metrics.impressions <= 2 ? 14 : metrics.impressions <= 8 ? 8 : 0;
+      const responseScore = Math.min(18, clickRate * 100);
       const score = genreAffinity * 9 + engagementScore + freshnessScore + explorationBoost
+        + exposureBoost + responseScore
         + (currentUser && followedSet.has(String(s.author_id)) ? 18 : 0);
-      return {...s, recommendationScore: score, explorationBoost};
+      return {...s, recommendationScore: score, explorationBoost, impressions:metrics.impressions, clicks:metrics.clicks, clickRate};
     }).sort((a,b) => b.recommendationScore-a.recommendationScore).slice(0,12);
     if (!currentUser) {
       $("personalNote").textContent = "Connecte-toi pour personnaliser les suggestions";
@@ -225,7 +266,11 @@ async function loadDiscovery() {
       $("status").textContent = "Ton compte est connecté. Les tendances et nouveautés sont disponibles dès maintenant.";
     }
     personalStories=personal;
-    trendingStories=[...items].sort((a,b)=>(Math.log1p(b.likesCount||0)*5 + Math.max(0,20-Math.min((dateNow-(Date.parse(b.created_at||"")||dateNow))/86400000,20))) - (Math.log1p(a.likesCount||0)*5 + Math.max(0,20-Math.min((dateNow-(Date.parse(a.created_at||"")||dateNow))/86400000,20)))).slice(0,12);
+    trendingStories=[...items].sort((a,b)=>{
+      const ma=discoveryMetrics.get(String(a.id))||{impressions:0,clicks:0}, mb=discoveryMetrics.get(String(b.id))||{impressions:0,clicks:0};
+      const score=s=>Math.log1p(s.likesCount||0)*3+Math.max(0,20-Math.min((dateNow-(Date.parse(s.created_at||"")||dateNow))/86400000,20));
+      return (score(b)+(mb.clicks+1)/(mb.impressions+20)*80+(mb.impressions<=2?10:0))-(score(a)+(ma.clicks+1)/(ma.impressions+20)*80+(ma.impressions<=2?10:0));
+    }).slice(0,12);
     latestStories=[...items].sort((a,b)=>(Date.parse(b.created_at||"")||0)-(Date.parse(a.created_at||"")||0)).slice(0,12);
     applyDiscoveryFilters();
   } catch (err) {
