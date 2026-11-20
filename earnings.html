@@ -65,7 +65,7 @@ async function init(){
   db.from("novelia_public_monetization_config").select("enabled,author_share_bps,minimum_payout_xof,minimum_chapter_price_xof,maximum_chapter_price_xof").single(),
   db.from("novelia_author_wallet_balances").select("available_balance_xof").eq("author_id",user.id).maybeSingle(),
   db.from("novelia_author_wallet_ledger").select("id,amount_xof,entry_type,description,created_at").eq("author_id",user.id).order("created_at",{ascending:false}).limit(100),
-  db.from("novelia_payout_requests").select("id,amount_xof,status,created_at,processed_at,destination_operator,destination_phone_number").eq("author_id",user.id).order("created_at",{ascending:false}).limit(50),
+  db.from("novelia_payout_requests").select("id,amount_xof,provider_fee_xof,status,created_at,processed_at,destination_operator,destination_phone_number").eq("author_id",user.id).order("created_at",{ascending:false}).limit(50),
   db.from("novelia_payout_destinations").select("id,operator,phone_number,account_holder,is_default").eq("author_id",user.id).order("created_at",{ascending:false})
  ]);
  config=cfg.data||{enabled:false,minimum_payout_xof:5000,author_share_bps:7000};
@@ -102,7 +102,7 @@ function renderPayouts(rows){
  const root=$("payoutHistory");root.replaceChildren();
  if(!rows.length){root.append(el("p","muted","Aucune demande de retrait."));return;}
  const labels={requested:"En attente",approved:"Approuvée",processing:"Transfert en cours",paid:"Payée",failed:"Échec",cancelled:"Annulée"};
- rows.forEach(x=>{const row=el("div","row"),left=el("div","",labels[x.status]||x.status);left.append(el("small","",date(x.created_at)+" · "+(x.destination_operator==="moov_tg"?"Moov":"TMoney")+" "+x.destination_phone_number));row.append(left,el("span","amount",fmt(x.amount_xof)));root.append(row);});
+ rows.forEach(x=>{const row=el("div","row"),left=el("div","",labels[x.status]||x.status);left.append(el("small","",date(x.created_at)+" · "+(x.destination_operator==="moov_tg"?"Moov":"TMoney")+" "+x.destination_phone_number+(Number(x.provider_fee_xof)>0?" · frais "+fmt(x.provider_fee_xof):"")));row.append(left,el("span","amount",fmt(x.amount_xof)));root.append(row);});
 }
 $("destinationForm").onsubmit=async e=>{
  e.preventDefault();const msg=$("destinationMessage");msg.textContent="Enregistrement…";
