@@ -1261,20 +1261,44 @@ $("saveReaderPrefs").addEventListener('click', async () => {
   }
 });
 
-window.addEventListener('scroll', () => {
+function persistCurrentReadingPosition() {
+  if ($("reader").hidden || !story || !chapters[currentChapter]) return;
+  try {
+    const progress = getProgress();
+    const previous = progress[storyKey] || {};
+    progress[storyKey] = {
+      ...previous,
+      chapter: currentChapter,
+      total: chapters.length,
+      scrollPercent: currentContentScrollPercent(),
+      updatedAt: new Date().toISOString(),
+      syncSource: "local"
+    };
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    updateResumeButton();
+    if (currentUser && librarySyncReady && navigator.onLine) saveDetailedProgressToCloud();
+  } catch (error) {
+    console.warn("Sauvegarde de position impossible :", error);
+  }
+}
+window.addEventListener("scroll", () => {
   if ($("reader").hidden || !story || !chapters[currentChapter]) return;
   if (scrollSaveTimer) window.clearTimeout(scrollSaveTimer);
   scrollSaveTimer = window.setTimeout(() => {
-    try {
-      const progress = getProgress();
-      const old = progress[storyKey] || {};
-      progress[storyKey] = {...old, chapter:currentChapter, total:chapters.length, scrollPercent:currentContentScrollPercent(), updatedAt:new Date().toISOString(), syncSource:'local'};
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
-      updateResumeButton();
-      if (currentUser && librarySyncReady && navigator.onLine) saveDetailedProgressToCloud();
-    } catch (e) { console.warn('Sauvegarde de position impossible :', e); }
+    scrollSaveTimer = null;
+    persistCurrentReadingPosition();
   }, 800);
 }, {passive:true});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && !$("reader").hidden) {
+    if (scrollSaveTimer) { window.clearTimeout(scrollSaveTimer); scrollSaveTimer = null; }
+    persistCurrentReadingPosition();
+  }
+});
+window.addEventListener("pagehide", () => {
+  if (scrollSaveTimer) { window.clearTimeout(scrollSaveTimer); scrollSaveTimer = null; }
+  persistCurrentReadingPosition();
+});
 
 
 let selectedReviewRating = 0;
