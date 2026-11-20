@@ -154,7 +154,7 @@ async function loadPublicationReceipts(){
   box.append(card);
  });
 }
-async function loadDashboard(){const {data:a,error:ae}=await supabase.auth.getUser();if(ae)throw ae;user=a.user;if(!user){status("Connecte-toi pour gérer tes histoires.","error");$("storyGrid").replaceChildren(el("p","Connexion requise.","muted"));const link=el("a","Se connecter","btn");link.href="login.html";$("storyGrid").append(link);$("draftList").textContent="Connexion requise.";return}
+async function loadDashboard(){const {data:a,error:ae}=await supabase.auth.getUser();if(ae)throw ae;user=a.user;if(!user){await loadPublicationReceipts();status("Connecte-toi pour gérer tes histoires.","error");$("storyGrid").replaceChildren(el("p","Connexion requise.","muted"));const link=el("a","Se connecter","btn");link.href="login.html";$("storyGrid").append(link);$("draftList").textContent="Connexion requise.";return}
 const {data:p,error:pe}=await supabase.from("profiles").select("username,display_name").eq("id",user.id).maybeSingle();if(!pe)$("authorHandle").textContent=p?.username?"@"+p.username:(p?.display_name||user.email||"Auteur Novelia");
 const {data:rows,error}=await supabase.from("stories").select("id,title,description,cover_url,genre,status,moderation_hidden,created_at,author_id").eq("author_id",user.id).order("created_at",{ascending:false});if(error)throw error;stories=rows||[];const ids=stories.map(s=>s.id);
 $("storyCount").textContent=stories.length;$("publishedCount").textContent=stories.filter(s=>s.status==="published"&&!s.moderation_hidden).length;$("draftCount").textContent=stories.filter(s=>["draft","drafts"].includes((s.status||"").toLowerCase())).length;
