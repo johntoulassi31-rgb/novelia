@@ -95,7 +95,7 @@
   </article>`).join('');
  }
  async function updateCopyrightClaim(id,button){
-  const statusSelect=document.querySelector('[data-claim-status="'+CSS.escape(id)+'"]');
+  const statusSelect=document.querySelector('[data-claim-status="'+id+'"]');
   const note=document.getElementById('copyrightNote-'+id);
   if(!statusSelect||!note)return;
   button.disabled=true;
