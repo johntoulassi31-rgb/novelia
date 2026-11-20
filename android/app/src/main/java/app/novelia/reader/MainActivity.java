@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
 
     private final class NoveliaMediaBridge {
         @JavascriptInterface public void update(String title, String author) {
-            runOnUiThread(() -> setNativePlayback(title, author, true));
+            runOnUiThread(() -> setNativePlayback(title, author, false));
         }
         @JavascriptInterface public void playing(String title, String author) {
             runOnUiThread(() -> setNativePlayback(title, author, true));
