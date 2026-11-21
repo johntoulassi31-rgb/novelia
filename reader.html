@@ -1303,6 +1303,10 @@ function openReader(index, restorePosition = true) {
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
     }
   }
+  // En mode lecture, on masque la fiche de présentation et les avis :
+  // un appui sur une œuvre mène directement au chapitre, sans écran intermédiaire.
+  $("bookCard").hidden = true;
+  $("reviewsPanel").hidden = true;
   $("reader").hidden = false;
   $("readerBottomBar").hidden = false;
   renderChapter();
@@ -1476,7 +1480,7 @@ function showStory() {
 $("libraryButton").addEventListener("click",toggleLibrary);
 document.querySelectorAll("[data-story-section]").forEach(button=>button.addEventListener("click",()=>{const key=button.dataset.storySection;document.querySelectorAll("[data-story-section]").forEach(x=>x.setAttribute("aria-selected",String(x===button)));$("storyAboutPanel").hidden=key!=="about";$("storyCharactersPanel").hidden=key!=="characters";$("storyPlaylistPanel").hidden=key!=="playlist";$("storyRewritePanel").hidden=key!=="rewrite";}));
 $("readerToolsShortcut").addEventListener("click",()=>{$("readerTools").open=true;$("readerTools").scrollIntoView({behavior:"smooth",block:"center"});});
-$("readerBackButton").addEventListener("click",()=>{$("reader").hidden=true;$("readerBottomBar").hidden=true;$("bookCard").scrollIntoView({behavior:"smooth",block:"start"});});
+$("readerBackButton").addEventListener("click",()=>{if(history.length>1){history.back();}else{location.href="index.html#histoires";}});
 $("readerPrevFixed").addEventListener("click",()=>changeReaderChapter(currentChapter-1));
 $("readerNextFixed").addEventListener("click",()=>changeReaderChapter(currentChapter+1));
 $("readerCommentsFixed").addEventListener("click",()=>$("commentsPanel").scrollIntoView({behavior:"smooth",block:"start"}));
