@@ -1051,7 +1051,7 @@ grid.addEventListener("click", event => {
     overlay.hidden=false;
   }
   document.addEventListener("pointerdown",event=>{
-    const el=event.target.closest("[data-preview-id]");if(!el)return;
+    const el=event.target.closest(".home-preview-cover[data-preview-id]");if(!el)return;
     if(event.pointerType==="mouse"&&event.button!==0)return;
     pressed=el;openedByHold=false;
     timer=window.setTimeout(()=>{openedByHold=true;show(el);},550);
@@ -1061,7 +1061,7 @@ grid.addEventListener("click", event => {
   document.addEventListener("pointercancel",cancel,{passive:true});
   document.addEventListener("pointermove",event=>{if(pressed&&Math.abs(event.movementX)+Math.abs(event.movementY)>12)cancel()},{passive:true});
   document.addEventListener("click",event=>{if(openedByHold){event.preventDefault();event.stopPropagation();openedByHold=false;}},true);
-  document.addEventListener("contextmenu",event=>{const el=event.target.closest("[data-preview-id]");if(el){event.preventDefault();show(el);}},true);
+  document.addEventListener("contextmenu",event=>{const el=event.target.closest(".home-preview-cover[data-preview-id]");if(el){event.preventDefault();show(el);}},true);
   $("storyPreviewClose").addEventListener("click",close);
   overlay.addEventListener("click",event=>{if(event.target===overlay)close()});
   document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!overlay.hidden)close()});
