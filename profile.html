@@ -133,6 +133,16 @@
         <a href="earnings-admin.html">💰 Revenus et paiements</a>
       </div>
     </section>
+    <section class="stats-panel" id="ambassadorAccessPanel" hidden aria-labelledby="ambassadorAccessTitle">
+      <h2 id="ambassadorAccessTitle">🌟 Espace ambassadeur</h2>
+      <p class="hint">Espace réservé aux ambassadeurs Novelia officiellement approuvés.</p>
+      <div class="admin-links"><a href="ambassador-space.html">Ouvrir mon espace ambassadeur</a></div>
+    </section>
+    <section class="stats-panel" id="juryAccessPanel" hidden aria-labelledby="juryAccessTitle">
+      <h2 id="juryAccessTitle">⚖️ Espace du jury</h2>
+      <p class="hint">Accès réservé aux membres du jury affectés à au moins un concours.</p>
+      <div class="admin-links"><a href="contest-jury.html">Consulter mes missions et évaluations</a></div>
+    </section>
     <p><a href="earnings.html">Consulter mes revenus d’auteur</a></p>
     <p><a href="purchases.html">Consulter mes achats premium</a></p>
     <p><a href="protection.html">Consulter les preuves de publication de mes œuvres</a></p>
@@ -330,15 +340,22 @@
       }
 
       currentUser = user;
-      // L'accès n'est affiché qu'après confirmation par la table protégée app_admins.
+      // Chaque espace n'est affiché qu'après vérification du rôle en base.
       const adminPanel = document.getElementById("adminAccessPanel");
-      if (adminPanel) {
-        adminPanel.hidden = true;
-        const adminCheck = await supabase.from("app_admins").select("user_id").eq("user_id", user.id).maybeSingle();
-        if (!adminCheck.error && adminCheck.data && adminCheck.data.user_id === user.id) {
-          adminPanel.hidden = false;
-        }
-      }
+      const ambassadorPanel = document.getElementById("ambassadorAccessPanel");
+      const juryPanel = document.getElementById("juryAccessPanel");
+      if (adminPanel) adminPanel.hidden = true;
+      if (ambassadorPanel) ambassadorPanel.hidden = true;
+      if (juryPanel) juryPanel.hidden = true;
+
+      const [adminCheck, ambassadorCheck, juryCheck] = await Promise.all([
+        supabase.from("app_admins").select("user_id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("ambassadors").select("user_id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("novelia_contest_jurors").select("id").eq("juror_id", user.id).limit(1)
+      ]);
+      if (adminPanel && !adminCheck.error && adminCheck.data?.user_id === user.id) adminPanel.hidden = false;
+      if (ambassadorPanel && !ambassadorCheck.error && ambassadorCheck.data?.user_id === user.id) ambassadorPanel.hidden = false;
+      if (juryPanel && !juryCheck.error && juryCheck.data?.length) juryPanel.hidden = false;
       emailEl.textContent = user.email || "Non renseignée";
 
       const { data, error } = await supabase
