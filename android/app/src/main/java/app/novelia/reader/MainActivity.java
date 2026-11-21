@@ -260,10 +260,18 @@ public class MainActivity extends Activity {
 
     private final class NoveliaUpdateBridge {
         @JavascriptInterface public int getVersionCode() {
-            return BuildConfig.VERSION_CODE;
+            try {
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+            } catch (Exception error) {
+                return 0;
+            }
         }
         @JavascriptInterface public String getVersionName() {
-            return BuildConfig.VERSION_NAME;
+            try {
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (Exception error) {
+                return "";
+            }
         }
     }
 
