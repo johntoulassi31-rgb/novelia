@@ -94,7 +94,32 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;border-t
 @media(max-width:360px){.book-top{grid-template-columns:1fr}.cover,.cover-fallback{width:65%}}
 .chapter-paywall{max-width:680px;margin:18px auto;padding:18px}.premium-purchase-form{margin-top:18px}.premium-purchase-form .field{margin:12px 0}.premium-purchase-form label{display:block;font-weight:bold;margin-bottom:6px}.premium-purchase-form input,.premium-purchase-form select{width:100%;padding:12px;border:1px solid #dfd2b4;border-radius:9px;background:#fffdf8;color:#392b08;font:inherit}.premium-price{font-size:27px;font-weight:bold;color:#76570c}.chapter-paywall .card{background:#f8f3e6;border:1px solid #eee3c9;border-radius:14px;padding:18px}
 \n.webtoon-upload-box{margin:12px 0;padding:14px;border:1px dashed #b99b63;border-radius:12px;background:var(--panel);color:var(--text)}.webtoon-upload-box p{font-size:13px;color:var(--muted)}.webtoon-upload-box input{max-width:100%;font:inherit}
-.webtoon-script-panel{position:relative;margin:14px 0;padding:16px 14px 18px;min-height:120px;background:linear-gradient(145deg,#171326,#29213b 58%,#151321);border:1px solid #76608f;border-radius:14px;box-shadow:0 8px 22px #09061125;color:#f8f2ff;overflow:hidden}.webtoon-script-panel:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 90% 8%,#b99be51c,transparent 38%)}.webtoon-panel-label{position:relative;z-index:1;margin:-2px 0 13px;color:#d6b8ff;font:700 11px/1.4 Arial,sans-serif;letter-spacing:1.3px;text-transform:uppercase}.webtoon-panel-narration{position:relative;z-index:1;margin:8px 0;color:#f2edf8;font:15px/1.65 Georgia,serif}.webtoon-script-caption{position:relative;z-index:1;margin:6px auto 14px;padding:10px 12px;max-width:92%;border:1px solid #d8c5a0;border-radius:8px;background:#f4e9d1;color:#352b22;text-align:center;font:italic 14px/1.55 Georgia,serif}.webtoon-speech-bubble{position:relative;z-index:1;display:flex;flex-direction:column;gap:4px;width:fit-content;max-width:92%;margin:12px 0 8px auto;padding:10px 13px;background:#fff;color:#282238;border:1px solid #d9d1e8;border-radius:15px 15px 3px 15px;font:14px/1.5 Arial,sans-serif;box-shadow:0 3px 10px #0002}.webtoon-speech-bubble strong{font-size:10px;letter-spacing:.8px;color:#7651a3}.webtoon-speech-bubble span{font-size:14px}.webtoon-script-panel:nth-child(even) .webtoon-speech-bubble{margin-left:0;margin-right:auto;border-radius:15px 15px 15px 3px}.webtoon-script-panel:nth-child(even){background:linear-gradient(145deg,#21172d,#30233d 60%,#191522)}\n</style>
+.webtoon-script-panel{position:relative;margin:14px 0;padding:16px 14px 18px;min-height:120px;background:linear-gradient(145deg,#171326,#29213b 58%,#151321);border:1px solid #76608f;border-radius:14px;box-shadow:0 8px 22px #09061125;color:#f8f2ff;overflow:hidden}.webtoon-script-panel:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 90% 8%,#b99be51c,transparent 38%)}.webtoon-panel-label{position:relative;z-index:1;margin:-2px 0 13px;color:#d6b8ff;font:700 11px/1.4 Arial,sans-serif;letter-spacing:1.3px;text-transform:uppercase}.webtoon-panel-narration{position:relative;z-index:1;margin:8px 0;color:#f2edf8;font:15px/1.65 Georgia,serif}.webtoon-script-caption{position:relative;z-index:1;margin:6px auto 14px;padding:10px 12px;max-width:92%;border:1px solid #d8c5a0;border-radius:8px;background:#f4e9d1;color:#352b22;text-align:center;font:italic 14px/1.55 Georgia,serif}.webtoon-speech-bubble{position:relative;z-index:1;display:flex;flex-direction:column;gap:4px;width:fit-content;max-width:92%;margin:12px 0 8px auto;padding:10px 13px;background:#fff;color:#282238;border:1px solid #d9d1e8;border-radius:15px 15px 3px 15px;font:14px/1.5 Arial,sans-serif;box-shadow:0 3px 10px #0002}.webtoon-speech-bubble strong{font-size:10px;letter-spacing:.8px;color:#7651a3}.webtoon-speech-bubble span{font-size:14px}.webtoon-script-panel:nth-child(even) .webtoon-speech-bubble{margin-left:0;margin-right:auto;border-radius:15px 15px 15px 3px}.webtoon-script-panel:nth-child(even){background:linear-gradient(145deg,#21172d,#30233d 60%,#191522)}\n
+/* Lecture immersive des webtoons : planches verticales bord à bord. */
+body.webtoon-reading{background:#090909;color:#f5f5f5}
+body.webtoon-reading>header{display:none}
+body.webtoon-reading .container{width:100%;max-width:none;margin:0;padding:0 0 76px}
+body.webtoon-reading>.container>.back-link{display:none}
+body.webtoon-reading .reader{margin:0;padding:0;scroll-margin-top:0}
+body.webtoon-reading .reader-topbar{top:0;margin:0;padding:11px 12px;background:#111;color:#fff;border-bottom:1px solid #333;box-shadow:none}
+body.webtoon-reading .reader-topbar strong{color:#fff}
+body.webtoon-reading .chapter{padding:0;margin:0;background:#090909;border:0;border-radius:0;overflow:visible}
+body.webtoon-reading #readingType,body.webtoon-reading #chapterTitle,body.webtoon-reading #chapterCounter,body.webtoon-reading #readerTools,body.webtoon-reading #progressTrack,body.webtoon-reading #reportChapterButton,body.webtoon-reading .chapter-nav{display:none!important}
+body.webtoon-reading .webtoon-content{width:100%;margin:0;background:#090909}
+body.webtoon-reading .webtoon-panel{display:block;margin:0;padding:0;border:0;border-radius:0;background:#090909}
+body.webtoon-reading .webtoon-content img{display:block;width:100%;max-width:100%;height:auto;margin:0;object-fit:contain}
+body.webtoon-reading .webtoon-caption{margin:0;padding:14px 18px;background:#111;color:#f5f5f5;text-align:center}
+body.webtoon-reading .webtoon-script-panel{margin:0;padding:24px 16px;min-height:220px;border-radius:0;border-left:0;border-right:0}
+body.webtoon-reading #chapterAudioPlayer{margin:12px;padding:12px}
+body.webtoon-reading #audioFocusToggle{display:none}
+body.webtoon-reading .comments-panel{width:min(850px,calc(100% - 24px));margin:20px auto;padding:18px;background:#151515;border-color:#333;color:#f5f5f5}
+body.webtoon-reading .comments-panel h2,body.webtoon-reading .comments-panel label{color:#f5f5f5}
+body.webtoon-reading .comments-panel textarea{background:#222;color:#fff;border-color:#444}
+body.webtoon-reading .reader-bottom-bar{background:#111;border-color:#333;box-shadow:0 -3px 14px #0008}
+body.webtoon-reading .reader-bottom-bar .button{background:#292929;color:#fff;border-color:#444}
+body.webtoon-reading .reader-bottom-bar .primary{background:#c8981d;color:#211805;border-color:#c8981d}
+
+</style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
 <body>
@@ -1257,6 +1282,7 @@ function renderLockedChapter(chapter) {
 function renderChapter() {
   const chapter = chapters[currentChapter];
   if (!chapter) return;
+  document.body.classList.toggle("webtoon-reading", story?.type === "Webtoon");
 
   $("chapterTitle").textContent = chapter.title || "Chapitre " + (currentChapter + 1);
   $("readerBarTitle").textContent=story.title+" · "+(chapter.title||"Chapitre "+(currentChapter+1));
