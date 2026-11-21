@@ -11,10 +11,24 @@ main{max-width:760px;margin:auto;padding:22px 16px 70px}h1{font: bold 27px Georg
 .card{background:#fff;border:1px solid #e9e0d0;border-radius:16px;padding:18px;margin:14px 0}h2{font: bold 19px Georgia,serif;color:#654b88;margin:0 0 8px}
 label{display:block;font-weight:600;margin:15px 0 7px}select,input{width:100%;padding:12px;border:1px solid #d8cde4;border-radius:10px;background:#fff;color:#2c2140;font-size:15px}
 button{margin-top:18px;background:#6c4a8c;color:#fff;border:0;border-radius:10px;padding:12px 18px;font-weight:bold;font-size:15px}
-.preview{padding:16px;border-radius:12px;background:#fffdf6;color:#2a2011;border:1px solid #eadfbf;margin-top:12px;line-height:1.8}.status{min-height:20px;color:#4b7654;font-size:13px}
+.preview{padding:16px;border-radius:12px;background:#fffdf6;color:#2a2011;border:1px solid #eadfbf;margin-top:12px;line-height:1.8}.status{min-height:20px;color:#4b7654;font-size:13px}.version-history{padding-left:20px;line-height:1.55}.version-history li{margin:12px 0;color:#756b7e}.version-history a{color:#76539a;font-weight:600}
 </style></head>
 <body><header><a href="index.html">← NOVELIA</a><strong>PARAMÈTRES</strong></header>
 <main><h1>Personnaliser mon expérience</h1><p class="intro">Choisis l’apparence et le confort de lecture qui te conviennent.</p>
+<section class="card" id="appVersions">
+<h2>Novelia et ses mises à jour</h2>
+<p class="intro">Informations sur l’application installée et historique des versions publiées.</p>
+<p><strong>Version installée :</strong> <span id="installedAppVersion">Vérification…</span></p>
+<button id="checkAppUpdate" type="button">Vérifier les mises à jour</button>
+<p class="status" id="appUpdateStatus" role="status" aria-live="polite"></p>
+<h3 style="margin:20px 0 10px;color:#654b88">Historique des versions</h3>
+<ul class="version-history">
+<li><strong>1.1.1 — 21 novembre 2026</strong><br>Ajout du système de notification des mises à jour et améliorations de stabilité. <a href="https://github.com/johntoulassi31-rgb/novelia/releases/tag/v1.1.1" target="_blank" rel="noopener">Détails de la version</a></li>
+<li><strong>1.1.0 — 21 novembre 2026</strong><br>Version précédente publiée. <a href="https://github.com/johntoulassi31-rgb/novelia/releases/tag/v1.1.0" target="_blank" rel="noopener">Consulter la publication</a></li>
+<li><strong>1.0.9 — 20 novembre 2026</strong><br>Version précédente publiée. <a href="https://github.com/johntoulassi31-rgb/novelia/releases/tag/v1.0.9" target="_blank" rel="noopener">Consulter la publication</a></li>
+<li><strong>Versions antérieures</strong><br><a href="https://github.com/johntoulassi31-rgb/novelia/releases" target="_blank" rel="noopener">Voir toutes les versions de Novelia</a></li>
+</ul>
+</section>
 <section class="card"><h2>Apparence</h2><label for="theme">Thème de lecture</label><select id="theme"><option value="light">Clair</option><option value="dark">Sombre</option><option value="sepia">Sépia</option></select></section>
 <section class="card"><h2>Texte et typographie</h2>
 <label for="font">Police d’écriture</label><select id="font"><option value="Georgia, Times New Roman, serif">Georgia</option><option value="Arial, sans-serif">Arial</option><option value="Times New Roman, serif">Times New Roman</option><option value="Verdana, sans-serif">Verdana</option><option value="Tahoma, sans-serif">Tahoma</option><option value="Trebuchet MS, sans-serif">Trebuchet MS</option></select>
@@ -35,6 +49,29 @@ $("size").value=Math.max(14,Math.min(30,Number(prefs.fontSize)||18));
 $("line").value=["1.5","1.8","2"].includes(String(prefs.lineHeight))?String(prefs.lineHeight):"2";
 function preview(){ $("sizeLabel").textContent=$("size").value+" px";const t={light:["#fffdf6","#2a2011"],dark:["#100b18","#f7f1ff"],sepia:["#f1e4cc","#4b3524"]}[$("theme").value];$("preview").style.cssText="background:"+t[0]+";color:"+t[1]+";font-family:"+$("font").value+";font-size:"+$("size").value+"px;line-height:"+$("line").value}
 ["theme","font","size","line"].forEach(id=>$(id).addEventListener("input",preview));preview();
+
+const appVersionEl=$("installedAppVersion"), appUpdateStatus=$("appUpdateStatus");
+if(window.NoveliaNativeApp && typeof window.NoveliaNativeApp.getVersionName==="function"){
+  try{appVersionEl.textContent=window.NoveliaNativeApp.getVersionName()+" (Android)";}catch(e){appVersionEl.textContent="Non disponible";}
+}else{appVersionEl.textContent="Application Android uniquement";}
+$("checkAppUpdate").addEventListener("click",async()=>{
+  appUpdateStatus.textContent="Vérification en cours…";
+  try{
+    const response=await fetch("./updates.json?manual="+Date.now(),{cache:"no-store"});
+    if(!response.ok)throw new Error("Service indisponible");
+    const update=await response.json();
+    if(window.NoveliaNativeApp && typeof window.NoveliaNativeApp.getVersionCode==="function"){
+      const installed=Number(window.NoveliaNativeApp.getVersionCode());
+      if(Number(update.versionCode)>installed){
+        appUpdateStatus.textContent="La version "+(update.versionName||update.versionCode)+" est disponible. Retourne à l’accueil pour afficher la notification de téléchargement.";
+      }else{
+        appUpdateStatus.textContent="Tu utilises la dernière version disponible ("+(update.versionName||"à jour")+").";
+      }
+    }else{
+      appUpdateStatus.textContent="Dernière version Android publiée : "+(update.versionName||update.versionCode)+".";
+    }
+  }catch(e){appUpdateStatus.textContent="Impossible de vérifier les mises à jour pour le moment.";}
+});
 $("save").addEventListener("click",()=>{const value={theme:$("theme").value,fontFamily:$("font").value,fontSize:Number($("size").value),lineHeight:$("line").value};try{localStorage.setItem(KEY,JSON.stringify(value));$("status").textContent="Préférences enregistrées sur cet appareil. Elles seront appliquées à ta prochaine lecture."}catch(e){$("status").textContent="Impossible d’enregistrer les préférences sur cet appareil."}});
 })();
 </script><script src="bottom-nav.js" defer></script></body></html>
