@@ -53,14 +53,25 @@ async function init(){
  const status=document.getElementById("status");
  const {data:{user},error:authError}=await db.auth.getUser();
  if(authError||!user){status.textContent="Connecte-toi pour vérifier ton statut.";return;}
- const {data,error}=await db.from("ambassadors").select("user_id,created_at").eq("user_id",user.id).maybeSingle();
- if(error){status.textContent="Impossible de vérifier ton statut pour le moment.";return;}
- if(!data){status.textContent="Accès refusé : cet espace est réservé aux ambassadeurs officiellement approuvés.";return;}
+ const [admin,ambassador]=await Promise.all([
+  db.from("app_admins").select("user_id").eq("user_id",user.id).maybeSingle(),
+  db.from("ambassadors").select("user_id,created_at").eq("user_id",user.id).maybeSingle()
+ ]);
+ const isAdmin=!admin.error&&admin.data?.user_id===user.id;
+ if(admin.error&&ambassador.error){status.textContent="Impossible de vérifier tes autorisations pour le moment.";return;}
+ if(!isAdmin&&ambassador.error){status.textContent="Impossible de vérifier ton statut d'ambassadeur.";return;}
+ if(!isAdmin&&!ambassador.data){status.textContent="Accès refusé : cet espace est réservé aux administrateurs et aux ambassadeurs approuvés.";return;}
  document.getElementById("content").hidden=false;
  document.getElementById("missions").hidden=false;
  document.getElementById("quickLinks").hidden=false;
- document.getElementById("since").textContent=data.created_at?new Date(data.created_at).toLocaleDateString("fr-FR"):"Non renseignée";
- status.textContent="Accès confirmé.";
+ if(isAdmin&&!ambassador.data){
+  document.querySelector("#content .stat").innerHTML="<strong>Accès :</strong> Administrateur Novelia";
+  document.getElementById("since").parentElement.hidden=true;
+  status.textContent="Accès administrateur confirmé. Consultation de l’espace ambassadeur.";
+ }else{
+  document.getElementById("since").textContent=ambassador.data.created_at?new Date(ambassador.data.created_at).toLocaleDateString("fr-FR"):"Non renseignée";
+  status.textContent=isAdmin?"Accès administrateur confirmé. Statut ambassadeur également actif.":"Accès confirmé.";
+ }
 }
 init();
 </script>
