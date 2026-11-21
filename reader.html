@@ -325,6 +325,7 @@ const requestedChapterId = params.get("chapter_id");
 const storyKey = dbStoryId ? "db_" + dbStoryId : demoId;
 
 let story = null;
+let viewRecordedForStory = false;
 let chapters = [];
 let currentChapter = 0;
 let currentUser = null;
@@ -1284,6 +1285,7 @@ function renderChapter() {
   loadComments();
 }
 
+async function recordStoryViewOnce(){if(viewRecordedForStory||!isDatabaseStory||!dbStoryId||!currentUser||isOfflineMode||!story?.id)return;viewRecordedForStory=true;const {error}=await supabase.from("novelia_story_views").insert({story_id:story.id,user_id:currentUser.id});if(error&&error.code!=="23505")console.warn("Enregistrement de lecture impossible :",error.message||error);}
 function openReader(index, restorePosition = true) {
   if (!chapters.length) return;
   currentChapter = Math.max(0, Math.min(index, chapters.length - 1));
@@ -1304,6 +1306,7 @@ function openReader(index, restorePosition = true) {
   $("reader").hidden = false;
   $("readerBottomBar").hidden = false;
   renderChapter();
+  if(!chapters[currentChapter]?.is_locked) recordStoryViewOnce().catch(error=>console.warn("Compteur de lectures :",error));
   $("reader").scrollIntoView({behavior:"smooth",block:"start"});
   const saved = getProgress()[storyKey];
   const targetIndex = currentChapter;
