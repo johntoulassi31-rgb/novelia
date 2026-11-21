@@ -20,6 +20,13 @@
 <h3>Détail par œuvre</h3><div id="analyticsStories"><p class="muted">Les statistiques apparaîtront ici.</p></div>
 <p class="muted small">Une impression correspond à une œuvre affichée à un lecteur connecté (une fois par jour et par œuvre). Le taux de clics est calculé sur les impressions. Les données sont agrégées et seul l’auteur de l’œuvre peut les consulter.</p>
 </section>
+<section class="panel" id="readingAnalytics">
+<div class="top"><div><h2>Lectures de mes œuvres</h2><p class="muted small">Lectures enregistrées pour tes histoires publiées.</p></div><button id="refreshReadingAnalytics" class="secondary" type="button">Actualiser</button></div>
+<div id="readingSummary" class="stats"><p class="muted">Chargement des lectures…</p></div>
+<h3>Évolution quotidienne · 14 jours</h3><div id="readingChart" class="analytics-chart" role="img" aria-label="Évolution des lectures quotidiennes sur les 14 derniers jours"></div>
+<h3>Détail par œuvre</h3><div id="readingStories"><p class="muted">Chargement des statistiques de lecture…</p></div>
+<p class="muted small">Une lecture est comptée une fois par lecteur connecté, par histoire et par jour. Les lectures hors connexion, anonymes et celles des auteurs sur leurs propres œuvres ne sont pas comptabilisées.</p>
+</section>
 <section class="panel" id="authorRecommendations">
 <h2>Conseils pour améliorer la visibilité</h2>
 <p class="muted small">Des pistes personnalisées à partir des informations de tes œuvres et des statistiques disponibles. Elles ne garantissent pas une hausse de lectures.</p>
@@ -134,6 +141,28 @@ async function loadDiscoveryAnalytics(){
  list.append(wrap);
 }
 
+async function loadReadingAnalytics(){
+ const summary=$("readingSummary"),list=$("readingStories"),chart=$("readingChart");
+ summary.replaceChildren();list.replaceChildren();chart.replaceChildren();
+ const [result,daily]=await Promise.all([
+  supabase.rpc("novelia_author_reading_analytics"),
+  supabase.rpc("novelia_author_reading_daily_analytics")
+ ]);
+ if(result.error){summary.append(el("p","Statistiques de lecture indisponibles : "+result.error.message,"error"));return}
+ const rows=result.data||[];
+ const total=rows.reduce((a,r)=>({all:a.all+Number(r.views_total||0),w7:a.w7+Number(r.views_7d||0),w30:a.w30+Number(r.views_30d||0),likes:a.likes+Number(r.likes_total||0)}),{all:0,w7:0,w30:0,likes:0});
+ const add=(label,value)=>{const box=el("div",undefined,"stat");box.append(el("span",label),el("strong",numberFmt(value)));summary.append(box)};
+ add("Lectures au total",total.all);add("Lectures · 7 jours",total.w7);add("Lectures · 30 jours",total.w30);add("J’aime reçus",total.likes);
+ if(daily.error){chart.append(el("p","Graphique indisponible : "+daily.error.message,"error"))}
+ else{
+  const days=daily.data||[],max=Math.max(1,...days.map(d=>Number(d.views||0)));
+  days.forEach(d=>{const col=el("div",undefined,"analytics-day"),bars=el("div",undefined,"analytics-bars"),bar=el("i");bar.style.height=(Number(d.views||0)/max*100)+"%";bar.title=numberFmt(d.views)+" lecture(s)";bars.append(bar);col.append(bars,el("small",new Date(d.day+"T00:00:00Z").toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})));chart.append(col)});
+ }
+ if(!rows.length){list.append(el("p","Aucune œuvre publiée et visible à mesurer pour le moment.","muted"));return}
+ const wrap=el("div",undefined,"analytics-list");
+ rows.forEach(r=>{const item=el("article",undefined,"analytics-item"),head=el("div",undefined,"analytics-head"),metrics=el("div",undefined,"analytics-metrics");head.append(el("strong",r.story_title||"Sans titre"));item.append(head);[["Lectures totales",r.views_total],["Lectures · 7 j",r.views_7d],["Lectures · 30 j",r.views_30d],["J’aime",r.likes_total]].forEach(([label,value])=>{const m=el("div",undefined,"analytics-metric");m.append(el("span",label),el("b",numberFmt(value)));metrics.append(m)});item.append(metrics);wrap.append(item)});
+ list.append(wrap);
+}
 async function loadPublicationReceipts(){
  const box=$("publicationReceiptsList");box.replaceChildren();
  if(!user){box.append(el("p","Connecte-toi pour consulter tes empreintes de publication.","muted"));return}
@@ -163,8 +192,9 @@ $("chapterCount").textContent=chapters.length;
 let likes=[];if(ids.length){const r=await supabase.from("story_likes").select("story_id").in("story_id",ids);if(r.error)throw r.error;likes=r.data||[]}const likeMap=new Map();likes.forEach(x=>likeMap.set(x.story_id,(likeMap.get(x.story_id)||0)+1));stories.forEach(s=>s.likeCount=likeMap.get(s.id)||0);$("likesCount").textContent=likes.length;
 let comments=[];const cids=chapters.map(c=>c.id);if(cids.length){const r=await supabase.from("comments").select("chapter_id,moderation_hidden").in("chapter_id",cids).eq("moderation_hidden",false);if(r.error)throw r.error;comments=r.data||[]}const chapterStory=new Map(chapters.map(c=>[c.id,c.story_id]));const commentMap=new Map();comments.forEach(c=>{const sid=chapterStory.get(c.chapter_id);commentMap.set(sid,(commentMap.get(sid)||0)+1)});stories.forEach(s=>s.commentCount=commentMap.get(s.id)||0);$("commentsCount").textContent=comments.length;
 const best=stories.find(s=>s.status!=="published")||stories[0],cont=$("continueWriting");cont.replaceChildren();if(best){if(best.cover_url){const img=el("img");img.className="cover";img.src=best.cover_url;img.alt="Couverture de "+(best.title||"histoire");img.onerror=()=>img.replaceWith(el("div",best.title||"Novelia","cover"));cont.append(img)}else cont.append(el("div",best.title||"Novelia","cover"));const copy=el("div",undefined,"continue-copy");copy.append(el("p","Continuer l’écriture","muted small"),el("h3",best.title||"Sans titre"),el("p",(best.chapterCount||0)+" chapitre(s) · "+(best.status||"statut inconnu"),"muted small"));const a=el("a","Ouvrir l’éditeur","btn");a.href="publish.html";copy.append(a);cont.append(copy)}else cont.textContent="Crée ta première histoire pour commencer.";
-renderStories();await loadDiscoveryAnalytics();await loadPublicationReceipts();await loadComments(ids);await loadDrafts();renderRem();status("Espace auteur chargé.","success")}
+renderStories();await loadDiscoveryAnalytics();await loadReadingAnalytics();await loadPublicationReceipts();await loadComments(ids);await loadDrafts();renderRem();status("Espace auteur chargé.","success")}
 $("refreshAnalytics").addEventListener("click",async()=>{const b=$("refreshAnalytics");b.disabled=true;try{await loadDiscoveryAnalytics()}finally{b.disabled=false}});
+$("refreshReadingAnalytics").addEventListener("click",async()=>{const b=$("refreshReadingAnalytics");b.disabled=true;try{await loadReadingAnalytics()}finally{b.disabled=false}});
 $("refreshButton").addEventListener("click",async()=>{const b=$("refreshButton");b.disabled=true;try{await loadDashboard()}catch(e){status("Erreur : "+(e.message||String(e)),"error")}finally{b.disabled=false}});
 loadDashboard().catch(e=>{console.error(e);status("Erreur de chargement : "+(e.message||String(e)),"error")});
 </script><script src="bottom-nav.js" defer></script>
