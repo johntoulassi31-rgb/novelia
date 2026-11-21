@@ -30,7 +30,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#f3ebd7;border:1px 
 hr{border:0;border-top:1px solid var(--line);margin:24px 0}
 @media(max-width:540px){body{padding:12px}.panel{padding:15px}h1{font-size:24px}.field-row{grid-template-columns:1fr}.story-top{display:block}.story-top .status{margin-top:8px}.chapter-item{align-items:flex-start}.chapter-item button{flex-shrink:0}}
 
-.webtoon-composer{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.webtoon-composer h3{margin-top:0}.webtoon-panel-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:12px}.webtoon-panel-preview figure{margin:0;min-width:0}.webtoon-panel-preview img{display:block;width:100%;height:120px;object-fit:contain;background:#eee8dc;border-radius:8px}.webtoon-panel-preview figcaption{font-size:11px;overflow-wrap:anywhere;color:var(--muted);margin-top:4px}.webtoon-composer input[type=file]{max-width:100%}
+.webtoon-composer{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.webtoon-composer h3{margin-top:0}.webtoon-panel-preview{display:grid;gap:16px;margin-top:14px}.webtoon-editor-card{padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffdf8}.webtoon-editor-card h4{margin:0 0 10px}.webtoon-editor-canvas{display:block;width:100%;height:auto;max-height:65vh;object-fit:contain;background:#211f1b;touch-action:pan-y;border-radius:8px}.webtoon-bubble-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(115px,.7fr);gap:8px;margin-top:10px}.webtoon-bubble-controls textarea{min-height:66px}.webtoon-bubble-controls button{width:100%;margin-top:8px}.webtoon-bubble-list{font-size:12px;color:var(--muted);margin-top:8px}.webtoon-composer input[type=file]{max-width:100%}@media(max-width:520px){.webtoon-bubble-controls{grid-template-columns:1fr}}
 .chapter-audio-composer{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.chapter-audio-composer h3{margin-top:0}.chapter-audio-composer input{max-width:100%}
 .writing-metrics{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;color:var(--muted);font-size:13px}
 .writing-tools{border:1px solid var(--line);background:#fbf7ed;border-radius:12px;padding:12px;margin:12px 0}
@@ -159,12 +159,12 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
         </section>
         <section id="webtoonComposer" class="webtoon-composer hidden">
           <h3>Créer l’épisode illustré</h3>
-          <p class="note">Importe tes planches dans l’ordre de lecture. Novelia les optimise, les héberge et les insère automatiquement dans le contenu de l’épisode.</p>
+          <p class="note">Importe tes planches, ajoute les dialogues et les cartouches directement dessus, puis déplace chaque bulle à l’endroit souhaité. Novelia enregistrera les images avec les textes intégrés.</p>
           <label for="webtoonPanelFiles">Planches de l’épisode (JPG, PNG ou WebP)</label>
           <input id="webtoonPanelFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
-          <p class="note">Maximum 20 images par import · 20 Mo par image source · optimisation WebP · 30 Mo maximum par import.</p>
-          <div class="form-actions"><button type="button" id="uploadWebtoonPanels">Importer les planches</button><button type="button" id="clearWebtoonFiles" class="secondary">Vider la sélection</button></div>
-          <p id="webtoonUploadStatus" class="note" role="status" aria-live="polite">Les images seront ajoutées à la fin du contenu, dans l’ordre sélectionné.</p>
+          <p class="note">Maximum 20 planches · 20 Mo par image source · optimisation WebP · 30 Mo maximum par import.</p>
+          <div class="form-actions"><button type="button" id="uploadWebtoonPanels">Enregistrer les planches finalisées</button><button type="button" id="clearWebtoonFiles" class="secondary">Vider la sélection</button></div>
+          <p id="webtoonUploadStatus" class="note" role="status" aria-live="polite">Sélectionne tes planches pour ouvrir leur éditeur de dialogues.</p>
           <div id="webtoonPanelPreview" class="webtoon-panel-preview"></div>
         </section>
         <section id="chapterAudioComposer" class="chapter-audio-composer">
@@ -462,16 +462,7 @@ function refreshWebtoonComposer(){
  box.classList.toggle("hidden",!isWebtoonEditor());
 }
 let webtoonPreviewUrls=[];
-function previewWebtoonFiles(files){
- webtoonPreviewUrls.forEach(url=>URL.revokeObjectURL(url));webtoonPreviewUrls=[];
- const box=$("webtoonPanelPreview");box.replaceChildren();
- Array.from(files||[]).forEach((file,index)=>{
-  const figure=document.createElement("figure");
-  const img=document.createElement("img");img.alt="Aperçu de la planche "+(index+1);const previewUrl=URL.createObjectURL(file);webtoonPreviewUrls.push(previewUrl);img.src=previewUrl;
-  const caption=document.createElement("figcaption");caption.textContent=(index+1)+". "+file.name;
-  figure.append(img,caption);box.append(figure);
- });
-}
+let webtoonEditorPanels=[];
 function loadImageForCompression(file){
  return new Promise((resolve,reject)=>{
   const url=URL.createObjectURL(file),img=new Image();
@@ -480,78 +471,119 @@ function loadImageForCompression(file){
   img.src=url;
  });
 }
-async function optimizeWebtoonImage(file){
- if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Format non accepté : "+file.name);
- if(file.size>MAX_WEBTOON_SOURCE_BYTES)throw new Error(file.name+" dépasse 20 Mo.");
- const image=await loadImageForCompression(file);
- if(!image.naturalWidth||!image.naturalHeight)throw new Error("Dimensions d’image invalides : "+file.name);
- const scale=Math.min(1,1800/image.naturalWidth,3000/image.naturalHeight);
- const canvas=document.createElement("canvas");
- try{
-  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
-  canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
-  const ctx=canvas.getContext("2d");
-  if(!ctx)throw new Error("Optimisation d’image indisponible sur cet appareil.");
-  ctx.fillStyle="#ffffff";ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(image,0,0,canvas.width,canvas.height);
-  const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",0.82));
-  if(!blob)throw new Error("Impossible de convertir "+file.name+" en WebP.");
-  if(blob.size>8*1024*1024)throw new Error("La planche optimisée reste trop volumineuse : "+file.name);
-  return new File([blob],file.name.replace(/\.[^.]+$/,"")+".webp",{type:"image/webp"});
- }finally{
-  canvas.width=1;canvas.height=1;
-  image.removeAttribute("src");
- }
+function wrapCanvasText(ctx,text,maxWidth){
+ const words=String(text||"").split(/\s+/),lines=[];let line="";
+ for(const word of words){const test=line?line+" "+word:word;if(line&&ctx.measureText(test).width>maxWidth){lines.push(line);line=word;}else line=test;}
+ if(line)lines.push(line);return lines;
 }
-async function uploadWebtoonPanel(optimized,index,originalName){
- const safeName=Date.now()+"-"+index+"-"+Math.random().toString(36).slice(2,10)+".webp";
- const path=currentUser.id+"/"+selectedStory.id+"/"+safeName;
- const {error}=await supabase.storage.from(WEBTOON_BUCKET).upload(path,optimized,{
-  cacheControl:"31536000",contentType:"image/webp",upsert:false
+function drawWebtoonEditorPanel(panel){
+ const {canvas,image,bubbles}=panel,ctx=canvas.getContext("2d");
+ ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+ bubbles.forEach((bubble,index)=>{
+  const x=bubble.x*canvas.width,y=bubble.y*canvas.height,w=bubble.w*canvas.width;
+  const isCaption=bubble.type==="narration",fontSize=Math.max(18,Math.round(canvas.width*.027));
+  ctx.save();ctx.font=(isCaption?"italic ":"")+"bold "+fontSize+"px Arial";
+  const lines=wrapCanvasText(ctx,bubble.text,w-36),lineHeight=fontSize*1.28,pad=18;
+  const h=lines.length*lineHeight+pad*2,actualW=Math.min(w,Math.max(140,...lines.map(line=>ctx.measureText(line).width+36)));
+  const left=Math.max(4,Math.min(canvas.width-actualW-4,x));
+  const top=Math.max(4,Math.min(canvas.height-h-4,y));
+  ctx.shadowColor="rgba(0,0,0,.28)";ctx.shadowBlur=10;ctx.shadowOffsetY=3;
+  ctx.fillStyle=isCaption?"#fff0c9":"#ffffff";ctx.strokeStyle=isCaption?"#6e5423":"#292333";ctx.lineWidth=Math.max(2,canvas.width*.002);
+  const radius=isCaption?8:Math.min(28,fontSize);
+  ctx.beginPath();ctx.roundRect(left,top,actualW,h,radius);ctx.fill();ctx.shadowColor="transparent";ctx.stroke();
+  ctx.fillStyle="#201b25";ctx.textAlign="center";ctx.textBaseline="middle";
+  lines.forEach((line,lineIndex)=>ctx.fillText(line,left+actualW/2,top+pad+lineHeight*(lineIndex+.5),actualW-24));
+  if(!isCaption){ctx.fillStyle="#201b25";ctx.beginPath();ctx.moveTo(left+actualW*.68,top+h-1);ctx.lineTo(left+actualW*.61,top+h+Math.max(12,fontSize*.55));ctx.lineTo(left+actualW*.78,top+h-1);ctx.closePath();ctx.fill();}
+  ctx.restore();bubble._rect={x:left,y:top,w:actualW,h:h+(isCaption?0:fontSize*.55)};
  });
- if(error)throw new Error("Échec de l’envoi de "+originalName+" : "+error.message);
- const {data}=supabase.storage.from(WEBTOON_BUCKET).getPublicUrl(path);
- if(!data?.publicUrl)throw new Error("Adresse publique introuvable pour "+originalName);
- return {url:data.publicUrl,size:optimized.size,name:originalName};
+ const list=panel.card.querySelector(".webtoon-bubble-list");
+ list.textContent=bubbles.length?bubbles.map((b,i)=>(i+1)+". "+(b.type==="narration"?"Cartouche":"Dialogue")+" : "+b.text.slice(0,55)).join(" · "):"Aucun texte ajouté. Appuie sur la planche pour déplacer une bulle après l’avoir créée.";
 }
-$("webtoonPanelFiles").addEventListener("change",()=>{
- const files=$("webtoonPanelFiles").files;
- previewWebtoonFiles(files);
- $("webtoonUploadStatus").textContent=files.length+" planche(s) sélectionnée(s).";
+async function buildWebtoonEditorPanel(file,index){
+ const image=await loadImageForCompression(file),scale=Math.min(1,1800/image.naturalWidth,3000/image.naturalHeight);
+ const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+ const card=document.createElement("article");card.className="webtoon-editor-card";
+ const heading=document.createElement("h4");heading.textContent="Planche "+(index+1)+" — "+file.name;
+ const preview=document.createElement("canvas");preview.className="webtoon-editor-canvas";preview.width=canvas.width;preview.height=canvas.height;
+ const controls=document.createElement("div");controls.className="webtoon-bubble-controls";
+ const textInput=document.createElement("textarea");textInput.maxLength=500;textInput.placeholder="Écris le dialogue ou le texte de narration…";textInput.setAttribute("aria-label","Texte à intégrer à la planche "+(index+1));
+ const typeSelect=document.createElement("select");typeSelect.setAttribute("aria-label","Type de texte");
+ [["dialogue","Bulle de dialogue"],["narration","Cartouche de narration"]].forEach(([value,label])=>{const opt=document.createElement("option");opt.value=value;opt.textContent=label;typeSelect.appendChild(opt);});
+ const addButton=document.createElement("button");addButton.type="button";addButton.className="small";addButton.textContent="＋ Ajouter le texte";
+ const list=document.createElement("p");list.className="webtoon-bubble-list";
+ const buttonWrap=document.createElement("div");buttonWrap.append(addButton);
+ controls.append(textInput,typeSelect,buttonWrap);
+ card.append(heading,preview,controls,list);$("webtoonPanelPreview").append(card);
+ const panel={file,image,canvas:preview,bubbles:[],card};
+ addButton.addEventListener("click",()=>{
+  const value=textInput.value.trim();if(!value){textInput.focus();return;}
+  panel.bubbles.push({text:value,type:typeSelect.value,x:.08,y:.08+Math.min(.65,panel.bubbles.length*.13),w:.55});
+  textInput.value="";drawWebtoonEditorPanel(panel);
+ });
+ preview.addEventListener("pointerdown",event=>{
+  const rect=preview.getBoundingClientRect(),x=(event.clientX-rect.left)*preview.width/rect.width,y=(event.clientY-rect.top)*preview.height/rect.height;
+  for(let i=panel.bubbles.length-1;i>=0;i--){const b=panel.bubbles[i],r=b._rect;if(r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){panel.dragIndex=i;panel.dragOffsetX=x-r.x;panel.dragOffsetY=y-r.y;preview.setPointerCapture(event.pointerId);break;}}
+ });
+ preview.addEventListener("pointermove",event=>{
+  if(panel.dragIndex===undefined)return;
+  const rect=preview.getBoundingClientRect(),x=(event.clientX-rect.left)*preview.width/rect.width,y=(event.clientY-rect.top)*preview.height/rect.height,b=panel.bubbles[panel.dragIndex];
+  b.x=Math.max(0,Math.min(.94,(x-panel.dragOffsetX)/preview.width));b.y=Math.max(0,Math.min(.94,(y-panel.dragOffsetY)/preview.height));drawWebtoonEditorPanel(panel);
+ });
+ const stopDrag=()=>{delete panel.dragIndex;};
+ preview.addEventListener("pointerup",stopDrag);preview.addEventListener("pointercancel",stopDrag);
+ drawWebtoonEditorPanel(panel);return panel;
+}
+$("webtoonPanelFiles").addEventListener("change",async()=>{
+ const files=Array.from($("webtoonPanelFiles").files||[]);
+ $("webtoonPanelPreview").replaceChildren();webtoonEditorPanels=[];
+ if(!files.length){$("webtoonUploadStatus").textContent="Aucune planche sélectionnée.";return;}
+ if(files.length>MAX_WEBTOON_FILES){$("webtoonUploadStatus").textContent="Maximum 20 planches par import.";return;}
+ $("webtoonUploadStatus").textContent="Préparation de l’éditeur…";
+ try{for(let i=0;i<files.length;i++){webtoonEditorPanels.push(await buildWebtoonEditorPanel(files[i],i));}
+ $("webtoonUploadStatus").textContent=files.length+" planche(s) prêtes. Ajoute les dialogues, puis fais-les glisser directement sur les images.";
+ }catch(error){$("webtoonUploadStatus").textContent="Impossible de préparer les planches : "+error.message;}
 });
 $("clearWebtoonFiles").addEventListener("click",()=>{
- $("webtoonPanelFiles").value="";previewWebtoonFiles([]);
+ $("webtoonPanelFiles").value="";$("webtoonPanelPreview").replaceChildren();webtoonEditorPanels=[];
  $("webtoonUploadStatus").textContent="Sélection vidée.";
 });
+async function optimizeWebtoonCanvas(canvas){
+ const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",.84));
+ if(!blob)throw new Error("Impossible de finaliser une planche en WebP.");
+ if(blob.size>8*1024*1024)throw new Error("Une planche finalisée dépasse 8 Mo.");
+ return new File([blob],"webtoon-panel.webp",{type:"image/webp"});
+}
+async function uploadWebtoonPanel(optimized,index){
+ const safeName=Date.now()+"-"+index+"-"+Math.random().toString(36).slice(2,10)+".webp";
+ const path=currentUser.id+"/"+selectedStory.id+"/"+safeName;
+ const {error}=await supabase.storage.from(WEBTOON_BUCKET).upload(path,optimized,{cacheControl:"31536000",contentType:"image/webp",upsert:false});
+ if(error)throw new Error("Échec de l’envoi de la planche "+index+" : "+error.message);
+ const {data}=supabase.storage.from(WEBTOON_BUCKET).getPublicUrl(path);
+ if(!data?.publicUrl)throw new Error("Adresse publique introuvable pour la planche "+index);
+ return {url:data.publicUrl,size:optimized.size};
+}
 $("uploadWebtoonPanels").addEventListener("click",async()=>{
  if(!currentUser||!selectedStory||!isWebtoonEditor())return;
- const files=Array.from($("webtoonPanelFiles").files||[]);
- if(!files.length)return $("webtoonUploadStatus").textContent="Choisis d’abord les images à importer.";
- if(files.length>MAX_WEBTOON_FILES)return $("webtoonUploadStatus").textContent="Maximum 20 planches par import.";
- const button=$("uploadWebtoonPanels");button.disabled=true;
- let total=0,uploaded=0,failed=[];
+ if(!webtoonEditorPanels.length)return $("webtoonUploadStatus").textContent="Choisis d’abord les planches à importer.";
+ const button=$("uploadWebtoonPanels");button.disabled=true;let total=0,uploaded=0,failed=[];
  try{
   const urls=[];
-  for(let i=0;i<files.length;i++){
-   $("webtoonUploadStatus").textContent="Optimisation et envoi : "+(i+1)+"/"+files.length+"…";
+  for(let i=0;i<webtoonEditorPanels.length;i++){
+   $("webtoonUploadStatus").textContent="Finalisation et envoi : "+(i+1)+"/"+webtoonEditorPanels.length+"…";
    try{
-    const optimized=await optimizeWebtoonImage(files[i]);
-    if(total+optimized.size>MAX_WEBTOON_UPLOAD_BYTES){
-     failed.push("Limite de 30 Mo atteinte avant l’envoi de "+files[i].name+".");break;
-    }
-    const item=await uploadWebtoonPanel(optimized,i+1,files[i].name);
-    total+=item.size;urls.push(item.url);uploaded++;
-   }catch(error){failed.push(error.message);if(/limite de 30 Mo/.test(error.message))break;}
+    const canvas=webtoonEditorPanels[i].canvas,blobFile=await optimizeWebtoonCanvas(canvas);
+    if(total+blobFile.size>MAX_WEBTOON_UPLOAD_BYTES){failed.push("Limite de 30 Mo atteinte.");break;}
+    const item=await uploadWebtoonPanel(blobFile,i+1);total+=item.size;urls.push(item.url);uploaded++;
+   }catch(error){failed.push(error.message);break;}
   }
   if(urls.length){
-   const textarea=$("chapterEditContent");
-   const existing=textarea.value.trimEnd();
-   textarea.value=(existing?existing+"\n":"")+urls.join("\n")+"\n";
-   textarea.dispatchEvent(new Event("input",{bubbles:true}));
-   queueChapterAutosave();
+   const textarea=$("chapterEditContent"),existing=textarea.value.trim();
+   const existingUrls=existing.split(/\n+/).map(v=>v.trim()).filter(v=>/^https?:\/\//i.test(v));
+   const newContent=[...existingUrls,...urls].join("\n");
+   textarea.value=newContent+"\n";textarea.dispatchEvent(new Event("input",{bubbles:true}));queueChapterAutosave();
   }
-  $("webtoonUploadStatus").textContent=uploaded+" planche(s) ajoutée(s) · "+(total/1024/1024).toFixed(1)+" Mo optimisés."+(failed.length?" Échecs : "+failed.join(" | "):"");
-  $("webtoonPanelFiles").value="";previewWebtoonFiles([]);
+  $("webtoonUploadStatus").textContent=uploaded+" planche(s) finalisée(s) et enregistrée(s) · "+(total/1024/1024).toFixed(1)+" Mo."+(failed.length?" Erreur : "+failed.join(" | "):"");
+  if(uploaded===webtoonEditorPanels.length){$("webtoonPanelFiles").value="";$("webtoonPanelPreview").replaceChildren();webtoonEditorPanels=[];}
  }catch(error){$("webtoonUploadStatus").textContent="Import interrompu : "+error.message;}
  finally{button.disabled=false;}
 });
