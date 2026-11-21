@@ -148,6 +148,7 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 .story-preview-close{position:absolute;top:15px;right:18px;border:0;background:transparent;font-size:34px;line-height:1;cursor:pointer;color:#222}
 .story-preview-top{display:grid;grid-template-columns:minmax(105px,38%) 1fr;gap:20px;align-items:start;padding:18px 24px 20px 0}
 .story-preview-cover{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:12px;background:#eee}
+.home-preview-cover{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:pan-y}
 .story-preview-title{font-size:clamp(23px,5vw,30px);line-height:1.25;margin:8px 0 14px;color:#171717}
 .story-preview-author{font-size:16px;color:#333;overflow-wrap:anywhere}
 .story-preview-stats{display:flex;flex-wrap:wrap;gap:14px;margin:20px 0 4px;font-size:14px;color:#333}
@@ -472,23 +473,31 @@ function shelfCard(story, featured = false) {
     ? "reader.html?story=" + encodeURIComponent(id)
     : "reader.html?db_story=" + encodeURIComponent(id)) + "&open=1";
   const titleText = story.title || "Histoire Novelia";
-  link.dataset.previewId = id;
-  link.dataset.previewTitle = titleText;
-  link.dataset.previewDescription = story.description || "";
-  link.dataset.previewCover = story.cover_url || "";
-  link.dataset.previewGenre = story.genre || "";
-  link.dataset.previewType = story.story_type === "webtoon" ? "Webtoon" : "Roman";
-  link.dataset.previewUrl = link.href;
+  const previewData = {
+    previewId: id,
+    previewTitle: titleText,
+    previewDescription: story.description || "",
+    previewCover: story.cover_url || "",
+    previewGenre: story.genre || "",
+    previewType: story.story_type === "webtoon" ? "Webtoon" : "Roman",
+    previewUrl: link.href
+  };
+  function markPreviewTarget(element) {
+    Object.entries(previewData).forEach(([key, value]) => { element.dataset[key] = value; });
+    element.classList.add("home-preview-cover");
+  }
   if (story.cover_url) {
     const img = document.createElement("img");
     img.className = "shelf-cover";
     img.loading = "lazy";
     img.src = story.cover_url;
     img.alt = "Couverture de " + titleText;
+    markPreviewTarget(img);
     img.onerror = () => {
       const fallback = document.createElement("div");
       fallback.className = "shelf-placeholder";
       fallback.textContent = titleText;
+      markPreviewTarget(fallback);
       img.replaceWith(fallback);
     };
     link.appendChild(img);
@@ -496,6 +505,7 @@ function shelfCard(story, featured = false) {
     const cover = document.createElement("div");
     cover.className = "shelf-placeholder";
     cover.textContent = titleText;
+    markPreviewTarget(cover);
     link.appendChild(cover);
   }
   const info = document.createElement("div");
