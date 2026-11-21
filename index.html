@@ -140,6 +140,24 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 .shelf-title{font-size:14px;font-weight:500;line-height:1.35;-webkit-line-clamp:2}
 @media(min-width:700px){.stories,.shelf-track{grid-template-columns:repeat(5,minmax(0,1fr));gap:22px 17px}.shelf-card,.shelf-card.featured{flex-basis:auto}}
 @media(max-width:699px){.stories,.shelf-track{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 12px}.shelf-card,.shelf-card.featured{flex-basis:auto;max-width:none}.shelf-cover,.shelf-placeholder{aspect-ratio:2/3}}
+
+/* Fiche d’œuvre ouverte par appui long depuis l’accueil */
+.story-preview-overlay{position:fixed;inset:0;z-index:1200;background:#0008;display:flex;align-items:flex-end;justify-content:center;padding:0}
+.story-preview-overlay[hidden]{display:none}
+.story-preview-sheet{position:relative;width:min(680px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:28px 28px 0 0;padding:30px 24px 34px;color:#171717;box-shadow:0 -8px 35px #0002}
+.story-preview-close{position:absolute;top:15px;right:18px;border:0;background:transparent;font-size:34px;line-height:1;cursor:pointer;color:#222}
+.story-preview-top{display:grid;grid-template-columns:minmax(105px,38%) 1fr;gap:20px;align-items:start;padding:18px 24px 20px 0}
+.story-preview-cover{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:12px;background:#eee}
+.story-preview-title{font-size:clamp(23px,5vw,30px);line-height:1.25;margin:8px 0 14px;color:#171717}
+.story-preview-author{font-size:16px;color:#333;overflow-wrap:anywhere}
+.story-preview-stats{display:flex;flex-wrap:wrap;gap:14px;margin:20px 0 4px;font-size:14px;color:#333}
+.story-preview-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0}
+.story-preview-tag{background:#f2f2f2;border-radius:14px;padding:8px 12px;font-size:13px;font-weight:bold}
+.story-preview-description{font-size:15px;line-height:1.65;color:#292929;white-space:pre-wrap}
+.story-preview-actions{border-top:1px solid #e5e5e5;margin-top:22px;padding-top:8px;display:grid;gap:0}
+.story-preview-actions button{border:0;background:transparent;text-align:left;padding:17px 4px;font:inherit;font-size:17px;color:#222;cursor:pointer}
+.story-preview-actions button:disabled{opacity:.55}
+@media(min-width:600px){.story-preview-overlay{align-items:center;padding:18px}.story-preview-sheet{border-radius:22px;max-height:82vh}}
 </style>
 <style>
 .hero-carousel{margin:18px 16px 24px}
@@ -256,6 +274,24 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
   </div>
   <p id="message" aria-live="polite"></p>
 </main>
+
+
+<div id="storyPreviewOverlay" class="story-preview-overlay" hidden>
+  <section class="story-preview-sheet" role="dialog" aria-modal="true" aria-labelledby="storyPreviewTitle">
+    <button type="button" class="story-preview-close" id="storyPreviewClose" aria-label="Fermer">×</button>
+    <div class="story-preview-top">
+      <img id="storyPreviewCover" class="story-preview-cover" alt="">
+      <div><h2 id="storyPreviewTitle" class="story-preview-title"></h2><div id="storyPreviewAuthor" class="story-preview-author">Auteur Novelia</div><div class="story-preview-stats" id="storyPreviewStats"></div></div>
+    </div>
+    <div class="story-preview-tags" id="storyPreviewTags"></div>
+    <p class="story-preview-description" id="storyPreviewDescription"></p>
+    <div class="story-preview-actions">
+      <button type="button" id="storyPreviewRead">♧　Lire</button>
+      <button type="button" id="storyPreviewAdd">＋　Ajouter à la bibliothèque</button>
+      <button type="button" id="storyPreviewShare">➤　Partager</button>
+    </div>
+  </section>
+</div>
 
 <div id="reportOverlay" class="report-overlay" hidden>
   <section class="report-dialog" role="dialog" aria-modal="true" aria-labelledby="reportHeading">
@@ -400,6 +436,13 @@ function addPublishedStory(story) {
   const coverLink = makeElement("a", "home-book-cover");
   coverLink.href = "reader.html?db_story=" + encodeURIComponent(story.id) + "&open=1";
   coverLink.setAttribute("aria-label", "Lire " + (story.title || "cette histoire"));
+  coverLink.dataset.previewId = String(story.id);
+  coverLink.dataset.previewTitle = story.title || "Œuvre Novelia";
+  coverLink.dataset.previewDescription = story.description || "";
+  coverLink.dataset.previewCover = story.cover_url || "";
+  coverLink.dataset.previewGenre = story.genre || "";
+  coverLink.dataset.previewType = type;
+  coverLink.dataset.previewUrl = coverLink.href;
   if (story.cover_url) {
     const img = makeElement("img", "cover-image");
     img.src = story.cover_url;
@@ -429,6 +472,13 @@ function shelfCard(story, featured = false) {
     ? "reader.html?story=" + encodeURIComponent(id)
     : "reader.html?db_story=" + encodeURIComponent(id)) + "&open=1";
   const titleText = story.title || "Histoire Novelia";
+  link.dataset.previewId = id;
+  link.dataset.previewTitle = titleText;
+  link.dataset.previewDescription = story.description || "";
+  link.dataset.previewCover = story.cover_url || "";
+  link.dataset.previewGenre = story.genre || "";
+  link.dataset.previewType = story.story_type === "webtoon" ? "Webtoon" : "Roman";
+  link.dataset.previewUrl = link.href;
   if (story.cover_url) {
     const img = document.createElement("img");
     img.className = "shelf-cover";
@@ -965,6 +1015,63 @@ grid.addEventListener("click", event => {
     window.location.href = "reader.html?story=" + encodeURIComponent(demoButton.dataset.story) + "&open=1";
   }
 });
+
+
+// Appui long sur une couverture : ouvre la fiche rapide sans gêner le clic normal.
+(function initStoryPreview(){
+  const overlay=document.getElementById("storyPreviewOverlay");
+  if(!overlay)return;
+  let timer=null, pressed=null, openedByHold=false, activeStory=null;
+  const $=id=>document.getElementById(id);
+  function close(){overlay.hidden=true;activeStory=null;}
+  function show(el){
+    const d=el.dataset; activeStory={id:d.previewId,title:d.previewTitle||"Œuvre Novelia",description:d.previewDescription||"",cover:d.previewCover||"",genre:d.previewGenre||"",type:d.previewType||"Roman",url:d.previewUrl||el.href};
+    $("storyPreviewTitle").textContent=activeStory.title;
+    $("storyPreviewCover").src=activeStory.cover||"";
+    $("storyPreviewCover").hidden=!activeStory.cover;
+    $("storyPreviewCover").alt="Couverture de "+activeStory.title;
+    $("storyPreviewAuthor").textContent="Œuvre Novelia";
+    $("storyPreviewStats").textContent="✧ "+activeStory.type;
+    const tags=$("storyPreviewTags");tags.replaceChildren();
+    const tagLabel=activeStory.genre||activeStory.type;
+    const label=document.createElement("span");label.textContent="Mots-clés";tags.append(label);
+    tagLabel.split(/[,;|]/).map(x=>x.trim()).filter(Boolean).slice(0,4).forEach(value=>{const chip=document.createElement("span");chip.className="story-preview-tag";chip.textContent=value;tags.append(chip)});
+    $("storyPreviewDescription").textContent=activeStory.description||"Aucun résumé n’a encore été ajouté à cette œuvre.";
+    $("storyPreviewAdd").textContent="＋　Ajouter à la bibliothèque";
+    overlay.hidden=false;
+  }
+  document.addEventListener("pointerdown",event=>{
+    const el=event.target.closest("[data-preview-id]");if(!el)return;
+    if(event.pointerType==="mouse"&&event.button!==0)return;
+    pressed=el;openedByHold=false;
+    timer=window.setTimeout(()=>{openedByHold=true;show(el);},550);
+  },{passive:true});
+  function cancel(){if(timer){clearTimeout(timer);timer=null}pressed=null;}
+  document.addEventListener("pointerup",cancel,{passive:true});
+  document.addEventListener("pointercancel",cancel,{passive:true});
+  document.addEventListener("pointermove",event=>{if(pressed&&Math.abs(event.movementX)+Math.abs(event.movementY)>12)cancel()},{passive:true});
+  document.addEventListener("click",event=>{if(openedByHold){event.preventDefault();event.stopPropagation();openedByHold=false;}},true);
+  document.addEventListener("contextmenu",event=>{const el=event.target.closest("[data-preview-id]");if(el){event.preventDefault();show(el);}},true);
+  $("storyPreviewClose").addEventListener("click",close);
+  overlay.addEventListener("click",event=>{if(event.target===overlay)close()});
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!overlay.hidden)close()});
+  $("storyPreviewRead").addEventListener("click",()=>{if(activeStory)location.href=activeStory.url});
+  $("storyPreviewAdd").addEventListener("click",async()=>{
+    if(!activeStory)return;
+    if(!currentUser){location.href="./login.html?redirect="+encodeURIComponent(location.pathname+location.search);return;}
+    const button=$("storyPreviewAdd");button.disabled=true;
+    try{
+      const {error}=await supabase.from("user_library").upsert({user_id:currentUser.id,story_key:activeStory.id,is_favorite:false,last_chapter:0,is_archived:false,updated_at:new Date().toISOString()},{onConflict:"user_id,story_key"});
+      if(error)throw error;
+      button.textContent="✓　Ajoutée à la bibliothèque";
+    }catch(error){button.textContent="Erreur : réessaie";console.error("Ajout à la bibliothèque impossible",error)}
+    finally{button.disabled=false;}
+  });
+  $("storyPreviewShare").addEventListener("click",async()=>{
+    if(!activeStory)return;const shareData={title:activeStory.title,text:activeStory.description,url:new URL(activeStory.url,location.href).href};
+    try{if(navigator.share)await navigator.share(shareData);else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(shareData.url);$("storyPreviewShare").textContent="✓　Lien copié";}else window.prompt("Copie ce lien :",shareData.url)}catch(error){if(error?.name!=="AbortError")console.warn("Partage indisponible",error)}
+  });
+})();
 
 filters.forEach(button => button.addEventListener("click", () => {
   activeType = button.dataset.filter;
