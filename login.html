@@ -19,6 +19,8 @@
     #message { overflow-wrap: anywhere; margin-top: 16px; }
     a { color: #7b5d12; }
     .forgot { display:block; text-align:right; margin-top:10px; font-size:14px; }
+    .social-divider{display:flex;align-items:center;gap:10px;margin:20px 0 6px;color:#806f4b;font-size:13px}.social-divider:before,.social-divider:after{content:"";height:1px;background:#dfd3b8;flex:1}
+    .social-btn{background:#fff;border:1px solid #d8cba9;color:#302716}.social-btn.facebook{background:#eef3ff;border-color:#cbd8f0}.social-btn:disabled{opacity:.55}
   </style>
   <link rel="stylesheet" href="theme-gold.css">
 </head>
@@ -38,6 +40,11 @@
       </label>
       <button type="submit" id="loginBtn">Se connecter</button>
       <button type="button" class="secondary" id="signupBtn">Créer un compte</button>
+      <div class="social-divider">OU AVEC UN RÉSEAU SOCIAL</div>
+      <button type="button" class="social-btn" id="googleLogin">Continuer avec Google</button>
+      <button type="button" class="social-btn facebook" id="facebookLogin">Continuer avec Facebook</button>
+      <button type="button" class="social-btn" id="googleSignup">Créer un compte avec Google</button>
+      <button type="button" class="social-btn facebook" id="facebookSignup">Créer un compte avec Facebook</button>
     </form>
     <p id="message" role="status" aria-live="polite"></p>
     <p><a href="./index.html">Retour à l’accueil</a></p>
@@ -55,11 +62,13 @@
     const signupBtn = document.getElementById("signupBtn");
     const forgotBtn = document.getElementById("forgotPassword");
     const message = document.getElementById("message");
+    const socialButtons = ["googleLogin","facebookLogin","googleSignup","facebookSignup"].map(id => document.getElementById(id));
 
     function showMessage(text) { message.textContent = text; }
     function setLoading(loading) {
       loginBtn.disabled = loading;
       signupBtn.disabled = loading;
+      socialButtons.forEach(button => button.disabled = loading);
       forgotBtn.style.pointerEvents = loading ? "none" : "auto";
       forgotBtn.setAttribute("aria-disabled", String(loading));
     }
@@ -108,6 +117,31 @@
       } catch { showMessage("Une erreur réseau est survenue. Réessaie."); }
       finally { setLoading(false); }
     });
+
+    async function socialAuth(provider, creatingAccount) {
+      if (creatingAccount && !document.getElementById("ageConsent").checked) {
+        showMessage("Pour créer un compte, confirme que tu as au moins 16 ans et accepte la politique de confidentialité.");
+        return;
+      }
+      setLoading(true);
+      showMessage(creatingAccount ? "Préparation de la création du compte..." : "Connexion avec " + provider + "...");
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: "https://johntoulassi31-rgb.github.io/novelia/index.html",
+            queryParams: { prompt: "select_account" }
+          }
+        });
+        if (error) showMessage("Ce service n'est pas encore configuré. Réessaie plus tard.");
+      } catch {
+        showMessage("Impossible de démarrer la connexion sociale. Réessaie.");
+      } finally { setLoading(false); }
+    }
+    document.getElementById("googleLogin").addEventListener("click", () => socialAuth("google", false));
+    document.getElementById("facebookLogin").addEventListener("click", () => socialAuth("facebook", false));
+    document.getElementById("googleSignup").addEventListener("click", () => socialAuth("google", true));
+    document.getElementById("facebookSignup").addEventListener("click", () => socialAuth("facebook", true));
 
     forgotBtn.addEventListener("click", async event => {
       event.preventDefault();
