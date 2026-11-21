@@ -353,9 +353,13 @@
         supabase.from("ambassadors").select("user_id").eq("user_id", user.id).maybeSingle(),
         supabase.from("novelia_contest_jurors").select("id").eq("juror_id", user.id).limit(1)
       ]);
-      if (adminPanel && !adminCheck.error && adminCheck.data?.user_id === user.id) adminPanel.hidden = false;
-      if (ambassadorPanel && !ambassadorCheck.error && ambassadorCheck.data?.user_id === user.id) ambassadorPanel.hidden = false;
-      if (juryPanel && !juryCheck.error && juryCheck.data?.length) juryPanel.hidden = false;
+      const isAdmin = !adminCheck.error && adminCheck.data?.user_id === user.id;
+      const isAmbassador = !ambassadorCheck.error && ambassadorCheck.data?.user_id === user.id;
+      const isJuror = !juryCheck.error && juryCheck.data?.length > 0;
+      if (adminPanel) adminPanel.hidden = !isAdmin;
+      // L'administrateur peut ouvrir les trois espaces ; les autres rôles restent limités au leur.
+      if (ambassadorPanel) ambassadorPanel.hidden = !(isAdmin || isAmbassador);
+      if (juryPanel) juryPanel.hidden = !(isAdmin || isJuror);
       emailEl.textContent = user.email || "Non renseignée";
 
       const { data, error } = await supabase
