@@ -149,7 +149,7 @@ hr{border:0;border-top:1px solid var(--line);margin:24px 0}
         <h3 id="chapterFormTitle">Ajouter un chapitre</h3>
         <input id="chapterId" type="hidden">
         <label for="chapterEditTitle">Titre du chapitre *</label><input id="chapterEditTitle" maxlength="200" required placeholder="Ex. : Chapitre 2 — Le secret">
-        <label for="chapterEditContent">Contenu *</label><textarea id="chapterEditContent" required placeholder="Écris le contenu du chapitre…"></textarea>
+        <label id="chapterContentLabel" for="chapterEditContent">Contenu *</label><textarea id="chapterEditContent" required placeholder="Écris le contenu du chapitre…"></textarea>
         <section class="premium-chapter-settings">
           <h3>Monétisation du chapitre</h3>
           <label class="premium-toggle" for="chapterPremium"><input id="chapterPremium" type="checkbox"> Proposer ce chapitre à l’achat</label>
@@ -457,9 +457,12 @@ document.querySelectorAll("[data-tab]").forEach(button => {
 
 function isWebtoonEditor(){return !!selectedStory && ($("editType")?.value || selectedStory.story_type)==="webtoon";}
 function refreshWebtoonComposer(){
- const box=$("webtoonComposer");
- if(!box)return;
- box.classList.toggle("hidden",!isWebtoonEditor());
+ const webtoon=isWebtoonEditor(),box=$("webtoonComposer"),content=$("chapterEditContent"),label=$("chapterContentLabel");
+ if(box)box.classList.toggle("hidden",!webtoon);
+ if(content){content.classList.toggle("hidden",webtoon);content.required=!webtoon;}
+ if(label)label.classList.toggle("hidden",webtoon);
+ $("chapterWritingMetrics")?.classList.toggle("hidden",webtoon);
+ document.querySelector(".writing-tools")?.classList.toggle("hidden",webtoon);
 }
 let webtoonPreviewUrls=[];
 let webtoonEditorPanels=[];
@@ -490,7 +493,7 @@ function drawWebtoonEditorPanel(panel){
   ctx.shadowColor="rgba(0,0,0,.28)";ctx.shadowBlur=10;ctx.shadowOffsetY=3;
   ctx.fillStyle=isCaption?"#fff0c9":"#ffffff";ctx.strokeStyle=isCaption?"#6e5423":"#292333";ctx.lineWidth=Math.max(2,canvas.width*.002);
   const radius=isCaption?8:Math.min(28,fontSize);
-  ctx.beginPath();ctx.roundRect(left,top,actualW,h,radius);ctx.fill();ctx.shadowColor="transparent";ctx.stroke();
+  ctx.beginPath();ctx.moveTo(left+radius,top);ctx.lineTo(left+actualW-radius,top);ctx.quadraticCurveTo(left+actualW,top,left+actualW,top+radius);ctx.lineTo(left+actualW,top+h-radius);ctx.quadraticCurveTo(left+actualW,top+h,left+actualW-radius,top+h);ctx.lineTo(left+radius,top+h);ctx.quadraticCurveTo(left,top+h,left,top+h-radius);ctx.lineTo(left,top+radius);ctx.quadraticCurveTo(left,top,left+radius,top);ctx.closePath();ctx.fill();ctx.shadowColor="transparent";ctx.stroke();
   ctx.fillStyle="#201b25";ctx.textAlign="center";ctx.textBaseline="middle";
   lines.forEach((line,lineIndex)=>ctx.fillText(line,left+actualW/2,top+pad+lineHeight*(lineIndex+.5),actualW-24));
   if(!isCaption){ctx.fillStyle="#201b25";ctx.beginPath();ctx.moveTo(left+actualW*.68,top+h-1);ctx.lineTo(left+actualW*.61,top+h+Math.max(12,fontSize*.55));ctx.lineTo(left+actualW*.78,top+h-1);ctx.closePath();ctx.fill();}
