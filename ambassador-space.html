@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#fbf8f1">
+<title>Espace ambassadeur | Novelia</title>
+<link rel="stylesheet" href="theme-gold.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fbf8f1;color:#392b08;font:15px/1.6 Arial,sans-serif;padding:18px}
+main{max-width:760px;margin:20px auto}.card{background:#fffdf8;border:1px solid #ede0c1;border-radius:16px;padding:20px;margin:14px 0}
+h1{color:#7d5f12;margin-bottom:5px}h2{font-size:18px;color:#7d5f12;margin:0 0 8px}
+.muted{color:#675937}.stat{padding:12px;border-radius:10px;background:#f8f3e6;margin-top:12px}
+a{color:#8b6812}.links{display:grid;gap:10px}.links a{display:block;padding:13px;border:1px solid #e8d9b5;border-radius:10px;background:#fffaf0;text-decoration:none;font-weight:bold}
+#status{overflow-wrap:anywhere}[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<a href="profile.html">← Retour à mon profil</a>
+<section class="card">
+<h1>🌟 Espace ambassadeur Novelia</h1>
+<p class="muted">Bienvenue dans ton espace réservé. Il est accessible uniquement avec un statut d'ambassadeur actif.</p>
+<p id="status" role="status">Vérification de ton accès…</p>
+<div id="content" hidden>
+<div class="stat"><strong>Statut :</strong> Ambassadeur actif</div>
+<div class="stat"><strong>Depuis le :</strong> <span id="since">—</span></div>
+</div>
+</section>
+<section class="card" id="missions" hidden>
+<h2>Ta mission</h2>
+<ul>
+<li>Faire connaître Novelia autour de toi et sur tes réseaux.</li>
+<li>Inviter des auteurs à publier leurs histoires.</li>
+<li>Mettre en avant les œuvres que tu apprécies.</li>
+<li>Transmettre tes idées et signaler les difficultés rencontrées.</li>
+</ul>
+</section>
+<section class="card" id="quickLinks" hidden>
+<h2>Accès rapides</h2>
+<div class="links">
+<a href="index.html">Découvrir Novelia</a>
+<a href="ambassadeur.html">Programme ambassadeur et informations</a>
+<a href="profile.html">Mon profil et mon badge</a>
+</div>
+</section>
+</main>
+<script type="module">
+import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0/+esm";
+const db=createClient("https://czwaokqpqgrghxeeyguq.supabase.co","sb_publishable_ORoXM7DSfxdLF0jz8JRqqA_SISXCNsg");
+async function init(){
+ const status=document.getElementById("status");
+ const {data:{user},error:authError}=await db.auth.getUser();
+ if(authError||!user){status.textContent="Connecte-toi pour vérifier ton statut.";return;}
+ const {data,error}=await db.from("ambassadors").select("user_id,created_at").eq("user_id",user.id).maybeSingle();
+ if(error){status.textContent="Impossible de vérifier ton statut pour le moment.";return;}
+ if(!data){status.textContent="Accès refusé : cet espace est réservé aux ambassadeurs officiellement approuvés.";return;}
+ document.getElementById("content").hidden=false;
+ document.getElementById("missions").hidden=false;
+ document.getElementById("quickLinks").hidden=false;
+ document.getElementById("since").textContent=data.created_at?new Date(data.created_at).toLocaleDateString("fr-FR"):"Non renseignée";
+ status.textContent="Accès confirmé.";
+}
+init();
+</script>
+</body>
+</html>
