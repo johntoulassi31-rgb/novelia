@@ -73,6 +73,7 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         webView.addJavascriptInterface(new NoveliaMediaBridge(), "NoveliaNativeMedia");
+        webView.addJavascriptInterface(new NoveliaUpdateBridge(), "NoveliaNativeApp");
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePathCallback,
@@ -97,6 +98,10 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) {
                 if (splashOverlay != null) splashOverlay.setVisibility(View.GONE);
+                Uri pageUri = Uri.parse(url);
+                if ("johntoulassi31-rgb.github.io".equals(pageUri.getHost())) {
+                    view.evaluateJavascript("(function(){var s=document.createElement('script');s.src='https://johntoulassi31-rgb.github.io/novelia/update-check.js?v=1';s.async=true;document.head.appendChild(s);})();", null);
+                }
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -250,6 +255,15 @@ public class MainActivity extends Activity {
             service.putExtra(NoveliaPlaybackService.EXTRA_TITLE, title);
             service.putExtra(NoveliaPlaybackService.EXTRA_TOKEN, mediaSession.getSessionToken());
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(service); else startService(service);
+        }
+    }
+
+    private final class NoveliaUpdateBridge {
+        @JavascriptInterface public int getVersionCode() {
+            return BuildConfig.VERSION_CODE;
+        }
+        @JavascriptInterface public String getVersionName() {
+            return BuildConfig.VERSION_NAME;
         }
     }
 
