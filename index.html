@@ -425,9 +425,9 @@ function shelfCard(story, featured = false) {
   const link = document.createElement("a");
   link.className = "shelf-card" + (featured ? " featured" : "");
   const id = String(story.id);
-  link.href = story.isDemo
+  link.href = (story.isDemo
     ? "reader.html?story=" + encodeURIComponent(id)
-    : "reader.html?db_story=" + encodeURIComponent(id);
+    : "reader.html?db_story=" + encodeURIComponent(id)) + "&open=1";
   const titleText = story.title || "Histoire Novelia";
   if (story.cover_url) {
     const img = document.createElement("img");
@@ -956,13 +956,13 @@ grid.addEventListener("click", event => {
 
   const dbButton = event.target.closest("button[data-db-story]");
   if (dbButton) {
-    window.location.href = "reader.html?db_story=" + encodeURIComponent(dbButton.dataset.dbStory);
+    window.location.href = "reader.html?db_story=" + encodeURIComponent(dbButton.dataset.dbStory) + "&open=1";
     return;
   }
 
   const demoButton = event.target.closest("button[data-story]");
   if (demoButton) {
-    window.location.href = "reader.html?story=" + encodeURIComponent(demoButton.dataset.story);
+    window.location.href = "reader.html?story=" + encodeURIComponent(demoButton.dataset.story) + "&open=1";
   }
 });
 
