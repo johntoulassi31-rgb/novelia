@@ -1,9 +1,9 @@
 {
-  "versionCode": 13,
-  "versionName": "1.1.2",
+  "versionCode": 12,
+  "versionName": "1.1.1",
   "downloadUrl": "https://github.com/johntoulassi31-rgb/novelia/releases/download/v1.1.1/app-release.apk",
   "releaseNotes": [
-    "Test de la notification de mise à jour",
-    "Aucune nouvelle installation n'est nécessaire pour ce test"
+    "Ajout des notifications de mise à jour",
+    "Améliorations de stabilité"
   ]
 }
