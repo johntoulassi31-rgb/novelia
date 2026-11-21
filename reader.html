@@ -2017,8 +2017,9 @@ async function main() {
       }
     }
 
-    // Si la page a été ouverte depuis une notification, privilégier le chapitre visé
-    // plutôt que la dernière progression enregistrée dans la bibliothèque.
+    // Ouvrir directement le lecteur après la synchronisation du compte et de la progression.
+    // Une notification avec chapter_id garde la priorité ; sinon reprendre la dernière lecture,
+    // ou commencer au chapitre 1 si aucune progression n'existe.
     if (isDatabaseStory && requestedChapterId) {
       const chapterIndex = chapters.findIndex(
         chapter => String(chapter.id) === String(requestedChapterId)
@@ -2028,9 +2029,9 @@ async function main() {
         openReader(chapterIndex, false);
       } else {
         $("status").textContent = "Le chapitre demandé n'est pas disponible dans cette histoire.";
+        openReader(savedChapterIndex() ?? 0, true);
       }
-    }
-    else if (params.get("open") === "1") {
+    } else {
       openReader(savedChapterIndex() ?? 0, true);
     }
   } catch (error) {
