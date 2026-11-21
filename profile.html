@@ -62,6 +62,7 @@
     #avatarPreview{border-radius:50%;object-fit:cover}
     #avatarPreview[hidden]{display:none}
     .hint{font-size:13px;opacity:.8;margin:6px 0 0}
+  .admin-links{display:grid;gap:9px;margin-top:14px}.admin-links a{display:block;padding:13px 14px;border:1px solid #e8d9b5;border-radius:11px;background:#fffaf0;color:#72530d;text-decoration:none;font-weight:bold}.admin-links a:active{transform:scale(.99)}
   .stats-panel{margin:18px 0;padding:18px;background:#fffdf8;border:1px solid #ede0c1;border-radius:14px}.stats-panel h2{margin:0 0 5px;color:#7d5f12;font-size:19px}.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.stat{padding:12px;border-radius:10px;background:#f8f3e6;display:flex;flex-direction:column;gap:4px}.stat strong{font-size:23px;color:#7d5f12}.stat span{font-size:12px;color:#675937}@media(min-width:560px){.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}.badge-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.badge-card{padding:12px;border:1px solid #ede0c1;border-radius:10px;background:#fffaf0;display:flex;gap:10px;align-items:flex-start}.badge-icon{font-size:25px;line-height:1.2}.badge-card strong{display:block;color:#705411;font-size:14px}.badge-card span{display:block;color:#675937;font-size:12px;margin-top:3px}.badge-empty{padding:12px;background:#f8f3e6;border-radius:10px;color:#675937;font-size:13px}@media(max-width:380px){.badge-grid{grid-template-columns:1fr}}</style>
 <link rel="stylesheet" href="theme-gold.css">
 </head>
@@ -121,6 +122,17 @@
     <button class="secondary" id="deleteAccountButton" type="button" style="background:#f0e5cc">
       Demander la suppression de mon compte
     </button>
+    <section class="stats-panel" id="adminAccessPanel" hidden aria-labelledby="adminAccessTitle">
+      <h2 id="adminAccessTitle">⚙️ Administration Novelia</h2>
+      <p class="hint">Espace réservé aux administrateurs. Sélectionne le service à gérer.</p>
+      <div class="admin-links">
+        <a href="admin.html">🛡️ Tableau de bord et modération</a>
+        <a href="stats.html">📊 Statistiques générales</a>
+        <a href="ambassadeurs-admin.html">🌟 Gestion des ambassadeurs</a>
+        <a href="contest-admin.html">🏆 Gestion des concours</a>
+        <a href="earnings-admin.html">💰 Revenus et paiements</a>
+      </div>
+    </section>
     <p><a href="earnings.html">Consulter mes revenus d’auteur</a></p>
     <p><a href="purchases.html">Consulter mes achats premium</a></p>
     <p><a href="protection.html">Consulter les preuves de publication de mes œuvres</a></p>
@@ -318,6 +330,15 @@
       }
 
       currentUser = user;
+      // L'accès n'est affiché qu'après confirmation par la table protégée app_admins.
+      const adminPanel = document.getElementById("adminAccessPanel");
+      if (adminPanel) {
+        adminPanel.hidden = true;
+        const adminCheck = await supabase.from("app_admins").select("user_id").eq("user_id", user.id).maybeSingle();
+        if (!adminCheck.error && adminCheck.data && adminCheck.data.user_id === user.id) {
+          adminPanel.hidden = false;
+        }
+      }
       emailEl.textContent = user.email || "Non renseignée";
 
       const { data, error } = await supabase
