@@ -25,6 +25,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.view.ViewGroup;
 
 public class MainActivity extends Activity {
@@ -41,6 +42,8 @@ public class MainActivity extends Activity {
     private boolean resumeAfterFocusGain = false;
     private boolean pauseWasCausedByFocus = false;
     private static final String HOME = "https://johntoulassi31-rgb.github.io/novelia/";
+    private static final long EXIT_BACK_INTERVAL_MS = 2000;
+    private long lastBackPressedAt = 0;
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -324,12 +327,20 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() {
-        // Treat Novelia Home as the native root. Do not replay the WebView's
-        // entire URL history when the device Back button is pressed.
-        if (webView != null && !isHomePage()) {
-            webView.loadUrl(HOME);
+        // Respect the real navigation history inside Novelia.
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+            lastBackPressedAt = 0;
             return;
         }
-        super.onBackPressed();
+        // At the application root, require two consecutive Back presses to exit.
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressedAt < EXIT_BACK_INTERVAL_MS) {
+            lastBackPressedAt = 0;
+            finish();
+            return;
+        }
+        lastBackPressedAt = now;
+        Toast.makeText(this, "Appuyez encore sur Retour pour quitter Novelia", Toast.LENGTH_SHORT).show();
     }
 }
