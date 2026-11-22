@@ -29,6 +29,9 @@
     <h1>Novelia</h1>
     <p>Connecte-toi pour retrouver ton univers de lecture.</p>
     <form id="authForm">
+      <label for="username">Pseudonyme Novelia</label>
+      <input id="username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" autocomplete="username" placeholder="Ex. PlumeObsidienne" required>
+      <p style="font-size:13px;margin:6px 0 0">Obligatoire pour créer un compte : 3 à 24 caractères, lettres, chiffres ou _.</p>
       <label for="email">Adresse e-mail</label>
       <input id="email" type="email" autocomplete="email" placeholder="exemple@email.com" required>
       <label for="password">Mot de passe</label>
@@ -58,6 +61,7 @@
     const form = document.getElementById("authForm");
     const emailInput = document.getElementById("email");
     const passwordInput = document.getElementById("password");
+    const usernameInput = document.getElementById("username");
     const loginBtn = document.getElementById("loginBtn");
     const signupBtn = document.getElementById("signupBtn");
     const forgotBtn = document.getElementById("forgotPassword");
@@ -94,6 +98,8 @@
     signupBtn.addEventListener("click", async () => {
       const email = emailInput.value.trim();
       const password = passwordInput.value;
+      const username = usernameInput.value.trim();
+      if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) { showMessage("Choisis un pseudonyme de 3 à 24 caractères : lettres, chiffres ou _."); usernameInput.focus(); return; }
       if (!email) { showMessage("Entre ton adresse e-mail."); emailInput.focus(); return; }
       if (password.length < 6) { showMessage("Le mot de passe doit contenir au moins 6 caractères."); passwordInput.focus(); return; }
       if (!document.getElementById("ageConsent").checked) {
@@ -105,7 +111,7 @@
       try {
         const { data, error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: "https://johntoulassi31-rgb.github.io/novelia/" }
+          options: { data: { username }, emailRedirectTo: "https://johntoulassi31-rgb.github.io/novelia/" }
         });
         if (error) { showMessage("Impossible de créer le compte. Vérifie les informations et réessaie."); return; }
         if (data.session) {
@@ -119,6 +125,15 @@
     });
 
     async function socialAuth(provider, creatingAccount) {
+      if (creatingAccount) {
+        const username = usernameInput.value.trim();
+        if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) {
+          showMessage("Choisis un pseudonyme de 3 à 24 caractères : lettres, chiffres ou _.");
+          usernameInput.focus();
+          return;
+        }
+        localStorage.setItem("novelia_pending_signup_username", username);
+      }
       if (creatingAccount && !document.getElementById("ageConsent").checked) {
         showMessage("Pour créer un compte, confirme que tu as au moins 16 ans et accepte la politique de confidentialité.");
         return;
@@ -129,7 +144,7 @@
         const { error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
-            redirectTo: "https://johntoulassi31-rgb.github.io/novelia/index.html",
+            redirectTo: creatingAccount ? "https://johntoulassi31-rgb.github.io/novelia/profile.html" : "https://johntoulassi31-rgb.github.io/novelia/index.html",
             queryParams: { prompt: "select_account" }
           }
         });
