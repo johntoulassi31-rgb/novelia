@@ -90,7 +90,7 @@
         const story = new URLSearchParams(location.search).get("db_story");
         if (story && /^[0-9a-f-]{36}$/i.test(story)) path += "/story/" + story;
       }
-      let authorization = API_KEY;
+      let authorization = "Bearer " + API_KEY;
       try {
         const key = "sb-" + PROJECT_REF + "-auth-token";
         const raw = localStorage.getItem(key);
