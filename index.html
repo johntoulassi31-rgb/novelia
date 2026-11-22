@@ -139,6 +139,11 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
 .shelf-info{padding:0;margin-top:8px}
 .shelf-title{font-size:14px;font-weight:500;line-height:1.35;-webkit-line-clamp:2}
 @media(min-width:700px){.stories,.shelf-track{grid-template-columns:repeat(5,minmax(0,1fr));gap:22px 17px}.shelf-card,.shelf-card.featured{flex-basis:auto}}
+.member-shelf-card{align-items:center;text-align:center;gap:7px;padding:10px 5px}
+.member-shelf-avatar{width:min(100%,92px);aspect-ratio:1;border-radius:50%;object-fit:cover;background:#e9dfc7;border:2px solid #d7c18a}
+.member-shelf-name{font-size:12px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.member-shelf-username{font-size:11px;color:#796a44;overflow-wrap:anywhere}
+.member-shelf-empty{grid-column:1/-1;color:#796a44;font-size:13px;padding:12px 0}
 @media(max-width:699px){.stories,.shelf-track{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 12px}.shelf-card,.shelf-card.featured{flex-basis:auto;max-width:none}.shelf-cover,.shelf-placeholder{aspect-ratio:2/3}}
 
 /* Fiche d’œuvre ouverte par appui long depuis l’accueil */
@@ -252,6 +257,10 @@ header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
     <div class="shelf-heading"><h2 id="followedTitle">Histoires d’auteurs que tu aimes</h2><span class="shelf-note">Tes abonnements</span></div>
     <div class="shelf-track" id="followedShelf" aria-label="Histoires des auteurs suivis"></div>
   </section>
+  <section class="shelf" aria-labelledby="membersTitle">
+    <div class="shelf-heading"><h2 id="membersTitle">La communauté Novelia</h2><a class="shelf-note" href="members.html" style="color:#7d5f12;text-decoration:none;font-weight:bold">Tous les membres →</a></div>
+    <div class="shelf-track" id="memberShelf" aria-label="Profils des membres Novelia"></div>
+  </section>
   <section class="shelf" aria-labelledby="trendingTitle">
     <div class="shelf-heading"><h2 id="trendingTitle">Les plus aimées</h2><span class="shelf-note">Tendances</span></div>
     <div class="shelf-track" id="trendingShelf" aria-label="Histoires populaires"></div>
@@ -353,6 +362,47 @@ let favoriteActions = Promise.resolve();
 let likeActions = Promise.resolve();
 let likedStoryIds = new Set();
 let storyLikeCounts = new Map();
+
+async function loadMemberShelf() {
+  const shelf = document.getElementById("memberShelf");
+  if (!shelf) return;
+  try {
+    const { data, error } = await supabase.from("profiles")
+      .select("id,username,display_name,avatar_url,created_at")
+      .order("created_at", { ascending: false })
+      .limit(9);
+    if (error) throw error;
+    shelf.replaceChildren();
+    (data || []).forEach(profile => {
+      const link = document.createElement("a");
+      link.className = "shelf-card member-shelf-card";
+      link.href = "public-profile.html?username=" + encodeURIComponent(profile.username || "");
+      const avatar = document.createElement("img");
+      avatar.className = "member-shelf-avatar";
+      avatar.alt = "";
+      avatar.loading = "lazy";
+      avatar.src = profile.avatar_url || "./icons/icon-192.png";
+      avatar.onerror = () => { avatar.src = "./icons/icon-192.png"; };
+      const name = document.createElement("span");
+      name.className = "member-shelf-name";
+      name.textContent = profile.display_name || profile.username || "Membre Novelia";
+      const username = document.createElement("span");
+      username.className = "member-shelf-username";
+      username.textContent = "@" + (profile.username || "membre");
+      link.append(avatar, name, username);
+      shelf.append(link);
+    });
+    if (!data || !data.length) {
+      const empty = document.createElement("p");
+      empty.className = "member-shelf-empty";
+      empty.textContent = "Les profils des membres apparaîtront ici.";
+      shelf.append(empty);
+    }
+  } catch (error) {
+    console.warn("Chargement des membres indisponible :", error);
+    shelf.innerHTML = '<p class="member-shelf-empty">Les profils sont momentanément indisponibles.</p>';
+  }
+}
 
 function readFavoriteCache(key) {
   try {
@@ -1123,6 +1173,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
 });
 
 updateFavoriteButtons();
+loadMemberShelf();
 await loadPublishedStories();
 filterStories();
 </script>
