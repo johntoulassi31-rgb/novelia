@@ -356,7 +356,7 @@ function queueAutosave() {
   const snapshot = getCreateDraftSnapshot();
   try { localStorage.setItem(localDraftKey(), JSON.stringify(snapshot)); }
   catch { setAutosaveStatus("Sauvegarde locale indisponible sur cet appareil.", "error"); }
-  if (!currentUser || !navigator.onLine) { setAutosaveStatus("Brouillon enregistré sur cet appareil. Il sera synchronisé dès le retour de la connexion.", "success"); return; }
+  if (!currentUser || !navigator.onLine) { autosavePending = true; setAutosaveStatus("Brouillon enregistré sur cet appareil. Il sera synchronisé dès le retour de la connexion.", "success"); return; }
   setAutosaveStatus("Modifications en attente de sauvegarde…");
   clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => { autosaveTimer = null; saveCreateDraftToCloud(); }, 1200);
