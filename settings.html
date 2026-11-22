@@ -74,4 +74,5 @@ $("checkAppUpdate").addEventListener("click",async()=>{
 });
 $("save").addEventListener("click",()=>{const value={theme:$("theme").value,fontFamily:$("font").value,fontSize:Number($("size").value),lineHeight:$("line").value};try{localStorage.setItem(KEY,JSON.stringify(value));$("status").textContent="Préférences enregistrées sur cet appareil. Elles seront appliquées à ta prochaine lecture."}catch(e){$("status").textContent="Impossible d’enregistrer les préférences sur cet appareil."}});
 })();
-</script><script src="bottom-nav.js" defer></script></body></html>
+</script><script src="bottom-nav.js" defer></script><script src="./analytics.js" defer></script>
+</body></html>
