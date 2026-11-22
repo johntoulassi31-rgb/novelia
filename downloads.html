@@ -192,5 +192,6 @@ $("refreshButton").addEventListener("click",render);
 $("clearAllButton").addEventListener("click",async()=>{if(!confirm("Supprimer toutes les copies hors connexion enregistrées sur cet appareil ? Cette action est irréversible."))return;const button=$("clearAllButton");button.disabled=true;try{const records=await getAll();for(const record of records)await removeOne(record.id);$("status").textContent=records.length+" copie(s) supprimée(s) de cet appareil.";$("status").className="success";await render();}catch(error){$("status").textContent=error.message||"Suppression impossible.";$("status").className="error";}finally{button.disabled=false;}});
 render();
 </script>
+<script src="./analytics.js" defer></script>
 </body>
 </html>
