@@ -13,15 +13,22 @@ create table if not exists private.novelia_traffic_events (
 );
 alter table private.novelia_traffic_events enable row level security;
 revoke all on private.novelia_traffic_events from public, anon, authenticated;
+grant usage on schema private to anon, authenticated;
+grant insert on private.novelia_traffic_events to anon, authenticated;
+drop policy if exists "Allow privacy-safe traffic events" on private.novelia_traffic_events;
+create policy "Allow privacy-safe traffic events" on private.novelia_traffic_events
+  for insert to anon, authenticated
+  with check (user_id is not distinct from (select auth.uid()));
 create index if not exists nov_traffic_visited_at_idx on private.novelia_traffic_events (visited_at desc);
 create index if not exists nov_traffic_visitor_idx on private.novelia_traffic_events (visitor_id, visited_at desc);
 create index if not exists nov_traffic_session_idx on private.novelia_traffic_events (session_id, visited_at desc);
+create index if not exists nov_traffic_user_idx on private.novelia_traffic_events (user_id, visited_at desc);
 
 create or replace function public.novelia_track_visit(
   p_visitor_id uuid, p_session_id uuid, p_page_path text,
   p_source text default 'direct', p_referrer_host text default null
 ) returns void
-language plpgsql security definer set search_path = ''
+language plpgsql security invoker set search_path = ''
 as $$
 declare
   safe_path text;
