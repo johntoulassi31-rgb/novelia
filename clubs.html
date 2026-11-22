@@ -107,4 +107,5 @@ $("showMine").addEventListener("click",()=>{view="mine";showList();load();});$("
 async function start(){const {data,error}=await supabase.auth.getUser();user=data?.user||null;$("account").textContent=user?"Connecté · crée un club ou rejoins une communauté.":"Mode visiteur · connecte-toi pour créer, rejoindre et discuter dans les clubs.";if(error)console.warn(error.message);await load();}
 start();
 </script><script src="bottom-nav.js" defer></script>
+<script src="./analytics.js" defer></script>
 </body></html>
