@@ -412,6 +412,7 @@ async function saveCreateDraftToCloud() {
   }
 }
 async function flushCreateDraftBeforeSubmit(){
+  if (!navigator.onLine) { if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; } autosavePending = true; return; }
   while(true){
     const hadTimer=Boolean(autosaveTimer);
     if(autosaveTimer){clearTimeout(autosaveTimer);autosaveTimer=null;}
@@ -812,6 +813,7 @@ createForm.addEventListener("submit", async event => {
 });
 
 async function flushChapterDraftBeforeContextChange(){
+  if (!navigator.onLine) { if (chapterAutosaveTimer) { clearTimeout(chapterAutosaveTimer); chapterAutosaveTimer = null; } chapterAutosavePending = true; return; }
   while(true){
     const hadTimer=Boolean(chapterAutosaveTimer);
     if(chapterAutosaveTimer){clearTimeout(chapterAutosaveTimer);chapterAutosaveTimer=null;}
