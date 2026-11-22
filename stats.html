@@ -42,6 +42,16 @@ button.secondary{background:#f1e7ce}
   <p id="status" role="status" aria-live="polite"></p>
 
   <div id="content" hidden>
+    <h2>Fréquentation</h2>
+    <div class="grid" id="kpiTraffic"></div>
+    <p class="muted">Les visiteurs uniques sont estimés à partir d’un identifiant aléatoire conservé sur l’appareil, uniquement après consentement.</p>
+    <h2>Visiteurs par jour (30 derniers jours)</h2>
+    <div class="chart" id="trafficChart" role="img" aria-label="Visiteurs uniques par jour"></div>
+    <h2>Pages les plus consultées (30 jours)</h2>
+    <ol id="topPages"></ol>
+    <h2>Origine des visites (30 jours)</h2>
+    <ol id="trafficSources"></ol>
+
     <h2>Utilisateurs</h2>
     <div class="grid" id="kpiUsers"></div>
 
@@ -88,8 +98,42 @@ function card(parent, value, label, sub) {
   parent.append(c);
 }
 
-function render(s) {
-  ["kpiUsers", "kpiContent", "kpiCommunity", "chart", "top"].forEach(id => $(id).replaceChildren());
+function render(s, t) {
+  ["kpiTraffic", "trafficChart", "topPages", "trafficSources", "kpiUsers", "kpiContent", "kpiCommunity", "chart", "top"].forEach(id => $(id).replaceChildren());
+
+  card($("kpiTraffic"), t.visitors_total, "Visiteurs uniques (total)");
+  card($("kpiTraffic"), t.visitors_7d, "Visiteurs uniques (7 j)");
+  card($("kpiTraffic"), t.visitors_30d, "Visiteurs uniques (30 j)");
+  card($("kpiTraffic"), t.sessions_7d, "Sessions (7 j)");
+  card($("kpiTraffic"), t.pageviews_7d, "Pages vues (7 j)");
+  card($("kpiTraffic"), t.pageviews_30d, "Pages vues (30 j)");
+  card($("kpiTraffic"), t.identified_visitors, "Visiteurs connectés", "Comptes identifiés parmi les visiteurs suivis");
+
+  const trafficDays = t.daily_visitors || [];
+  const trafficMax = Math.max(1, ...trafficDays.map(d => Number(d.count) || 0));
+  trafficDays.forEach(d => {
+    const bar = document.createElement("div"); bar.className = "bar";
+    const i = document.createElement("i");
+    i.style.height = Math.round((Number(d.count) || 0) / trafficMax * 85) + "%";
+    i.title = d.day + " : " + d.count + " visiteur(s)";
+    const b = document.createElement("b"); b.textContent = String(d.day).slice(8, 10);
+    bar.append(i, b); $("trafficChart").append(bar);
+  });
+
+  (t.top_pages || []).forEach(p => {
+    const li = document.createElement("li");
+    li.textContent = p.path + " — " + fmt(p.views) + " vue(s), " + fmt(p.visitors) + " visiteur(s)";
+    $("topPages").append(li);
+  });
+  if (!t.top_pages || !t.top_pages.length) {
+    const li = document.createElement("li"); li.textContent = "Aucune visite enregistrée."; $("topPages").append(li);
+  }
+  const sourceNames = {direct:"Accès direct",search:"Moteurs de recherche",social:"Réseaux sociaux",referral:"Autres sites",internal:"Navigation interne",unknown:"Non déterminée"};
+  (t.sources || []).forEach(s => {
+    const li = document.createElement("li");
+    li.textContent = (sourceNames[s.source] || s.source) + " — " + fmt(s.visitors) + " visiteur(s)";
+    $("trafficSources").append(li);
+  });
 
   card($("kpiUsers"), s.users_total, "Inscrits", "+" + fmt(s.users_7d) + " sur 7 jours");
   card($("kpiUsers"), s.users_30d, "Nouveaux (30 j)");
@@ -158,8 +202,10 @@ async function load() {
     }
     const { data, error } = await db.rpc("novelia_admin_stats");
     if (error) throw error;
+    const { data: traffic, error: trafficError } = await db.rpc("novelia_admin_traffic_stats", { p_days: 30 });
+    if (trafficError) throw trafficError;
     stats = data;
-    render(stats);
+    render(stats, traffic);
     $("content").hidden = false;
     status("");
   } catch (e) {
