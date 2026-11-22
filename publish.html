@@ -354,7 +354,7 @@ function restoreCreateDraft(snapshot) {
 }
 function queueAutosave() {
   const snapshot = getCreateDraftSnapshot();
-  try { localStorage.setItem(localDraftKey(), JSON.stringify(snapshot)); }
+  try { localStorage.setItem(localDraftKey(), JSON.stringify({...snapshot,remoteDraftId})); }
   catch { setAutosaveStatus("Sauvegarde locale indisponible sur cet appareil.", "error"); }
   if (!currentUser || !navigator.onLine) { autosavePending = true; setAutosaveStatus("Brouillon enregistré sur cet appareil. Il sera synchronisé dès le retour de la connexion.", "success"); return; }
   setAutosaveStatus("Modifications en attente de sauvegarde…");
@@ -986,7 +986,7 @@ function setChapterAutosaveStatus(text, kind = "") {
 function queueChapterAutosave() {
   if (!currentUser || !selectedStory || chapterForm.classList.contains("hidden")) return;
   const snapshot = { title: $("chapterEditTitle").value, content: $("chapterEditContent").value, savedAt: new Date().toISOString() };
-  try { localStorage.setItem(chapterDraftKey(), JSON.stringify(snapshot)); } catch {}
+  try { localStorage.setItem(chapterDraftKey(), JSON.stringify({...snapshot,remoteDraftId:chapterRemoteDraftId})); } catch {}
   setChapterAutosaveStatus("Modifications en attente de sauvegarde…");
   clearTimeout(chapterAutosaveTimer);
   chapterAutosaveTimer = setTimeout(() => { chapterAutosaveTimer = null; saveChapterDraftToCloud(); }, 1200);
