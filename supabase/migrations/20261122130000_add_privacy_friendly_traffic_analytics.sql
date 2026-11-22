@@ -41,11 +41,6 @@ begin
   safe_source := case when p_source in ('direct','search','social','referral','internal') then p_source else 'unknown' end;
   safe_host := left(regexp_replace(coalesce(p_referrer_host, ''), '[^A-Za-z0-9.-]', '', 'g'), 120);
   if safe_host = '' then safe_host := null; end if;
-  if exists (
-    select 1 from private.novelia_traffic_events e
-    where e.visitor_id = p_visitor_id and e.session_id = p_session_id
-      and e.page_path = safe_path and e.visited_at > now() - interval '20 seconds'
-  ) then return; end if;
   insert into private.novelia_traffic_events
     (visitor_id, session_id, user_id, page_path, source, referrer_host)
   values (p_visitor_id, p_session_id, (select auth.uid()), safe_path, safe_source, safe_host);
