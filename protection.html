@@ -67,4 +67,5 @@ init().catch(error=>status("Impossible de charger les reçus : "+(error?.message
 supabase.auth.onAuthStateChange(()=>init().catch(error=>status("Erreur de session : "+(error?.message||"inconnue."))));
 </script>
 <script src="bottom-nav.js" defer></script>
+<script src="./analytics.js" defer></script>
 </body></html>
