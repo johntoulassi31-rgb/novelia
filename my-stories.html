@@ -21,4 +21,5 @@ const pc=stories.filter(s=>s.status==="published"),dc=stories.filter(s=>s.status
 for(const s of pc)el("pubList").append(card(s,0,chapters.filter(c=>c.story_id===s.id).length));for(const s of dc)el("draftList").append(card(s,drafts.filter(d=>d.story_id===s.id).length,chapters.filter(c=>c.story_id===s.id).length));
 if(!pc.length)el("pubList").innerHTML='<div class="empty">Aucune histoire publiée pour le moment.</div>';if(!dc.length&&!drafts.some(d=>!d.story_id))el("draftList").innerHTML='<div class="empty">Aucun brouillon pour le moment.</div>';el("status").textContent="Tes œuvres sont à jour."}
 load().catch(e=>{console.error(e);el("status").textContent="Erreur de chargement : "+e.message});
-</script></body></html>
+</script><script src="./analytics.js" defer></script>
+</body></html>
