@@ -30,7 +30,7 @@
     <p>Connecte-toi pour retrouver ton univers de lecture.</p>
     <form id="authForm">
       <label for="username">Pseudonyme Novelia</label>
-      <input id="username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" autocomplete="username" placeholder="Ex. PlumeObsidienne" required>
+      <input id="username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" autocomplete="username" placeholder="Ex. PlumeObsidienne">
       <p style="font-size:13px;margin:6px 0 0">Obligatoire pour créer un compte : 3 à 24 caractères, lettres, chiffres ou _.</p>
       <label for="email">Adresse e-mail</label>
       <input id="email" type="email" autocomplete="email" placeholder="exemple@email.com" required>
@@ -69,6 +69,11 @@
     const socialButtons = ["googleLogin","facebookLogin","googleSignup","facebookSignup"].map(id => document.getElementById(id));
 
     function showMessage(text) { message.textContent = text; }
+    async function usernameAlreadyUsed(username) {
+      const { data, error } = await supabase.from("profiles").select("id").ilike("username", username).limit(1);
+      if (error) return false;
+      return Boolean(data && data.length);
+    }
     function setLoading(loading) {
       loginBtn.disabled = loading;
       signupBtn.disabled = loading;
@@ -100,6 +105,7 @@
       const password = passwordInput.value;
       const username = usernameInput.value.trim();
       if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) { showMessage("Choisis un pseudonyme de 3 à 24 caractères : lettres, chiffres ou _."); usernameInput.focus(); return; }
+      if (await usernameAlreadyUsed(username)) { showMessage("Ce pseudonyme est déjà utilisé. Choisis-en un autre."); usernameInput.focus(); return; }
       if (!email) { showMessage("Entre ton adresse e-mail."); emailInput.focus(); return; }
       if (password.length < 6) { showMessage("Le mot de passe doit contenir au moins 6 caractères."); passwordInput.focus(); return; }
       if (!document.getElementById("ageConsent").checked) {
@@ -132,6 +138,7 @@
           usernameInput.focus();
           return;
         }
+        if (await usernameAlreadyUsed(username)) { showMessage("Ce pseudonyme est déjà utilisé. Choisis-en un autre."); usernameInput.focus(); return; }
         localStorage.setItem("novelia_pending_signup_username", username);
       }
       if (creatingAccount && !document.getElementById("ageConsent").checked) {
