@@ -649,7 +649,8 @@ async function initialize() {
     setAutosaveStatus(cloudError
       ? "Brouillon local restauré. Comparaison avec le cloud indisponible ; ton texte local est conservé."
       : "Brouillon local le plus récent restauré.");
-    if (!cloudError) queueAutosave();
+    if (cloudError) autosavePending = true;
+    else queueAutosave();
   }
   ["title","description","type","genre","cover","chapterTitle","content","status"].forEach(id => {
     $(id).addEventListener("input", queueAutosave);
@@ -987,6 +988,7 @@ function queueChapterAutosave() {
   if (!currentUser || !selectedStory || chapterForm.classList.contains("hidden")) return;
   const snapshot = { title: $("chapterEditTitle").value, content: $("chapterEditContent").value, savedAt: new Date().toISOString() };
   try { localStorage.setItem(chapterDraftKey(), JSON.stringify({...snapshot,remoteDraftId:chapterRemoteDraftId})); } catch {}
+  if (!navigator.onLine) { chapterAutosavePending = true; setChapterAutosaveStatus("Brouillon enregistré sur cet appareil. Synchronisation dès le retour de la connexion.", "success"); return; }
   setChapterAutosaveStatus("Modifications en attente de sauvegarde…");
   clearTimeout(chapterAutosaveTimer);
   chapterAutosaveTimer = setTimeout(() => { chapterAutosaveTimer = null; saveChapterDraftToCloud(); }, 1200);
@@ -1039,6 +1041,7 @@ async function loadChapterVersions(){
 
 async function saveChapterDraftToCloud() {
   if (!currentUser || !selectedStory || chapterForm.classList.contains("hidden")) return;
+  if (!navigator.onLine) { chapterAutosavePending = true; setChapterAutosaveStatus("Brouillon conservé sur cet appareil. Synchronisation en attente de connexion.", "success"); return; }
   if (chapterAutosaveInProgress) { chapterAutosavePending = true; return; }
   const title = $("chapterEditTitle").value;
   const content = $("chapterEditContent").value;
@@ -1084,12 +1087,15 @@ async function restoreChapterDraft(chapter) {
   const key = chapterDraftKey();
   let localSnapshot = null;
   try { localSnapshot = JSON.parse(localStorage.getItem(key) || "null"); } catch {}
-  const query = supabase.from("novelia_author_drafts").select("id,title,content,updated_at")
-    .eq("author_id", currentUser.id).eq("story_id", selectedStory.id);
-  const { data: remoteDraft, error } = chapter
-    ? await query.eq("chapter_id", chapter.id).order("updated_at", {ascending:false}).limit(1).maybeSingle()
-    : await query.is("chapter_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
-  if (error) console.warn("Comparaison des brouillons en ligne impossible :", error.message);
+  let remoteDraft = null, error = null;
+  if (navigator.onLine) {
+    const query = supabase.from("novelia_author_drafts").select("id,title,content,updated_at")
+      .eq("author_id", currentUser.id).eq("story_id", selectedStory.id);
+    const result = chapter
+      ? await query.eq("chapter_id", chapter.id).order("updated_at", {ascending:false}).limit(1).maybeSingle()
+      : await query.is("chapter_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
+    remoteDraft = result.data; error = result.error;
+  }
   if (remoteDraft) chapterRemoteDraftId = remoteDraft.id;
   const localTime = Date.parse(localSnapshot?.savedAt || "") || 0;
   const remoteTime = Date.parse(remoteDraft?.updated_at || "") || 0;
@@ -1102,7 +1108,7 @@ async function restoreChapterDraft(chapter) {
     if (snapshot.content !== undefined) $("chapterEditContent").value = snapshot.content || "";
     if (snapshot.remoteDraftId) chapterRemoteDraftId = snapshot.remoteDraftId;
     try { localStorage.setItem(key, JSON.stringify({...snapshot,remoteDraftId:chapterRemoteDraftId})); } catch {}
-    setChapterAutosaveStatus(useRemote ? "Version en ligne plus récente récupérée." : "Brouillon local récupéré. Vérification de la synchronisation effectuée.");
+    setChapterAutosaveStatus(useRemote ? "Version en ligne plus récente récupérée." : navigator.onLine ? "Brouillon local récupéré. Synchronisation prête." : "Brouillon local récupéré hors connexion. Il sera synchronisé au retour d’Internet.", "success");
   } else {
     setChapterAutosaveStatus("La sauvegarde automatique démarrera dès que tu écriras.");
   }
