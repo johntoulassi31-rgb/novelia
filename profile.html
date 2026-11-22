@@ -442,6 +442,8 @@
         usernameEl.value = data.username || "";
         displayNameEl.value = data.display_name || "";
       }
+      const completingSignup = new URLSearchParams(window.location.search).get("complete_signup") === "1";
+      if (completingSignup && data?.username) { window.location.replace("index.html"); return; }
       const pendingSignupUsername = localStorage.getItem("novelia_pending_signup_username");
       if (!usernameEl.value && pendingSignupUsername) usernameEl.value = pendingSignupUsername;
       if (!usernameEl.value) statusEl.textContent = "Choisis un pseudonyme obligatoire pour terminer la création de ton compte.";
@@ -525,6 +527,7 @@
         }
         localStorage.removeItem("novelia_pending_signup_username");
         statusEl.textContent = "Profil enregistré avec succès.";
+        if (new URLSearchParams(window.location.search).get("complete_signup") === "1") { window.location.replace("index.html"); return; }
       });
 
     document.getElementById("logoutButton")
