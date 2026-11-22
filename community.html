@@ -82,4 +82,5 @@ $("refreshButton").addEventListener("click", () => { mode = "following"; loadFee
 async function start() { try { const {data,error} = await supabase.auth.getUser(); if (error) console.warn(error.message); currentUser = data?.user || null; $("accountStatus").textContent = currentUser ? "Connecté · ton fil peut suivre tes auteurs favoris." : "Mode visiteur · connecte-toi pour suivre des auteurs et réagir."; await loadFeed(); } catch (error) { setStatus("Impossible d’initialiser la communauté : " + error.message, "error"); } }
 start();
 </script><script src="bottom-nav.js" defer></script>
+<script src="./analytics.js" defer></script>
 </body></html>
