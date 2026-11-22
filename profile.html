@@ -442,6 +442,9 @@
         usernameEl.value = data.username || "";
         displayNameEl.value = data.display_name || "";
       }
+      const pendingSignupUsername = localStorage.getItem("novelia_pending_signup_username");
+      if (!usernameEl.value && pendingSignupUsername) usernameEl.value = pendingSignupUsername;
+      if (!usernameEl.value) statusEl.textContent = "Choisis un pseudonyme obligatoire pour terminer la création de ton compte.";
 
       try {
         const ex = await supabase.from("profiles").select("bio, avatar_url").eq("id", user.id).maybeSingle();
@@ -520,6 +523,7 @@
           showAvatar(currentAvatar);
           avatarFile.value = "";
         }
+        localStorage.removeItem("novelia_pending_signup_username");
         statusEl.textContent = "Profil enregistré avec succès.";
       });
 
