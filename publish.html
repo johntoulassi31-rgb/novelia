@@ -353,16 +353,16 @@ function restoreCreateDraft(snapshot) {
   $("status").value = snapshot.status || "draft";
 }
 function queueAutosave() {
-  if (!currentUser) return;
   const snapshot = getCreateDraftSnapshot();
   try { localStorage.setItem(localDraftKey(), JSON.stringify(snapshot)); }
   catch { setAutosaveStatus("Sauvegarde locale indisponible sur cet appareil.", "error"); }
+  if (!currentUser || !navigator.onLine) { setAutosaveStatus("Brouillon enregistré sur cet appareil. Il sera synchronisé dès le retour de la connexion.", "success"); return; }
   setAutosaveStatus("Modifications en attente de sauvegarde…");
   clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => { autosaveTimer = null; saveCreateDraftToCloud(); }, 1200);
 }
 async function saveCreateDraftToCloud() {
-  if (!currentUser) return;
+  if (!currentUser || !navigator.onLine) { if (currentUser) setAutosaveStatus("Brouillon conservé sur cet appareil. Synchronisation en attente de connexion.", "success"); return; }
   if (autosaveInProgress) { autosavePending = true; return; }
   const snapshot = getCreateDraftSnapshot();
   if (!snapshot.title.trim() && !snapshot.chapterTitle.trim() && !snapshot.content.trim()) {
@@ -607,23 +607,24 @@ function statusLabel(value) {
 }
 
 async function initialize() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.user) {
     account.textContent = "Tu dois être connecté pour publier ou gérer tes histoires.";
     loginArea.classList.remove("hidden");
     workspace.classList.add("hidden");
     showMessage("Connecte-toi à ton compte Novelia avant de continuer.", "error");
     return;
   }
-  currentUser = data.user;
+  currentUser = data.session.user;
   const monetizationResult=await supabase.from("novelia_public_monetization_config").select("enabled,minimum_chapter_price_xof,maximum_chapter_price_xof").single();
   if(!monetizationResult.error&&monetizationResult.data)monetizationConfig=monetizationResult.data;
   account.textContent = "Connecté : " + (currentUser.email || "compte Novelia");
   workspace.classList.remove("hidden");
   const localDraft = readCreateDraft();
-  const { data: cloudDraft, error: cloudError } = await supabase.from("novelia_author_drafts")
+  const cloudResult = navigator.onLine ? await supabase.from("novelia_author_drafts")
     .select("id,title,content,metadata,updated_at").eq("author_id", currentUser.id)
-    .is("story_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle();
+    .is("story_id", null).order("updated_at", {ascending:false}).limit(1).maybeSingle() : {data:null,error:new Error("Hors connexion")};
+  const cloudDraft = cloudResult.data, cloudError = cloudResult.error;
   const localTime = Date.parse(localDraft?.savedAt || "") || 0;
   const cloudTime = Date.parse(cloudDraft?.updated_at || "") || 0;
   const cloudIsNewer = Boolean(cloudDraft && (!localDraft || cloudTime > localTime));
@@ -654,7 +655,8 @@ async function initialize() {
     $(id).addEventListener("input", queueAutosave);
     $(id).addEventListener("change", queueAutosave);
   });
-  await loadOwnStories();
+  if (navigator.onLine) await loadOwnStories();
+  else setAutosaveStatus("Mode hors connexion : tu peux écrire. Ton brouillon est conservé sur cet appareil et sera synchronisé à la reconnexion.", "success");
 }
 
 async function loadOwnStories() {
@@ -751,6 +753,7 @@ createForm.addEventListener("submit", async event => {
   if (!currentUser) return showMessage("Connecte-toi avant de publier.", "error");
   await flushCreateDraftBeforeSubmit();
 
+  if (!navigator.onLine) return showMessage("Tu es hors connexion. Ton roman est sauvegardé sur cet appareil ; reconnecte-toi pour l’enregistrer et le publier.", "error");
   const title = $("title").value.trim();
   const description = $("description").value.trim();
   const storyType = $("type").value;
