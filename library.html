@@ -37,11 +37,13 @@ function setStatus(text,kind=""){ $("status").textContent=text;$("status").class
 function storyIdFromKey(key){return String(key||"").startsWith("db_")?String(key).slice(3):String(key||"")}
 function isDbKey(key){const id=storyIdFromKey(key);return /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)}
 function storyLink(key){return isDbKey(key)?"reader.html?db_story="+encodeURIComponent(storyIdFromKey(key)):"reader.html?story="+encodeURIComponent(key)}
+const OFFLINE_LIBRARY_DB="novelia-reader-offline";
+function getOfflineLibraryRecords(){return new Promise((resolve,reject)=>{if(!("indexedDB" in window)){resolve([]);return;}const req=indexedDB.open(OFFLINE_LIBRARY_DB,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("stories"))req.result.createObjectStore("stories",{keyPath:"id"});};req.onsuccess=()=>{const db=req.result;try{const tx=db.transaction("stories","readonly"),get=tx.objectStore("stories").getAll();get.onsuccess=()=>{resolve(get.result||[]);db.close();};get.onerror=()=>{reject(get.error);db.close();};}catch(error){db.close();reject(error);}};req.onerror=()=>reject(req.error||new Error("Stockage hors connexion inaccessible."));});}
 function titleFor(key){const id=storyIdFromKey(key);return storyMap.get(id)?.title||demoNames[key]||demoNames[id]||"Histoire Novelia"}
 function safe(tag,text,cls=""){const e=document.createElement(tag);e.textContent=text??"";if(cls)e.className=cls;return e}
 function newChaptersFor(key,row){const dates=chapterDates.get(storyIdFromKey(key));const last=Date.parse(row?.last_read_at||row?.updated_at||"");if(!dates||!(Number(row?.last_chapter)>0)||!last)return 0;return dates.filter(d=>Date.parse(d)>last).length}
 function percentFor(key,row){const total=chapterCounts.get(storyIdFromKey(key))||0;const chapter=Number(row?.last_chapter)||0;return total>0?Math.max(0,Math.min(100,Math.round(chapter/total*100))):0}
-function createBook(key,record,mode){const book=document.createElement("article");book.className="book";const coverLink=safe("a","");coverLink.className="cover-link";coverLink.href=storyLink(key)+"&open=1";const info=storyMap.get(storyIdFromKey(key));if(info?.cover_url){const img=document.createElement("img");img.className="cover";img.src=info.cover_url;img.alt="Ouvrir "+titleFor(key);img.loading="lazy";img.onerror=()=>img.replaceWith(safe("div",titleFor(key),"placeholder"));coverLink.append(img)}else coverLink.append(safe("div",titleFor(key),"placeholder"));book.append(coverLink);const titleRow=document.createElement("div");titleRow.className="book-title-row";const title=safe("h3","");const titleLink=safe("a",titleFor(key));titleLink.href=storyLink(key)+"&open=1";title.append(titleLink);titleRow.append(title);const check=safe("button","✓","book-check");check.type="button";check.title="Décocher et retirer de ta bibliothèque";check.setAttribute("aria-label","Décocher et retirer "+titleFor(key)+" de ta bibliothèque");check.addEventListener("click",async event=>{event.preventDefault();event.stopPropagation();await removeFromLibrary(key)});titleRow.append(check);book.append(titleRow);return book}
+function createBook(key,record,mode){const book=document.createElement("article");book.className="book";const coverLink=safe("a","");coverLink.className="cover-link";coverLink.href=storyLink(key)+"&open=1";const info=storyMap.get(storyIdFromKey(key));if(info?.cover_url){const img=document.createElement("img");img.className="cover";img.src=info.cover_url;img.alt="Ouvrir "+titleFor(key);img.loading="lazy";img.onerror=()=>img.replaceWith(safe("div",titleFor(key),"placeholder"));coverLink.append(img)}else coverLink.append(safe("div",titleFor(key),"placeholder"));book.append(coverLink);const titleRow=document.createElement("div");titleRow.className="book-title-row";const title=safe("h3","");const titleLink=safe("a",titleFor(key));titleLink.href=storyLink(key)+"&open=1";title.append(titleLink);titleRow.append(title);if(!record?.offline_download){const check=safe("button","✓","book-check");check.type="button";check.title="Décocher et retirer de ta bibliothèque";check.setAttribute("aria-label","Décocher et retirer "+titleFor(key)+" de ta bibliothèque");check.addEventListener("click",async event=>{event.preventDefault();event.stopPropagation();await removeFromLibrary(key)});titleRow.append(check);}else{const offline=safe("span","✓ Hors ligne","offline-library-label");titleRow.append(offline);}book.append(titleRow);return book}
 function openLibraryMenu(key,mode){contextKey=String(key);contextMode=mode;$("libraryContextTitle").textContent=titleFor(key)+(storyMap.get(storyIdFromKey(key))?.status==="draft"?" (brouillon)":"");const archiveAction=document.querySelector('[data-library-action="archive"]');archiveAction.textContent=mode==="archive"?"Restaurer dans les lectures actives":"Archiver l'histoire";$("libraryContextBackdrop").hidden=false}
 function closeLibraryMenu(){$("libraryContextBackdrop").hidden=true}
 function openLibraryInfo(key){const id=storyIdFromKey(key),info=storyMap.get(id)||{};$("libraryInfoTitle").textContent=titleFor(key);$("libraryInfoCover").src=info.cover_url||"";$("libraryInfoCover").hidden=!info.cover_url;$("libraryInfoAuthor").textContent="Chargement de l’auteur…";const total=chapterCounts.get(id)||0;const type=info.story_type==="webtoon"?"Webtoon":"Roman";const isDbStory=/^db_[0-9a-f-]{36}$/i.test(String(key));$("libraryInfoStats").textContent="☷ "+total+" chapitres · "+type+" · ☆ … J’aime · ◉ "+Number(info.view_count||0).toLocaleString("fr-FR")+" lectures";if(isDbStory){supabase.from("story_likes").select("user_id",{count:"exact",head:true}).eq("story_id",id).then(({count,error})=>{if($("libraryInfoBackdrop").hidden||$("libraryInfoTitle").textContent!==titleFor(key))return;const likesText=error?"—":Number(count||0).toLocaleString("fr-FR");$("libraryInfoStats").textContent="☷ "+total+" chapitres · "+type+" · ☆ "+likesText+" J’aime · ◉ "+Number(info.view_count||0).toLocaleString("fr-FR")+" lectures";}).catch(()=>{});}else $("libraryInfoStats").textContent="☷ "+total+" chapitres · "+type;$("libraryInfoSummaryTab").classList.add("active");$("libraryInfoChaptersTab").classList.remove("active");const renderSummary=()=>{const body=$("libraryInfoBody");body.replaceChildren();const meta=[info.genre,type].filter(Boolean);if(meta.length){const tags=safe("div", "","library-info-tags");meta.forEach(value=>tags.append(safe("span",value,"library-info-tag")));body.append(tags)}body.append(safe("p",info.description||"Aucun résumé n’a encore été ajouté à cette œuvre."));};const renderChapters=()=>{const body=$("libraryInfoBody");body.replaceChildren();const items=chapterDetails.get(id)||[];if(!items.length){body.append(safe("p","Aucun chapitre publié.","muted"));return}const list=document.createElement("ol");list.style.paddingLeft="22px";items.forEach(ch=>{const row=document.createElement("li");row.style.padding="5px 0";row.textContent=ch.title||("Chapitre "+(ch.chapter_number||""));list.append(row)});body.append(list)};renderSummary();$("libraryInfoChaptersTab").onclick=()=>{$("libraryInfoSummaryTab").classList.remove("active");$("libraryInfoChaptersTab").classList.add("active");renderChapters()};$("libraryInfoSummaryTab").onclick=()=>{$("libraryInfoChaptersTab").classList.remove("active");$("libraryInfoSummaryTab").classList.add("active");renderSummary()};if(info.author_id){supabase.from("profiles").select("username,display_name").eq("id",info.author_id).maybeSingle().then(({data,error})=>{$("libraryInfoAuthor").textContent=!error?(data?.display_name||data?.username||"Auteur Novelia"):"Auteur Novelia";}).catch(()=>$("libraryInfoAuthor").textContent="Auteur Novelia")}else $("libraryInfoAuthor").textContent="Auteur Novelia";$("libraryInfoRead").onclick=()=>location.href=storyLink(key)+"&open=1";$("libraryInfoAdd").onclick=()=>{closeLibraryInfo();closeLibraryMenu();location.href=storyLink(key)+"&open=1"};$("libraryInfoBackdrop").hidden=false}
@@ -66,19 +68,57 @@ async function deleteList(list){if(!confirm("Supprimer la liste « "+list.name+"
 function setTab(tab){activeTab=tab;$("activeView").hidden=tab!=="active";$("archiveView").hidden=tab!=="archive";$("listsView").hidden=tab!=="lists";document.querySelectorAll("[data-tab]").forEach(b=>{b.classList.toggle("active",b.dataset.tab===tab);b.setAttribute("aria-selected",String(b.dataset.tab===tab))})}
 document.querySelectorAll("[data-tab]").forEach(button=>button.addEventListener("click",()=>setTab(button.dataset.tab)));
 $("createListForm").addEventListener("submit",async e=>{e.preventDefault();if(!user)return;const name=$("listName").value.trim();if(!name)return;try{const {data,error}=await supabase.from("novelia_reading_lists").insert({user_id:user.id,name}).select("id,user_id,name,created_at,updated_at").single();if(error)throw error;lists.unshift(data);$("listName").value="";renderLists();$("listStatus").textContent="Liste créée."}catch(err){$("listStatus").textContent="Impossible de créer la liste. Vérifie le SQL, ou si ce nom existe déjà : "+err.message}});
-async function load(){try{const {data:auth,error:authError}=await supabase.auth.getUser();if(authError)throw authError;user=auth.user;if(!user){setStatus("Connecte-toi pour utiliser ta bibliothèque.");const a=safe("a","Se connecter");a.href="login.html";a.className="btn";$("activeBooks").replaceChildren(a);$("archivedBooks").replaceChildren();$("readingLists").replaceChildren();return}
- const [libR,histR,listsR,itemsR]=await Promise.all([
-  supabase.from("user_library").select("story_key,is_favorite,is_archived,last_chapter,updated_at").eq("user_id",user.id),
-  supabase.from("reading_history").select("story_key,last_chapter,last_read_at").eq("user_id",user.id).order("last_read_at",{ascending:false}).limit(200),
-  supabase.from("novelia_reading_lists").select("id,user_id,name,created_at,updated_at").eq("user_id",user.id).order("updated_at",{ascending:false}),
-  supabase.from("novelia_reading_list_items").select("id,list_id,user_id,story_key,added_at").eq("user_id",user.id)
- ]);
- if(libR.error)throw libR.error;if(histR.error)throw histR.error;if(listsR.error)throw listsR.error;if(itemsR.error)throw itemsR.error;
- library=libR.data||[];historyRows=histR.data||[];lists=listsR.data||[];listItems=itemsR.data||[];
- const keys=[...new Set([...library.map(x=>String(x.story_key)),...historyRows.map(x=>String(x.story_key)),...listItems.map(x=>String(x.story_key))])];const ids=[...new Set(keys.filter(isDbKey).map(storyIdFromKey))];
- if(ids.length){const {data,error}=await supabase.from("stories").select("id,title,description,cover_url,genre,story_type,status,author_id,view_count,moderation_hidden").in("id",ids);if(!error)(data||[]).forEach(s=>storyMap.set(String(s.id),s));const {data:chapters,error:chapterError}=await supabase.from("chapters").select("id,story_id,title,chapter_number,created_at,moderation_hidden").in("story_id",ids).or("moderation_hidden.is.null,moderation_hidden.eq.false").order("chapter_number",{ascending:true});if(!chapterError)(chapters||[]).forEach(ch=>{const sid=String(ch.story_id);chapterCounts.set(sid,(chapterCounts.get(sid)||0)+1);if(!chapterDetails.has(sid))chapterDetails.set(sid,[]);chapterDetails.get(sid).push({title:ch.title,chapter_number:ch.chapter_number});if(ch.created_at){if(!chapterDates.has(sid))chapterDates.set(sid,[]);chapterDates.get(sid).push(ch.created_at)}})}
- renderBooks();renderLists();setStatus("Bibliothèque chargée.","success");
- }catch(e){console.error(e);setStatus("Impossible de charger la bibliothèque : "+(e.message||"erreur inconnue"),"error")}}
+async function load(){
+ try{
+  let session=null;
+  try{const {data}=await supabase.auth.getSession();session=data?.session||null;}catch{}
+  user=session?.user||null;
+  const offlineRecords=await getOfflineLibraryRecords().catch(()=>[]);
+  library=[];historyRows=[];lists=[];listItems=[];
+  storyMap.clear();chapterCounts.clear();chapterDates.clear();chapterDetails.clear();
+  if(navigator.onLine&&user){
+   const [libR,histR,listsR,itemsR]=await Promise.all([
+    supabase.from("user_library").select("story_key,is_favorite,is_archived,last_chapter,updated_at").eq("user_id",user.id),
+    supabase.from("reading_history").select("story_key,last_chapter,last_read_at").eq("user_id",user.id).order("last_read_at",{ascending:false}).limit(200),
+    supabase.from("novelia_reading_lists").select("id,user_id,name,created_at,updated_at").eq("user_id",user.id).order("updated_at",{ascending:false}),
+    supabase.from("novelia_reading_list_items").select("id,list_id,user_id,story_key,added_at").eq("user_id",user.id)
+   ]);
+   if(libR.error)throw libR.error;if(histR.error)throw histR.error;if(listsR.error)throw listsR.error;if(itemsR.error)throw itemsR.error;
+   library=libR.data||[];historyRows=histR.data||[];lists=listsR.data||[];listItems=itemsR.data||[];
+   const keys=[...new Set([...library.map(x=>String(x.story_key)),...historyRows.map(x=>String(x.story_key)),...listItems.map(x=>String(x.story_key))])];
+   const ids=[...new Set(keys.filter(isDbKey).map(storyIdFromKey))];
+   if(ids.length){
+    const {data,error}=await supabase.from("stories").select("id,title,description,cover_url,genre,story_type,status,author_id,view_count,moderation_hidden").in("id",ids);
+    if(!error)(data||[]).forEach(item=>storyMap.set(String(item.id),item));
+    const {data:chapters,error:chapterError}=await supabase.from("chapters").select("id,story_id,title,chapter_number,created_at,moderation_hidden").in("story_id",ids).or("moderation_hidden.is.null,moderation_hidden.eq.false").order("chapter_number",{ascending:true});
+    if(!chapterError)(chapters||[]).forEach(ch=>{const sid=String(ch.story_id);chapterCounts.set(sid,(chapterCounts.get(sid)||0)+1);if(!chapterDetails.has(sid))chapterDetails.set(sid,[]);chapterDetails.get(sid).push({title:ch.title,chapter_number:ch.chapter_number});if(ch.created_at){if(!chapterDates.has(sid))chapterDates.set(sid,[]);chapterDates.get(sid).push(ch.created_at);}});
+   }
+  }
+  const knownKeys=new Set([...library,...historyRows].map(row=>String(row.story_key)));
+  offlineRecords.forEach(record=>{
+   if(!record?.id||!record.story||!Array.isArray(record.chapters)||!record.chapters.length)return;
+   const id=String(record.id),key="db_"+id;
+   const story=record.story;
+   if(!storyMap.has(id))storyMap.set(id,{id,title:story.title||"Histoire téléchargée",description:story.description||"",cover_url:story.cover||"",genre:story.genre||"Autre",story_type:story.type==="Webtoon"?"webtoon":"roman",status:"published",author_id:story.authorId||null});
+   chapterCounts.set(id,record.chapters.length);
+   chapterDetails.set(id,record.chapters.map(ch=>({title:ch.title,chapter_number:ch.chapter_number||0})));
+   if(!knownKeys.has(key))historyRows.push({story_key:key,last_chapter:0,last_read_at:record.savedAt||new Date().toISOString(),offline_download:true});
+  });
+  renderBooks();renderLists();
+  if(!navigator.onLine)setStatus(offlineRecords.length?"Mode hors connexion : "+offlineRecords.length+" histoire(s) téléchargée(s) disponibles dans ta bibliothèque.":"Hors connexion : aucune histoire téléchargée sur cet appareil.",offlineRecords.length?"success":"");
+  else if(!user)setStatus(offlineRecords.length?"Connecte-toi pour synchroniser ta bibliothèque. Tes téléchargements restent accessibles ici.":"Connecte-toi pour synchroniser ta bibliothèque.");
+  else setStatus("Bibliothèque chargée.","success");
+ }catch(e){
+  console.error(e);
+  const offlineRecords=await getOfflineLibraryRecords().catch(()=>[]);
+  library=[];historyRows=offlineRecords.filter(r=>r?.id&&r?.story&&r?.chapters?.length).map(r=>{
+   const id=String(r.id),key="db_"+id;storyMap.set(id,{id,title:r.story.title||"Histoire téléchargée",description:r.story.description||"",cover_url:r.story.cover||"",genre:r.story.genre||"Autre",story_type:r.story.type==="Webtoon"?"webtoon":"roman",status:"published"});
+   chapterCounts.set(id,r.chapters.length);return{story_key:key,last_read_at:r.savedAt||new Date().toISOString(),offline_download:true};
+  });
+  renderBooks();renderLists();
+  setStatus(offlineRecords.length?"Mode hors connexion : tes téléchargements restent accessibles.":"Impossible de charger la bibliothèque : "+(e.message||"erreur inconnue"),offlineRecords.length?"success":"error");
+ }
+}
 load();
 </script><script src="bottom-nav.js" defer></script>
 </body></html>
