@@ -39,6 +39,21 @@ a{color:#7d6835}
 <p><strong>Profil :</strong> tu peux ajouter, si tu le souhaites, une photo de profil et une courte biographie. Ces informations sont visibles par les autres utilisateurs sur ton profil public.</p>
 <p><strong>Candidature ambassadeur :</strong> si tu postules, nous enregistrons les informations que tu saisis (nom, ville, réseaux, motivation, disponibilité) pour étudier ta candidature. Si tu es retenu, ton badge est visible sur ton profil public.</p>
 <p><strong>Statistiques de fréquentation (avec ton accord) :</strong> si tu acceptes, Novelia enregistre les pages consultées, un identifiant aléatoire de navigateur et de session, la catégorie de provenance (accès direct, moteur de recherche, réseau social ou autre site) et, si tu es connecté, le fait que la visite est associée à ton compte. Ces données servent uniquement à mesurer l’audience et améliorer la plateforme. Nous ne collectons pas ton adresse IP, ton nom, ton e-mail, ni le contenu des pages que tu lis. Tu peux refuser à tout moment en effaçant le choix de statistiques dans les données du site de ton navigateur ; le bandeau te permet aussi de refuser dès la première visite.</p>
+<p><strong>Gérer ton choix :</strong> <button type="button" id="disableAnalytics">Désactiver les statistiques</button> <button type="button" id="enableAnalytics">Réactiver les statistiques</button> <span id="analyticsChoiceStatus" role="status"></span></p>
+<script>
+(function(){
+  const key="novelia_analytics_consent_v1";
+  const status=document.getElementById("analyticsChoiceStatus");
+  document.getElementById("disableAnalytics").addEventListener("click",function(){
+    try{localStorage.setItem(key,"no");status.textContent="Les statistiques sont désactivées sur cet appareil.";}
+    catch{status.textContent="Impossible de modifier ce choix dans ce navigateur.";}
+  });
+  document.getElementById("enableAnalytics").addEventListener("click",function(){
+    try{localStorage.setItem(key,"yes");status.textContent="Les statistiques sont activées sur cet appareil. Recharge la page pour reprendre la mesure.";}
+    catch{status.textContent="Impossible de modifier ce choix dans ce navigateur.";}
+  });
+})();
+</script>
 <p>Nous ne vendons pas tes données, et Novelia ne contient ni publicité ni outil de suivi publicitaire.</p>
 
 <h2>2. Pourquoi nous utilisons ces données</h2>
