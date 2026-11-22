@@ -99,7 +99,7 @@ async function load(){
    if(!record?.id||!record.story||!Array.isArray(record.chapters)||!record.chapters.length)return;
    const id=String(record.id),key="db_"+id;
    const story=record.story;
-   if(!storyMap.has(id))storyMap.set(id,{id,title:story.title||"Histoire téléchargée",description:story.description||"",cover_url:story.cover||"",genre:story.genre||"Autre",story_type:story.type==="Webtoon"?"webtoon":"roman",status:"published",author_id:story.authorId||null});
+   if(!storyMap.has(id))storyMap.set(id,{id,title:story.title||"Histoire téléchargée",description:story.description||"",cover_url:(record.media&&record.media[story.cover])||story.cover||"",genre:story.genre||"Autre",story_type:story.type==="Webtoon"?"webtoon":"roman",status:"published",author_id:story.authorId||null});
    chapterCounts.set(id,record.chapters.length);
    chapterDetails.set(id,record.chapters.map(ch=>({title:ch.title,chapter_number:ch.chapter_number||0})));
    if(!knownKeys.has(key))historyRows.push({story_key:key,last_chapter:0,last_read_at:record.savedAt||new Date().toISOString(),offline_download:true});
@@ -112,7 +112,7 @@ async function load(){
   console.error(e);
   const offlineRecords=await getOfflineLibraryRecords().catch(()=>[]);
   library=[];historyRows=offlineRecords.filter(r=>r?.id&&r?.story&&r?.chapters?.length).map(r=>{
-   const id=String(r.id),key="db_"+id;storyMap.set(id,{id,title:r.story.title||"Histoire téléchargée",description:r.story.description||"",cover_url:r.story.cover||"",genre:r.story.genre||"Autre",story_type:r.story.type==="Webtoon"?"webtoon":"roman",status:"published"});
+   const id=String(r.id),key="db_"+id;storyMap.set(id,{id,title:r.story.title||"Histoire téléchargée",description:r.story.description||"",cover_url:(r.media&&r.media[r.story.cover])||r.story.cover||"",genre:r.story.genre||"Autre",story_type:r.story.type==="Webtoon"?"webtoon":"roman",status:"published"});
    chapterCounts.set(id,r.chapters.length);return{story_key:key,last_read_at:r.savedAt||new Date().toISOString(),offline_download:true};
   });
   renderBooks();renderLists();
